@@ -8,7 +8,7 @@ from typing import Literal
 
 from .geo import METERS_PER_MILE, Point, haversine_m
 
-type RouteSource = Literal["provider", "via_city"]
+RouteSource = Literal["provider", "via_city"]
 
 KNOT_TIME_TOLERANCE_S = 1.0
 """How far the last knot's time may differ from the travel time before the route is rejected."""

@@ -38,7 +38,7 @@ PLANNING_BUDGET_S = 120.0
 """One deadline for the whole request. When it passes during the fill, the routes in hand are
 returned; when it passes during the base call, the request times out."""
 
-type ShortfallReason = Literal["no_distinct_alternative", "fill_incomplete"]
+ShortfallReason = Literal["no_distinct_alternative", "fill_incomplete"]
 NO_DISTINCT_ALTERNATIVE: ShortfallReason = "no_distinct_alternative"
 FILL_INCOMPLETE: ShortfallReason = "fill_incomplete"
 

@@ -4,6 +4,7 @@ import logging
 from typing import Annotated
 
 from django.conf import settings
+from django.core.exceptions import RequestDataTooBig
 from django.http import HttpRequest, HttpResponse
 from ninja import NinjaAPI, Query, Schema
 from ninja.errors import HttpError, ValidationError
@@ -45,6 +46,12 @@ def validation_error(request: HttpRequest, exc: ValidationError) -> HttpResponse
 
     details = "; ".join(f"{field(error)}: {error['msg']}" for error in exc.errors)
     return error_response(request, "validation_error", details, 422)
+
+
+@api.exception_handler(RequestDataTooBig)
+def body_too_big(request: HttpRequest, exc: RequestDataTooBig) -> HttpResponse:
+    """A body over Django's upload limit is the client's fault, not a server error."""
+    return error_response(request, "validation_error", "The request body is too large.", 422)
 
 
 @api.exception_handler(HttpError)

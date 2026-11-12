@@ -1,3 +1,7 @@
+import math
+
+import pytest
+
 from routing import Route, order_routes, simplify_line
 from tests.route_fixtures import lerp, route_from
 
@@ -18,11 +22,31 @@ def test_a_corner_is_kept():
     assert len(reduced) == 3
 
 
-def test_every_dropped_point_stays_within_the_tolerance():
-    line = [(40.0 + 0.0005 * (i % 2), -100.0 + 0.01 * i) for i in range(200)]
+def distance_to_segment(point, a, b, lon_scale):
+    """Distance in degrees from point to the segment a-b, longitudes shrunk by lon_scale."""
+    px, py = (point[1] - a[1]) * lon_scale, point[0] - a[0]
+    dx, dy = (b[1] - a[1]) * lon_scale, b[0] - a[0]
+    t = max(0.0, min(1.0, (px * dx + py * dy) / (dx * dx + dy * dy)))
+    return math.hypot(px - t * dx, py - t * dy)
 
-    assert len(simplify_line(line, tolerance=0.001)) == 2
-    assert len(simplify_line(line, tolerance=0.0001)) > 2
+
+@pytest.mark.parametrize("tolerance", [0.0001, 0.001, 0.01])
+def test_every_dropped_point_stays_within_the_tolerance_of_the_reduced_line(tolerance):
+    line = [
+        (40.0 + 0.003 * math.sin(i / 7) + 0.0005 * (i % 2), -100.0 + 0.01 * i) for i in range(400)
+    ]
+    lon_scale = math.cos(math.radians(sum(p[0] for p in line) / len(line)))
+
+    reduced = simplify_line(line, tolerance=tolerance)
+
+    assert reduced[0] == line[0] and reduced[-1] == line[-1]
+    assert len(reduced) < len(line) or tolerance < 0.001  # a tight tolerance may keep all
+    for point in line:
+        nearest = min(
+            distance_to_segment(point, a, b, lon_scale)
+            for a, b in zip(reduced, reduced[1:], strict=False)
+        )
+        assert nearest <= tolerance + 1e-12
 
 
 def test_short_lines_are_returned_as_they_are():

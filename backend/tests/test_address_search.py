@@ -125,12 +125,22 @@ async def test_a_missing_text_is_a_validation_error():
     assert response.json()["code"] == "validation_error"
 
 
-async def test_the_text_is_trimmed_before_it_is_sent(provider_mock):
+@pytest.mark.parametrize(
+    ("typed", "sent"),
+    [
+        pytest.param("abc", "abc", id="exactly 3 characters"),
+        pytest.param("x" * 100, "x" * 100, id="exactly 100 characters"),
+        pytest.param("  abc  ", "abc", id="3 characters with padding"),
+        pytest.param("  Dallas  ", "Dallas", id="padded word"),
+    ],
+)
+async def test_text_within_the_limits_is_accepted_and_sent_trimmed(provider_mock, typed, sent):
     route = respond(provider_mock)
 
-    await search("  Dallas  ")
+    response = await search(typed)
 
-    assert route.calls.last.request.url.params["text"] == "Dallas"
+    assert response.status_code == 200
+    assert route.calls.last.request.url.params["text"] == sent
 
 
 async def test_a_missing_key_is_a_clear_error(settings):

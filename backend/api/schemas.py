@@ -6,6 +6,10 @@ from typing import Annotated, Literal, Self
 from ninja import Schema
 from pydantic import AwareDatetime, Field, model_validator
 
+from routing.route import RouteSource
+
+from .planner import ShortfallReason
+
 DEPARTURE_GRACE = timedelta(minutes=15)
 """A departure typed as "now" arrives slightly in the past; this much is accepted as given."""
 DEPARTURE_HORIZON = timedelta(hours=48)
@@ -98,7 +102,7 @@ class RouteOut(RouteCore):
     # docstring would end up in the OpenAPI schema and the generated types.
     line: list[tuple[float, float]]
     """The route's line for the map as [lon, lat] pairs, reduced on the server."""
-    source: Literal["provider", "via_city"]
+    source: RouteSource
     via: ViaOut | None
 
     @staticmethod
@@ -114,7 +118,7 @@ class RouteOut(RouteCore):
         return [(lon, lat) for lat, lon in obj.line]
 
     @staticmethod
-    def resolve_source(obj) -> str:
+    def resolve_source(obj) -> RouteSource:
         return obj.route.source
 
     @staticmethod
@@ -123,7 +127,7 @@ class RouteOut(RouteCore):
 
 
 class ShortfallOut(Schema):
-    reason: Literal["no_distinct_alternative", "fill_incomplete"]
+    reason: ShortfallReason
     message: str
 
 

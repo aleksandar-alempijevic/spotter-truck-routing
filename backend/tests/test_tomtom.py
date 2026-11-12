@@ -165,25 +165,34 @@ async def test_a_second_leg_that_restarts_its_offsets_is_malformed(provider_mock
 
 
 @pytest.mark.parametrize(
-    "response",
+    ("response", "outcome"),
     [
         pytest.param(
-            httpx.Response(200, json=tomtom_body(tomtom_route([ORIGIN, DESTINATION]))), id="success"
+            httpx.Response(200, json=tomtom_body(tomtom_route([ORIGIN, DESTINATION]))),
+            None,
+            id="success",
         ),
-        pytest.param(httpx.Response(500, text="the key is test-tomtom-key"), id="500"),
         pytest.param(
-            httpx.Response(400, json={"detailedError": {"code": "X", "message": KEY}}), id="400"
+            httpx.Response(500, text="the key is test-tomtom-key"), ProviderUnavailable, id="500"
+        ),
+        pytest.param(
+            httpx.Response(400, json={"detailedError": {"code": "X", "message": KEY}}),
+            ProviderUnavailable,
+            id="400",
         ),
     ],
 )
-async def test_the_key_appears_in_no_log_record_at_debug_level(provider_mock, caplog, response):
+async def test_the_key_appears_in_no_log_record_at_debug_level(
+    provider_mock, caplog, response, outcome
+):
     provider_mock.get(host="api.tomtom.com").mock(return_value=response)
     caplog.set_level(logging.DEBUG)
 
-    try:
-        await call()
-    except Exception:
-        pass
+    if outcome is None:
+        assert len(await call()) == 1
+    else:
+        with pytest.raises(outcome):
+            await call()
 
     assert KEY not in caplog.text
     assert all(KEY not in record.getMessage() for record in caplog.records)
