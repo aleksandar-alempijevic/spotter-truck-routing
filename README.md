@@ -53,7 +53,7 @@ Settings come from environment variables, optionally from a git-ignored `.env` i
 backend/    Django + Django Ninja API on uvicorn (ASGI), Python 3.13, managed by uv
             risk_rules/ holds the risk and ranking rules (plain Python, no Django)
             routing/ holds route computations: checkpoints, ETAs, overlap (plain Python)
-            providers/ holds outbound HTTP to TomTom and the shared request policy
+            providers/ holds outbound HTTP to TomTom and Geoapify and the shared request policy
 frontend/   React + TypeScript + Vite + Material UI app, managed by pnpm
 docs/       architecture.md, logic.md (the risk and ranking rules), assumptions.md
 Makefile    install / run / test / check commands
