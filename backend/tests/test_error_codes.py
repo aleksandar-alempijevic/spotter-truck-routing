@@ -52,6 +52,6 @@ def test_each_error_class_answers_with_its_http_status():
 def test_every_error_the_api_answers_itself_uses_a_declared_code():
     declared = set(typing.get_args(ErrorCode))
 
-    for code, _message, status in API_ERRORS.values():
+    for key, (code, _message, status) in API_ERRORS.items():
         assert code in declared
-        assert status in API_ERRORS
+        assert status == key

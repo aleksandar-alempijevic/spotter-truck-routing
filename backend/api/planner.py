@@ -120,7 +120,7 @@ async def _fill(
     cancelled, so a gap that fills early costs few calls. When the deadline passes the routes in
     hand are returned.
     """
-    vias = via_candidates(origin, destination, [r.points for r in routes])
+    vias = await asyncio.to_thread(via_candidates, origin, destination, [r.points for r in routes])
     kept = list(routes)
     kept_cells = await asyncio.to_thread(lambda: [near_cells(r.points) for r in kept])
     pending = {asyncio.ensure_future(route_call(via, 0)): via for via in vias}

@@ -52,18 +52,18 @@ async def test_a_body_with_the_wrong_content_type_is_a_validation_error():
 
 
 @pytest.mark.parametrize(
-    ("method", "path"),
+    ("method", "path", "allowed"),
     [
-        pytest.param("get", "/api/routes", id="GET on the routes endpoint"),
-        pytest.param("post", "/api/health", id="POST on health"),
-        pytest.param("post", "/api/address-search", id="POST on address search"),
+        pytest.param("get", "/api/routes", "POST", id="GET on the routes endpoint"),
+        pytest.param("post", "/api/health", "GET", id="POST on health"),
+        pytest.param("post", "/api/address-search", "GET", id="POST on address search"),
     ],
 )
-async def test_a_wrong_method_is_a_405(method, path):
+async def test_a_wrong_method_is_a_405(method, path, allowed):
     response = await getattr(AsyncClient(**CLIENT_ARGS), method)(path)
 
     await assert_error(response, 405, "method_not_allowed")
-    assert response["Allow"] in {"GET", "POST"}
+    assert response["Allow"] == allowed
 
 
 @pytest.mark.parametrize(

@@ -397,11 +397,19 @@ async def test_a_missing_field_is_a_validation_error():
     assert "departure" in response.json()["message"]
 
 
-async def test_the_largest_load_and_the_smallest_interval_are_accepted(provider_mock):
-    mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
+async def test_the_largest_load_and_a_load_of_one_kilogram_are_accepted(provider_mock):
+    calls = mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
 
     assert (await post(payload(load_lb=80_000))).status_code == 200
-    assert (await post(payload(load_lb=0.5, checkpoint_interval_miles=10))).status_code == 200
+    assert (await post(payload(load_lb=2.2046))).status_code == 200  # the smallest whole kilogram
+
+    assert [c.url.params["vehicleWeight"] for c in calls] == ["36287", "1"]
+
+
+async def test_the_smallest_checkpoint_interval_is_accepted(provider_mock):
+    mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
+
+    assert (await post(payload(checkpoint_interval_miles=10))).status_code == 200
 
 
 @pytest.mark.parametrize(
