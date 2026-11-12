@@ -12,8 +12,21 @@ DEPARTURE_HORIZON = timedelta(hours=48)
 MAX_LOAD_LB = 80_000
 
 
+ErrorCode = Literal[
+    "validation_error",
+    "no_route",
+    "provider_timeout",
+    "provider_unavailable",
+    "provider_limited",
+    "provider_not_configured",
+    "provider_malformed_response",
+    "provider_error",
+]
+"""Every `code` an error body can carry. A test ties each error class to this set."""
+
+
 class ErrorOut(Schema):
-    code: str
+    code: ErrorCode
     message: str
 
 
@@ -87,3 +100,24 @@ class RoutesOut(PlanParams):
     """One to three routes, fastest first; ids are numbered from that order."""
     shortfall: ShortfallOut | None
     """Set when fewer than three routes came back, with the reason."""
+
+
+class SuggestionOut(Schema):
+    label: str
+    """The full text of the place, including its state."""
+    lat: float
+    lon: float
+    timezone: str
+    """IANA name of the place's time zone, for converting a typed departure time."""
+
+
+class AttributionOut(Schema):
+    text: str
+    url: str
+
+
+class AddressSearchOut(Schema):
+    suggestions: list[SuggestionOut]
+    """US places of any type; empty when nothing matches."""
+    attribution: AttributionOut
+    """Geoapify's required credit, to be shown wherever the suggestions are."""

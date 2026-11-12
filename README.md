@@ -2,7 +2,7 @@
 
 A web app that recommends the safest of three truck routes between two places, using the weather along each route at the time the truck will be there, the load weight and the travel time. Full-stack take-home: React frontend, Django backend.
 
-**Status:** in progress. The React page calls a Django health endpoint and shows the answer. The risk and ranking rules exist as plain Python ([docs/logic.md](docs/logic.md)) but nothing calls them yet. `POST /api/routes` returns up to three truck routes with checkpoints and ETAs from TomTom ([docs/architecture.md](docs/architecture.md)); the UI does not use it yet. Address search, weather and the map come in later steps; the architecture doc says where each will go.
+**Status:** in progress. The React page calls a Django health endpoint and shows the answer. The risk and ranking rules exist as plain Python ([docs/logic.md](docs/logic.md)) but nothing calls them yet. `POST /api/routes` returns up to three truck routes with checkpoints and ETAs from TomTom ([docs/architecture.md](docs/architecture.md)); the UI does not use it yet. `GET /api/address-search` returns US place suggestions from Geoapify, also not used by the UI yet. Weather and the map come in later steps; the architecture doc says where each will go.
 
 ## Prerequisites
 
@@ -31,10 +31,11 @@ The browser only talks to the Vite dev server, which forwards `/api` requests to
 
 ```sh
 make test    # backend (pytest, including the risk rules) and frontend (vitest) tests
-make check   # the tests, then ruff lint and format checks (backend), and tsc, ESLint and Prettier checks (frontend)
+make check   # the tests, a check that the generated API types are current, then ruff lint and format checks (backend), and tsc, ESLint and Prettier checks (frontend)
+make types   # regenerate frontend/src/api/schema.d.ts from the backend's OpenAPI schema
 ```
 
-Tests never make live calls: the providers are mocked, and the settings used by tests hold dummy keys. `backend/live_check.py` runs the routes endpoint against the real TomTom over seven test trips (about 12 calls); it needs `TOMTOM_API_KEY` in `.env` and is not part of `make check`.
+Tests never make live calls: the providers are mocked, and the settings used by tests hold dummy keys. `backend/live_check.py` runs the routes endpoint against the real TomTom over seven test trips (about 12 calls); it needs `TOMTOM_API_KEY` in `.env` and is not part of `make check`. `backend/live_address_check.py` does the same for address search against Geoapify (8 calls) and needs `GEOAPIFY_API_KEY`.
 
 ```sh
 uv --directory backend run python live_check.py /tmp/live-check.json
@@ -44,7 +45,7 @@ The [Makefile](Makefile) is the one place that defines these commands, including
 
 ## Configuration
 
-Settings come from environment variables, optionally from a git-ignored `.env` in the repository root ([.env.example](.env.example) lists them). Local development needs no Django setting: `make backend` turns on debug mode itself. The routes endpoint needs `TOMTOM_API_KEY`; without it the endpoint answers 503 with a clear message and the rest of the app works. With debug off (the default, so a deployment is safe unless configured otherwise) `DJANGO_SECRET_KEY` must be set. Tests ignore `.env` and use dummy values.
+Settings come from environment variables, optionally from a git-ignored `.env` in the repository root ([.env.example](.env.example) lists them). Local development needs no Django setting: `make backend` turns on debug mode itself. The routes endpoint needs `TOMTOM_API_KEY` and address search needs `GEOAPIFY_API_KEY`; without its key an endpoint answers 503 with a clear message and the rest of the app works. With debug off (the default, so a deployment is safe unless configured otherwise) `DJANGO_SECRET_KEY` must be set. Tests ignore `.env` and use dummy values.
 
 ## Repository layout
 

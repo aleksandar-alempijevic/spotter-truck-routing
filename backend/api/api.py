@@ -1,22 +1,34 @@
 """The API object and its endpoints."""
 
+from typing import Annotated
+
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
-from ninja import NinjaAPI, Schema
+from ninja import NinjaAPI, Query, Schema
 from ninja.errors import ValidationError
+from pydantic import StringConstraints
 
 from providers import (
+    ATTRIBUTION_TEXT,
+    ATTRIBUTION_URL,
     MalformedResponse,
     NoRouteFound,
+    Outbound,
     ProviderError,
     ProviderNotConfigured,
     ProviderRateLimited,
     ProviderTimeout,
     ProviderUnavailable,
+    autocomplete,
 )
 
 from .planner import plan_routes
-from .schemas import ErrorOut, RoutesIn, RoutesOut
+from .schemas import (
+    AddressSearchOut,
+    ErrorOut,
+    RoutesIn,
+    RoutesOut,
+)
 
 api = NinjaAPI(title="Spotter truck routing API", version="0.1.0")
 
@@ -33,10 +45,10 @@ ERROR_RESPONSES = {422: ErrorOut, 502: ErrorOut, 503: ErrorOut, 504: ErrorOut}
 
 @api.exception_handler(ValidationError)
 def validation_error(request: HttpRequest, exc: ValidationError) -> HttpResponse:
-    details = "; ".join(
-        f"{'.'.join(str(part) for part in error['loc'] if part != 'body')}: {error['msg']}"
-        for error in exc.errors
-    )
+    def field(error: dict) -> str:
+        return ".".join(str(part) for part in error["loc"] if part not in ("body", "query"))
+
+    details = "; ".join(f"{field(error)}: {error['msg']}" for error in exc.errors)
     return api.create_response(
         request, {"code": "validation_error", "message": details}, status=422
     )
@@ -99,5 +111,34 @@ async def routes(request: HttpRequest, payload: RoutesIn) -> RoutesOut:
                 if plan.shortfall
                 else None
             ),
+        }
+    )
+
+
+SEARCH_MIN_CHARS = 3
+SEARCH_MAX_CHARS = 100
+SearchText = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True, min_length=SEARCH_MIN_CHARS, max_length=SEARCH_MAX_CHARS
+    ),
+]
+
+
+@api.get(
+    "/address-search",
+    response={200: AddressSearchOut, **ERROR_RESPONSES},
+    summary="US place suggestions for typed text",
+)
+async def address_search(request: HttpRequest, q: Query[SearchText]) -> AddressSearchOut:
+    async with Outbound() as outbound:
+        found = await autocomplete(outbound, settings.GEOAPIFY_API_KEY, q)
+    return AddressSearchOut.model_validate(
+        {
+            "suggestions": [
+                {"label": s.label, "lat": s.lat, "lon": s.lon, "timezone": s.timezone}
+                for s in found
+            ],
+            "attribution": {"text": ATTRIBUTION_TEXT, "url": ATTRIBUTION_URL},
         }
     )

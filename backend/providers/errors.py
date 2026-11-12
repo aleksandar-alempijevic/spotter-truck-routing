@@ -9,7 +9,7 @@ class ProviderError(Exception):
     """Base of every error an outbound provider call can raise."""
 
     code = "provider_error"
-    message = "A provider request failed."
+    message = "A data provider request failed."
 
     def __init__(self) -> None:
         super().__init__(self.message)
@@ -17,25 +17,24 @@ class ProviderError(Exception):
 
 class ProviderTimeout(ProviderError):
     code = "provider_timeout"
-    message = "The routing provider took too long to answer."
+    message = "A data provider took too long to answer."
 
 
 class ProviderUnavailable(ProviderError):
     code = "provider_unavailable"
-    message = "The routing provider failed to answer correctly."
+    message = "A data provider failed to answer correctly."
 
 
 class ProviderRateLimited(ProviderError):
     code = "provider_limited"
     message = (
-        "The routing provider is refusing requests (rate limit, quota or credentials). "
-        "Try again later."
+        "A data provider is refusing requests (rate limit, quota or credentials). Try again later."
     )
 
 
 class ProviderNotConfigured(ProviderError):
     code = "provider_not_configured"
-    message = "The routing provider is not configured on this server."
+    message = "A data provider is not configured on this server."
 
 
 class NoRouteFound(ProviderError):
@@ -45,4 +44,4 @@ class NoRouteFound(ProviderError):
 
 class MalformedResponse(ProviderError):
     code = "provider_malformed_response"
-    message = "The routing provider returned a response that could not be used."
+    message = "A data provider returned a response that could not be used."
