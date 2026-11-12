@@ -1,11 +1,12 @@
 """The API object and its endpoints."""
 
+import logging
 from typing import Annotated
 
 from django.conf import settings
 from django.http import HttpRequest, HttpResponse
 from ninja import NinjaAPI, Query, Schema
-from ninja.errors import ValidationError
+from ninja.errors import HttpError, ValidationError
 from pydantic import StringConstraints
 
 from providers import (
@@ -15,17 +16,26 @@ from providers import (
     ProviderError,
     autocomplete,
 )
+from providers.errors import error_classes
 
+from .errors import API_ERRORS
 from .planner import plan_routes
-from .schemas import AddressSearchOut, ErrorOut, RoutesIn, RoutesOut
+from .schemas import AddressSearchOut, ErrorCode, ErrorOut, RoutesIn, RoutesOut
 
 api = NinjaAPI(title="Spotter truck routing API", version="0.1.0")
 
+logger = logging.getLogger(__name__)
+
 ERROR_RESPONSES = dict.fromkeys(
-    {422, ProviderError.status, *(error.status for error in ProviderError.__subclasses__())},
+    {422, *API_ERRORS, *(error.status for error in error_classes())},
     ErrorOut,
 )
-"""The error statuses every endpoint declares, taken from the provider error classes."""
+"""The error statuses every endpoint declares: the validation and general API errors, and the
+status of every provider error class."""
+
+
+def error_response(request: HttpRequest, code: ErrorCode, message: str, status: int):
+    return api.create_response(request, {"code": code, "message": message}, status=status)
 
 
 @api.exception_handler(ValidationError)
@@ -34,23 +44,37 @@ def validation_error(request: HttpRequest, exc: ValidationError) -> HttpResponse
         return ".".join(str(part) for part in error["loc"] if part not in ("body", "query"))
 
     details = "; ".join(f"{field(error)}: {error['msg']}" for error in exc.errors)
-    return api.create_response(
-        request, {"code": "validation_error", "message": details}, status=422
-    )
+    return error_response(request, "validation_error", details, 422)
+
+
+@api.exception_handler(HttpError)
+def http_error(request: HttpRequest, exc: HttpError) -> HttpResponse:
+    """Ninja raises a 400 `HttpError` for a body it cannot parse as JSON."""
+    if exc.status_code == 400:
+        return error_response(
+            request, "validation_error", "The request body is not valid JSON.", 422
+        )
+    return unexpected_error(request, exc)
 
 
 @api.exception_handler(ProviderError)
 def provider_error(request: HttpRequest, exc: ProviderError) -> HttpResponse:
-    return api.create_response(
-        request, {"code": exc.code, "message": exc.message}, status=exc.status
-    )
+    return error_response(request, exc.code, exc.message, exc.status)
+
+
+@api.exception_handler(Exception)
+def unexpected_error(request: HttpRequest, exc: Exception) -> HttpResponse:
+    """Anything else is a bug: log it, and answer with no detail from it."""
+    logger.error("unhandled error in %s", request.path, exc_info=exc)
+    code, message, status = API_ERRORS[500]
+    return error_response(request, code, message, status)
 
 
 class HealthOut(Schema):
     status: str
 
 
-@api.get("/health", response=HealthOut, summary="Liveness check")
+@api.get("/health", response={200: HealthOut, **ERROR_RESPONSES}, summary="Liveness check")
 async def health(request) -> dict:
     return {"status": "ok"}
 

@@ -53,6 +53,7 @@ async def test_request_carries_kilograms_truck_mode_and_coded_instructions(provi
     assert params["maxAlternatives"] == "2"
     assert params["departAt"] == "2026-11-13T08:00:00+00:00"
     assert params["key"] == KEY
+    assert request.extensions["timeout"]["read"] == 50  # long trips take up to 30 s
 
 
 async def test_a_via_point_goes_between_origin_and_destination_and_tags_the_route(provider_mock):
@@ -103,17 +104,34 @@ async def test_a_missing_key_is_an_error_at_call_time():
 @pytest.mark.parametrize(
     ("response", "error"),
     [
-        (httpx.Response(200, json={"routes": []}), NoRouteFound),
-        (
+        pytest.param(httpx.Response(200, json={"routes": []}), NoRouteFound, id="no routes"),
+        pytest.param(
             httpx.Response(400, json={"detailedError": {"code": "MAP_MATCHING_FAILURE"}}),
             NoRouteFound,
+            id="map matching failure",
         ),
-        (httpx.Response(400, json={"detailedError": {"code": "NO_ROUTE_FOUND"}}), NoRouteFound),
-        (httpx.Response(400, json={"detailedError": {"code": "BAD_INPUT"}}), ProviderUnavailable),
-        (httpx.Response(400, text="not json"), ProviderUnavailable),
-        (httpx.Response(200, json={"nothing": 1}), MalformedResponse),
-        (httpx.Response(200, json={"routes": [{"summary": {}}]}), MalformedResponse),
-        (httpx.Response(200, json={"routes": "none"}), MalformedResponse),
+        pytest.param(
+            httpx.Response(400, json={"detailedError": {"code": "NO_ROUTE_FOUND"}}),
+            NoRouteFound,
+            id="no route found",
+        ),
+        pytest.param(
+            httpx.Response(400, json={"detailedError": {"code": "BAD_INPUT"}}),
+            ProviderUnavailable,
+            id="other 400 code",
+        ),
+        pytest.param(httpx.Response(400, text="not json"), ProviderUnavailable, id="400 not JSON"),
+        pytest.param(
+            httpx.Response(200, json={"nothing": 1}), MalformedResponse, id="no routes key"
+        ),
+        pytest.param(
+            httpx.Response(200, json={"routes": [{"summary": {}}]}),
+            MalformedResponse,
+            id="route without fields",
+        ),
+        pytest.param(
+            httpx.Response(200, json={"routes": "none"}), MalformedResponse, id="routes not a list"
+        ),
     ],
 )
 async def test_tomtoms_own_failures_become_neutral_errors(provider_mock, response, error):
@@ -149,9 +167,13 @@ async def test_a_second_leg_that_restarts_its_offsets_is_malformed(provider_mock
 @pytest.mark.parametrize(
     "response",
     [
-        httpx.Response(200, json=tomtom_body(tomtom_route([ORIGIN, DESTINATION]))),
-        httpx.Response(500, text="the key is test-tomtom-key"),
-        httpx.Response(400, json={"detailedError": {"code": "X", "message": KEY}}),
+        pytest.param(
+            httpx.Response(200, json=tomtom_body(tomtom_route([ORIGIN, DESTINATION]))), id="success"
+        ),
+        pytest.param(httpx.Response(500, text="the key is test-tomtom-key"), id="500"),
+        pytest.param(
+            httpx.Response(400, json={"detailedError": {"code": "X", "message": KEY}}), id="400"
+        ),
     ],
 )
 async def test_the_key_appears_in_no_log_record_at_debug_level(provider_mock, caplog, response):

@@ -75,9 +75,23 @@ async def test_the_client_is_closed_when_the_request_is_cancelled(provider_mock,
     assert closed == 1
 
 
-async def test_a_client_is_not_shared_between_requests():
-    async with Outbound() as first, Outbound() as second:
-        assert first._client is not second._client
+async def test_each_request_closes_its_own_client(monkeypatch):
+    closed = 0
+    real_aclose = httpx.AsyncClient.aclose
+
+    async def counting_aclose(self):
+        nonlocal closed
+        closed += 1
+        await real_aclose(self)
+
+    monkeypatch.setattr(httpx.AsyncClient, "aclose", counting_aclose)
+
+    async with Outbound():
+        pass
+    async with Outbound(), Outbound():
+        pass
+
+    assert closed == 3
 
 
 KEY = "secret-key-value"
@@ -87,16 +101,18 @@ BODY_WITH_KEY = {"message": f"echoes {KEY}"}
 @pytest.mark.parametrize(
     ("upstream", "error", "calls"),
     [
-        (httpx.Response(401, json=BODY_WITH_KEY), ProviderRateLimited, 1),
-        (httpx.Response(403), ProviderRateLimited, 1),
-        (httpx.Response(429), ProviderRateLimited, 1),
-        (httpx.Response(404), ProviderUnavailable, 1),
-        (httpx.Response(500, text=KEY), ProviderUnavailable, 2),
-        (httpx.Response(503), ProviderUnavailable, 2),
-        (httpx.Response(200, text="<html>"), MalformedResponse, 1),
-        (httpx.Response(200, text="null"), MalformedResponse, 1),
-        (httpx.ReadTimeout(f"slow {KEY}"), ProviderTimeout, 2),
-        (httpx.ConnectError(f"cannot reach {KEY}"), ProviderUnavailable, 2),
+        pytest.param(httpx.Response(401, json=BODY_WITH_KEY), ProviderRateLimited, 1, id="401"),
+        pytest.param(httpx.Response(403), ProviderRateLimited, 1, id="403"),
+        pytest.param(httpx.Response(429), ProviderRateLimited, 1, id="429"),
+        pytest.param(httpx.Response(404), ProviderUnavailable, 1, id="404"),
+        pytest.param(httpx.Response(500, text=KEY), ProviderUnavailable, 2, id="500"),
+        pytest.param(httpx.Response(503), ProviderUnavailable, 2, id="503"),
+        pytest.param(httpx.Response(200, text="<html>"), MalformedResponse, 1, id="not JSON"),
+        pytest.param(httpx.Response(200, text="null"), MalformedResponse, 1, id="JSON null"),
+        pytest.param(httpx.ReadTimeout(f"slow {KEY}"), ProviderTimeout, 2, id="timeout"),
+        pytest.param(
+            httpx.ConnectError(f"cannot reach {KEY}"), ProviderUnavailable, 2, id="connect error"
+        ),
     ],
 )
 async def test_every_upstream_failure_becomes_a_neutral_error_and_only_some_are_retried(
@@ -140,7 +156,13 @@ async def test_a_5xx_is_retried_once_and_a_good_second_answer_is_used(provider_m
     assert route.call_count == 2
 
 
-@pytest.mark.parametrize("upstream", [httpx.Response(500), httpx.ReadTimeout("slow")])
+@pytest.mark.parametrize(
+    "upstream",
+    [
+        pytest.param(httpx.Response(500), id="500"),
+        pytest.param(httpx.ReadTimeout("slow"), id="timeout"),
+    ],
+)
 async def test_a_call_made_without_retry_is_made_once(provider_mock, upstream):
     route = provider_mock.get(URL)
     if isinstance(upstream, Exception):

@@ -2,7 +2,7 @@
 
 A route forced through a city on another corridor is how a third route is made when the router
 returns fewer. Candidates are chosen by geometry only; whether a candidate route is distinct
-enough is decided afterwards by `overlap.is_distinct`. The list is data: extending it means
+enough is decided afterwards by `overlap.measure_overlap`. The list is data: extending it means
 adding a row.
 """
 

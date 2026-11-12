@@ -56,14 +56,23 @@ def test_total_miles_come_from_the_declared_length():
 @pytest.mark.parametrize(
     "overrides",
     [
-        {"knots": ((0.0, 0.0), (500.0, 600.0), (900.0, 500.0), (1000.0, 1000.0))},
-        {"knots": ((0.0, 0.0), (900.0, 100.0), (800.0, 200.0), (1000.0, 1000.0))},
-        {"knots": ((0.0, 0.0), (1000.0, 900.0))},
-        {"knots": ()},
-        {"points": ((40.0, -100.0),)},
-        {"points": ((40.0, -100.0), (40.0, -100.0))},
-        {"length_m": 0.0},
-        {"travel_time_s": float("nan")},
+        pytest.param(
+            {"knots": ((0.0, 0.0), (500.0, 600.0), (900.0, 500.0), (1000.0, 1000.0))},
+            id="seconds go backwards",
+        ),
+        pytest.param(
+            {"knots": ((0.0, 0.0), (900.0, 100.0), (800.0, 200.0), (1000.0, 1000.0))},
+            id="metres go backwards",
+        ),
+        pytest.param({"knots": ((0.0, 0.0), (1000.0, 900.0))}, id="last time is not the total"),
+        pytest.param({"knots": ()}, id="no knots"),
+        pytest.param({"points": ((40.0, -100.0),)}, id="one point"),
+        pytest.param({"points": ((40.0, -100.0), (40.0, -100.0))}, id="coinciding points"),
+        pytest.param({"points": ((40.0, -100.0), (91.0, -100.0))}, id="latitude out of range"),
+        pytest.param({"points": ((40.0, -100.0), (40.0, 181.0))}, id="longitude out of range"),
+        pytest.param({"points": ((40.0, -100.0), (float("nan"), -99.0))}, id="NaN latitude"),
+        pytest.param({"length_m": 0.0}, id="zero length"),
+        pytest.param({"travel_time_s": float("nan")}, id="NaN travel time"),
     ],
 )
 def test_a_route_that_breaks_the_contract_is_rejected_not_repaired(overrides):

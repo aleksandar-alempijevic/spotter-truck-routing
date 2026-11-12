@@ -1,4 +1,4 @@
-from routing import order_routes, simplify_line
+from routing import Route, order_routes, simplify_line
 from tests.route_fixtures import lerp, route_from
 
 
@@ -56,3 +56,13 @@ def test_ties_in_time_and_miles_still_give_unique_ids():
     ids = [route_id for route_id, _ in order_routes([a, a, a])]
 
     assert ids == ["route-1", "route-2", "route-3"]
+
+
+def test_equal_travel_times_are_ordered_by_miles():
+    def route(length_m: float) -> Route:
+        points = tuple(lerp((40.0, -100.0), (40.0, -90.0), 10))
+        return Route(points, length_m, 1000.0, ((0.0, 0.0), (length_m, 1000.0)))
+
+    short, long = route(800_000.0), route(900_000.0)
+
+    assert order_routes([long, short]) == [("route-1", short), ("route-2", long)]

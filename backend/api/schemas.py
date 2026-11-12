@@ -1,7 +1,7 @@
 """Wire schemas. Distances are in miles, load in pounds, and times are absolute instants."""
 
 from datetime import UTC, datetime, timedelta
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
 from ninja import Schema
 from pydantic import AwareDatetime, Field, model_validator
@@ -14,6 +14,9 @@ MAX_LOAD_LB = 80_000
 
 ErrorCode = Literal[
     "validation_error",
+    "not_found",
+    "method_not_allowed",
+    "internal_error",
     "no_route",
     "provider_timeout",
     "provider_unavailable",
@@ -24,6 +27,14 @@ ErrorCode = Literal[
 ]
 """Every `code` an error body can carry. A test ties each error class to this set."""
 
+MAX_CHECKPOINTS_PER_ROUTE = 600
+"""The longest test route (about 3,560 miles) has 357 checkpoints at 10-mile spacing; this leaves
+room for a route of about 6,000 miles."""
+MAX_ID_LENGTH = 64
+
+Latitude = Annotated[float, Field(ge=-90, le=90, allow_inf_nan=False)]
+Longitude = Annotated[float, Field(ge=-180, le=180, allow_inf_nan=False)]
+
 
 class ErrorOut(Schema):
     code: ErrorCode
@@ -31,17 +42,23 @@ class ErrorOut(Schema):
 
 
 class PointIn(Schema):
-    lat: float = Field(ge=-90, le=90, allow_inf_nan=False)
-    lon: float = Field(ge=-180, le=180, allow_inf_nan=False)
+    lat: Latitude
+    lon: Longitude
 
 
-class RoutesIn(Schema):
+class PlanParams(Schema):
+    """What a plan was made for, and what the weather request sends back with the routes."""
+
+    load_lb: float = Field(gt=0, le=MAX_LOAD_LB, allow_inf_nan=False)
+    checkpoint_interval_miles: Literal[10, 25, 50]
+
+
+class RoutesIn(PlanParams):
+    # The trip, on top of the plan parameters the request shares with the weather request.
     origin: PointIn
     destination: PointIn
     departure: AwareDatetime
     """When the truck leaves, with a UTC offset; from 15 minutes ago to 48 hours ahead."""
-    load_lb: float = Field(gt=0, le=MAX_LOAD_LB, allow_inf_nan=False)
-    checkpoint_interval_miles: Literal[10, 25, 50]
 
     @model_validator(mode="after")
     def _check_trip(self) -> Self:
@@ -53,28 +70,21 @@ class RoutesIn(Schema):
         return self
 
 
-class PlanParams(Schema):
-    """What a plan was made for, and what the weather request sends back with the routes."""
-
-    load_lb: float
-    checkpoint_interval_miles: Literal[10, 25, 50]
-
-
 class CheckpointOut(Schema):
-    mile: float
-    lat: float
-    lon: float
-    eta: datetime
+    mile: float = Field(ge=0, allow_inf_nan=False)
+    lat: Latitude
+    lon: Longitude
+    eta: AwareDatetime
     """UTC instant the truck reaches this mark, with no rest breaks."""
 
 
 class RouteCore(Schema):
     """The part of a route the weather request sends back; the line is never sent back."""
 
-    id: str
-    travel_time_seconds: int
-    total_miles: float
-    checkpoints: list[CheckpointOut]
+    id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
+    travel_time_seconds: int = Field(ge=0)
+    total_miles: float = Field(ge=0, allow_inf_nan=False)
+    checkpoints: list[CheckpointOut] = Field(min_length=1, max_length=MAX_CHECKPOINTS_PER_ROUTE)
 
 
 class ViaOut(Schema):

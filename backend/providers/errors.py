@@ -51,3 +51,14 @@ class NoRouteFound(ProviderError):
 class MalformedResponse(ProviderError):
     code = "provider_malformed_response"
     message = "A data provider returned a response that could not be used."
+
+
+def error_classes() -> set[type[ProviderError]]:
+    """Every provider error class, including those more than one level below the base."""
+    found: set[type[ProviderError]] = set()
+    stack = [ProviderError]
+    while stack:
+        error = stack.pop()
+        found.add(error)
+        stack.extend(error.__subclasses__())
+    return found

@@ -59,6 +59,7 @@ async def test_suggestions_carry_label_coordinates_zone_and_the_attribution(prov
     assert params["filter"] == "countrycode:us"
     assert params["text"] == "Spring"
     assert "type" not in params
+    assert route.calls.last.request.extensions["timeout"]["read"] == 5
 
 
 async def test_a_timezone_given_as_a_plain_name_is_accepted(provider_mock):
@@ -70,14 +71,14 @@ async def test_a_timezone_given_as_a_plain_name_is_accepted(provider_mock):
 @pytest.mark.parametrize(
     "bad",
     [
-        {"timezone": None},
-        {"timezone": {}},
-        {"timezone": ""},
-        {"formatted": ""},
-        {"formatted": None},
-        {"lat": None},
-        {"lat": "37"},
-        {"lon": 400},
+        pytest.param({"timezone": None}, id="no time zone"),
+        pytest.param({"timezone": {}}, id="time zone without a name"),
+        pytest.param({"timezone": ""}, id="empty time zone"),
+        pytest.param({"formatted": ""}, id="empty label"),
+        pytest.param({"formatted": None}, id="no label"),
+        pytest.param({"lat": None}, id="no latitude"),
+        pytest.param({"lat": "37"}, id="latitude as text"),
+        pytest.param({"lon": 400}, id="longitude out of range"),
     ],
 )
 async def test_a_suggestion_missing_something_the_ui_needs_is_dropped(provider_mock, bad):
@@ -98,7 +99,15 @@ async def test_no_match_is_an_empty_list_not_an_error(provider_mock):
     assert response.json()["attribution"]["text"]
 
 
-@pytest.mark.parametrize("q", ["", "ab", "  a ", "x" * 101])
+@pytest.mark.parametrize(
+    "q",
+    [
+        pytest.param("", id="empty"),
+        pytest.param("ab", id="2 characters"),
+        pytest.param("  a ", id="2 after trimming"),
+        pytest.param("x" * 101, id="101 characters"),
+    ],
+)
 async def test_text_outside_the_length_limits_is_rejected_before_any_provider_call(
     provider_mock, q
 ):
@@ -142,11 +151,11 @@ async def test_the_adapter_refuses_an_empty_key():
 @pytest.mark.parametrize(
     "upstream",
     [
-        httpx.Response(400, json={"message": f"bad {KEY}"}),
-        httpx.Response(200, text="<html>"),
-        httpx.Response(200, json={"nothing": 1}),
-        httpx.Response(200, json={"results": "no"}),
-        httpx.Response(200, json=[1, 2]),
+        pytest.param(httpx.Response(400, json={"message": f"bad {KEY}"}), id="400"),
+        pytest.param(httpx.Response(200, text="<html>"), id="not JSON"),
+        pytest.param(httpx.Response(200, json={"nothing": 1}), id="no results"),
+        pytest.param(httpx.Response(200, json={"results": "no"}), id="results not a list"),
+        pytest.param(httpx.Response(200, json=[1, 2]), id="body not an object"),
     ],
 )
 async def test_geoapifys_own_failures_are_gateway_errors(provider_mock, upstream):

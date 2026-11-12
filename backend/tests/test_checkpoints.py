@@ -69,7 +69,13 @@ def test_etas_never_go_backwards_and_the_eta_is_utc():
 
 
 @pytest.mark.parametrize("spacing", [10, 25, 50])
-@pytest.mark.parametrize("waypoints", [[ORIGIN, DESTINATION], [ORIGIN, (44.0, -92.0), DESTINATION]])
+@pytest.mark.parametrize(
+    "waypoints",
+    [
+        pytest.param([ORIGIN, DESTINATION], id="direct"),
+        pytest.param([ORIGIN, (44.0, -92.0), DESTINATION], id="with a bend"),
+    ],
+)
 def test_checkpoints_are_accepted_by_the_risk_rules_summary(spacing, waypoints):
     route = route_from(waypoints)
     checkpoints = build_checkpoints(route, spacing, DEPARTURE)

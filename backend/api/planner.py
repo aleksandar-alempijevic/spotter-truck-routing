@@ -8,6 +8,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 
 from providers import (
     NoRouteFound,
@@ -37,13 +38,14 @@ PLANNING_BUDGET_S = 120.0
 """One deadline for the whole request. When it passes during the fill, the routes in hand are
 returned; when it passes during the base call, the request times out."""
 
-NO_DISTINCT_ALTERNATIVE = "no_distinct_alternative"
-FILL_INCOMPLETE = "fill_incomplete"
+type ShortfallReason = Literal["no_distinct_alternative", "fill_incomplete"]
+NO_DISTINCT_ALTERNATIVE: ShortfallReason = "no_distinct_alternative"
+FILL_INCOMPLETE: ShortfallReason = "fill_incomplete"
 
 
 @dataclass(frozen=True, slots=True)
 class Shortfall:
-    reason: str
+    reason: ShortfallReason
     message: str
 
 
@@ -131,6 +133,7 @@ async def _fill(
                 for task in done:
                     via = pending.pop(task)
                     if len(kept) >= WANTED_ROUTES:
+                        _consume(task)
                         continue
                     if await _judge(task, via, kept, kept_cells):
                         tried.append(via.name)
@@ -146,6 +149,12 @@ async def _fill(
     if len(kept) >= WANTED_ROUTES:
         return kept, None
     return kept, _shortfall(len(kept), incomplete, tried)
+
+
+def _consume(task: asyncio.Future[list[Route]]) -> None:
+    """Mark a finished call's outcome as seen, so a skipped failure is not reported at exit."""
+    if not task.cancelled():
+        task.exception()
 
 
 async def _judge(

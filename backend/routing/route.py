@@ -4,8 +4,11 @@ import bisect
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Literal
 
 from .geo import METERS_PER_MILE, Point, haversine_m
+
+type RouteSource = Literal["provider", "via_city"]
 
 KNOT_TIME_TOLERANCE_S = 1.0
 """How far the last knot's time may differ from the travel time before the route is rejected."""
@@ -56,6 +59,11 @@ class Route:
     def __post_init__(self) -> None:
         if len(self.points) < 2:
             raise RouteContractError("a route needs at least two points")
+        if not all(
+            math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180
+            for lat, lon in self.points
+        ):
+            raise RouteContractError("every point must be a finite latitude and longitude")
         if not (math.isfinite(self.length_m) and self.length_m > 0):
             raise RouteContractError("a route's length must be a finite number above 0")
         if not (math.isfinite(self.travel_time_s) and self.travel_time_s >= 0):
@@ -88,7 +96,7 @@ class Route:
         return self.length_m / METERS_PER_MILE
 
     @property
-    def source(self) -> str:
+    def source(self) -> RouteSource:
         return "via_city" if self.via else "provider"
 
     def seconds_at(self, meters: float) -> float:

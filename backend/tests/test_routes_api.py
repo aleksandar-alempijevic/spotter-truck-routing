@@ -1,14 +1,14 @@
 import asyncio
 import json
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 import httpx
 import pytest
 from django.test import AsyncClient
 
 from api import planner
-from risk_rules import Checkpoint, Level, summarize_route
+from api.schemas import PlanParams, RouteCore
 from routing.via_cities import CITIES
 from tests.route_fixtures import tomtom_body, tomtom_route
 
@@ -115,27 +115,64 @@ async def test_each_route_carries_line_checkpoints_and_etas(provider_mock):
         assert (lat, lon) == pytest.approx(LA, abs=1e-6)
 
 
-async def test_checkpoints_are_accepted_by_the_risk_rules_summary(provider_mock):
-    mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
+async def test_the_request_reaches_tomtom_and_the_checkpoints_as_given(provider_mock):
+    calls = mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
+    # A departure in a zone other than UTC, so the offset has to survive to both consumers.
+    departure = (datetime.now(timezone(timedelta(hours=-6))) + timedelta(hours=3)).replace(
+        microsecond=0
+    )
 
-    for spacing in (10, 25, 50):
-        body = (await post(payload(checkpoint_interval_miles=spacing))).json()
-        for route in body["routes"]:
-            summary = summarize_route(
-                route["total_miles"],
-                [Checkpoint(c["mile"], Level.LOW) for c in route["checkpoints"]],
-            )
-            assert summary.low_miles == pytest.approx(route["total_miles"])
+    ten = (
+        await post(payload(departure=departure.isoformat(), checkpoint_interval_miles=10))
+    ).json()
+    fifty = (
+        await post(payload(departure=departure.isoformat(), checkpoint_interval_miles=50))
+    ).json()
+
+    request = calls[0]
+    assert request.url.params["vehicleWeight"] == "27216"  # 60,000 lb in kilograms
+    assert request.url.params["departAt"] == departure.isoformat()
+    assert request.url.path.split("/")[-2] == (
+        f"{LA[0]:.5f},{LA[1]:.5f}:{NY[0]:.5f},{NY[1]:.5f}"  # origin first, then destination
+    )
+    for body in (ten, fifty):
+        assert datetime.fromisoformat(body["routes"][0]["checkpoints"][0]["eta"]) == departure
+    marks_10 = [c["mile"] for c in ten["routes"][0]["checkpoints"]]
+    marks_50 = [c["mile"] for c in fifty["routes"][0]["checkpoints"]]
+    assert marks_10[:3] == [0, 10, 20]
+    assert marks_50[:3] == [0, 50, 100]
+    assert len(marks_10) > 4 * len(marks_50) - 5
 
 
-async def test_the_weather_send_back_subset_excludes_the_line(provider_mock):
+async def test_the_response_has_exactly_the_documented_fields(provider_mock):
     mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
 
     body = (await post(payload())).json()
 
     send_back = {"id", "travel_time_seconds", "total_miles", "checkpoints"}
-    assert send_back < set(body["routes"][0])
-    assert {"line", "source", "via"} <= set(body["routes"][0]) - send_back
+    assert set(body) == {"load_lb", "checkpoint_interval_miles", "routes", "shortfall"}
+    assert set(RouteCore.model_fields) == send_back
+    assert set(PlanParams.model_fields) == {"load_lb", "checkpoint_interval_miles"}
+    for route in body["routes"]:
+        assert set(route) == send_back | {"line", "source", "via"}
+        assert set(route["checkpoints"][0]) == {"mile", "lat", "lon", "eta"}
+
+
+async def test_the_send_back_subset_is_the_response_without_the_line_source_and_via(
+    provider_mock,
+):
+    mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
+    body = (await post(payload())).json()
+
+    send_back = {
+        **{name: body[name] for name in PlanParams.model_fields},
+        "routes": [{name: r[name] for name in RouteCore.model_fields} for r in body["routes"]],
+    }
+
+    class SendBack(PlanParams):
+        routes: list[RouteCore]
+
+    assert SendBack.model_validate(send_back).routes[0].id == "route-1"
 
 
 # For base routes MAIN and NORTH the via candidates, in the order they are tried, are
@@ -329,18 +366,16 @@ async def test_a_missing_key_is_a_clear_error_not_a_crash(settings):
 @pytest.mark.parametrize(
     "overrides",
     [
-        {"load_lb": 0},
-        {"load_lb": -5},
-        {"load_lb": 80_001},
-        {"load_lb": "heavy"},
-        {"checkpoint_interval_miles": 30},
-        {"origin": {"lat": 91, "lon": 0}},
-        {"destination": {"lat": 0, "lon": -181}},
-        {"destination": {"lat": LA[0], "lon": LA[1]}},
-        {"departure": "2026-11-13T08:00:00"},
-        {"departure": "yesterday"},
-        {"departure": (datetime.now(UTC) - timedelta(hours=1)).isoformat()},
-        {"departure": (datetime.now(UTC) + timedelta(hours=49)).isoformat()},
+        pytest.param({"load_lb": 0}, id="zero load"),
+        pytest.param({"load_lb": -5}, id="negative load"),
+        pytest.param({"load_lb": 80_001}, id="load over the limit"),
+        pytest.param({"load_lb": "heavy"}, id="load not a number"),
+        pytest.param({"checkpoint_interval_miles": 30}, id="interval not offered"),
+        pytest.param({"origin": {"lat": 91, "lon": 0}}, id="latitude out of range"),
+        pytest.param({"destination": {"lat": 0, "lon": -181}}, id="longitude out of range"),
+        pytest.param({"destination": {"lat": LA[0], "lon": LA[1]}}, id="same point"),
+        pytest.param({"departure": "2026-11-13T08:00:00"}, id="naive departure"),
+        pytest.param({"departure": "yesterday"}, id="departure not a time"),
     ],
 )
 async def test_invalid_requests_are_rejected_before_any_provider_call(provider_mock, overrides):
@@ -362,12 +397,28 @@ async def test_a_missing_field_is_a_validation_error():
     assert "departure" in response.json()["message"]
 
 
-async def test_the_limits_themselves_are_accepted(provider_mock):
+async def test_the_largest_load_and_the_smallest_interval_are_accepted(provider_mock):
     mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
-    just_past = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
 
-    assert (await post(payload(load_lb=80_000, departure=just_past))).status_code == 200
+    assert (await post(payload(load_lb=80_000))).status_code == 200
     assert (await post(payload(load_lb=0.5, checkpoint_interval_miles=10))).status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("offset", "accepted"),
+    [
+        pytest.param(timedelta(minutes=-14), True, id="14 minutes ago"),
+        pytest.param(timedelta(minutes=-16), False, id="16 minutes ago"),
+        pytest.param(timedelta(hours=47, minutes=59), True, id="47h59m ahead"),
+        pytest.param(timedelta(hours=48, minutes=1), False, id="48h01m ahead"),
+    ],
+)
+async def test_the_departure_window_is_checked_at_both_ends(provider_mock, offset, accepted):
+    mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
+
+    response = await post(payload(departure=(datetime.now(UTC) + offset).isoformat()))
+
+    assert response.status_code == (200 if accepted else 422)
 
 
 async def test_the_openapi_schema_declares_the_error_body():

@@ -12,7 +12,7 @@ Readings and limits the app applies where the assessment is silent. The rules fo
 ## Routes and checkpoints
 
 - **Every route ends with a checkpoint at the destination,** so the arrival ETA is shown. The risk rules accept a final checkpoint that stands for no miles ([logic.md](logic.md#2-route-summary)).
-- **ETAs are driving time only,** from the provider's typical speeds: no live traffic and no rest breaks.
+- **ETAs are driving time only.** The request asks TomTom for traffic (`traffic=true`) at the departure time, so the times are TomTom's time-of-day prediction for that departure, not a fixed typical speed. Rest breaks are not included. How much traffic changed the ETAs has not been measured separately.
 - **Routes the provider returns are shown as given.** Only a route made by sending the truck through a via-city must overlap every other route by less than half; the provider's own alternatives skip that check.
 - **A via-city comes from a fixed list of 45 US hubs,** chosen by geometry alone, so a via route can include a local detour into the city. Up to six cities are tried, so "no distinct third route" means those six did not work, not that no third route exists.
 

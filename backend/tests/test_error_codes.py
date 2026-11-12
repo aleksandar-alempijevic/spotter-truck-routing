@@ -1,5 +1,6 @@
 import typing
 
+from api.errors import API_ERRORS
 from api.schemas import ErrorCode, ErrorOut
 from providers import ProviderError
 from providers.errors import (
@@ -46,3 +47,11 @@ def test_each_error_class_answers_with_its_http_status():
         ProviderNotConfigured: 503,
         ProviderError: 502,
     } == {error: error.status for error in subclasses(ProviderError)}
+
+
+def test_every_error_the_api_answers_itself_uses_a_declared_code():
+    declared = set(typing.get_args(ErrorCode))
+
+    for code, _message, status in API_ERRORS.values():
+        assert code in declared
+        assert status in API_ERRORS

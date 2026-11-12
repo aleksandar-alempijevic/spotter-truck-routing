@@ -64,6 +64,16 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** ErrorOut */
+        ErrorOut: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "validation_error" | "not_found" | "method_not_allowed" | "internal_error" | "no_route" | "provider_timeout" | "provider_unavailable" | "provider_limited" | "provider_not_configured" | "provider_malformed_response" | "provider_error";
+            /** Message */
+            message: string;
+        };
         /** CheckpointOut */
         CheckpointOut: {
             /** Mile */
@@ -132,16 +142,6 @@ export interface components {
             /** Lon */
             lon: number;
         };
-        /** ErrorOut */
-        ErrorOut: {
-            /**
-             * Code
-             * @enum {string}
-             */
-            code: "validation_error" | "no_route" | "provider_timeout" | "provider_unavailable" | "provider_limited" | "provider_not_configured" | "provider_malformed_response" | "provider_error";
-            /** Message */
-            message: string;
-        };
         /** PointIn */
         PointIn: {
             /** Lat */
@@ -151,13 +151,6 @@ export interface components {
         };
         /** RoutesIn */
         RoutesIn: {
-            origin: components["schemas"]["PointIn"];
-            destination: components["schemas"]["PointIn"];
-            /**
-             * Departure
-             * Format: date-time
-             */
-            departure: string;
             /** Load Lb */
             load_lb: number;
             /**
@@ -165,6 +158,13 @@ export interface components {
              * @enum {integer}
              */
             checkpoint_interval_miles: 10 | 25 | 50;
+            origin: components["schemas"]["PointIn"];
+            destination: components["schemas"]["PointIn"];
+            /**
+             * Departure
+             * Format: date-time
+             */
+            departure: string;
         };
         /** AddressSearchOut */
         AddressSearchOut: {
@@ -217,6 +217,69 @@ export interface operations {
                     "application/json": components["schemas"]["HealthOut"];
                 };
             };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
         };
     };
     api_api_routes: {
@@ -241,8 +304,35 @@ export interface operations {
                     "application/json": components["schemas"]["RoutesOut"];
                 };
             };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
             /** @description Unprocessable Content */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -299,8 +389,35 @@ export interface operations {
                     "application/json": components["schemas"]["AddressSearchOut"];
                 };
             };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
             /** @description Unprocessable Content */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };

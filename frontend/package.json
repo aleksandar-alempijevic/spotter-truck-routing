@@ -47,5 +47,12 @@
   "prettier": {
     "singleQuote": true,
     "printWidth": 100
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "openapi-typescript>typescript": "6"
+      }
+    }
   }
 }

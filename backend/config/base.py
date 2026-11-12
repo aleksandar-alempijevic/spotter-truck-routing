@@ -36,6 +36,7 @@ INSTALLED_APPS = ["ninja"]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "api.middleware.ApiErrorBodies",
 ]
 
 TEMPLATES = [

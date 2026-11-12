@@ -33,30 +33,34 @@ ENDPOINTS = [
 ]
 
 
-def failures(key: str):
-    return [
-        (
-            httpx.Response(400, json={"message": f"bad request with {key}"}),
+def failures(key: str) -> dict[str, tuple[httpx.Response | Exception, int, str]]:
+    return {
+        "400": (
+            httpx.Response(400, json={"message": f"bad with {key}"}),
             502,
             "provider_unavailable",
         ),
-        (httpx.Response(401, text=key), 503, "provider_limited"),
-        (httpx.Response(403), 503, "provider_limited"),
-        (httpx.Response(429), 503, "provider_limited"),
-        (httpx.Response(404), 502, "provider_unavailable"),
-        (httpx.Response(500, text=f"the key is {key}"), 502, "provider_unavailable"),
-        (httpx.Response(200, text="<html>"), 502, "provider_malformed_response"),
-        (httpx.ReadTimeout(f"slow {key}"), 504, "provider_timeout"),
-        (httpx.ConnectError(f"cannot reach host with {key}"), 502, "provider_unavailable"),
-    ]
+        "401": (httpx.Response(401, text=key), 503, "provider_limited"),
+        "403": (httpx.Response(403), 503, "provider_limited"),
+        "429": (httpx.Response(429), 503, "provider_limited"),
+        "404": (httpx.Response(404), 502, "provider_unavailable"),
+        "500": (httpx.Response(500, text=f"the key is {key}"), 502, "provider_unavailable"),
+        "not JSON": (httpx.Response(200, text="<html>"), 502, "provider_malformed_response"),
+        "timeout": (httpx.ReadTimeout(f"slow {key}"), 504, "provider_timeout"),
+        "connect error": (
+            httpx.ConnectError(f"cannot reach host with {key}"),
+            502,
+            "provider_unavailable",
+        ),
+    }
 
 
 @pytest.mark.parametrize(("call", "host", "key"), ENDPOINTS)
-@pytest.mark.parametrize("index", range(9))
+@pytest.mark.parametrize("failure", list(failures("")))
 async def test_a_provider_failure_is_an_api_error_and_the_key_stays_out(
-    provider_mock, caplog, call, host, key, index
+    provider_mock, caplog, call, host, key, failure
 ):
-    upstream, status, code = failures(key)[index]
+    upstream, status, code = failures(key)[failure]
     caplog.set_level(logging.DEBUG)
     route = provider_mock.get(host=host)
     if isinstance(upstream, Exception):
