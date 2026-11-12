@@ -47,3 +47,6 @@ TEMPLATES = [
 
 ROOT_URLCONF = "config.urls"
 ASGI_APPLICATION = "config.asgi.application"
+
+# Provider keys. Optional at start-up: a missing key is a clear API error when a request needs it.
+TOMTOM_API_KEY = os.environ.get("TOMTOM_API_KEY", "")

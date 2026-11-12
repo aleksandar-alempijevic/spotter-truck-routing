@@ -2,7 +2,7 @@
 
 A web app that recommends the safest of three truck routes between two places, using the weather along each route at the time the truck will be there, the load weight and the travel time. Full-stack take-home: React frontend, Django backend.
 
-**Status:** project skeleton. The React page calls a Django health endpoint and shows the answer. The risk and ranking rules exist as plain Python ([docs/logic.md](docs/logic.md)) but nothing calls them yet. Routing, weather and the map come in later steps; [docs/architecture.md](docs/architecture.md) says where each will go.
+**Status:** in progress. The React page calls a Django health endpoint and shows the answer. The risk and ranking rules exist as plain Python ([docs/logic.md](docs/logic.md)) but nothing calls them yet. `POST /api/routes` returns up to three truck routes with checkpoints and ETAs from TomTom ([docs/architecture.md](docs/architecture.md)); the UI does not use it yet. Address search, weather and the map come in later steps; the architecture doc says where each will go.
 
 ## Prerequisites
 
@@ -34,19 +34,27 @@ make test    # backend (pytest, including the risk rules) and frontend (vitest) 
 make check   # the tests, then ruff lint and format checks (backend), and tsc, ESLint and Prettier checks (frontend)
 ```
 
+Tests never make live calls: the providers are mocked, and the settings used by tests hold dummy keys. `backend/live_check.py` runs the routes endpoint against the real TomTom over seven test trips (about 12 calls); it needs `TOMTOM_API_KEY` in `.env` and is not part of `make check`.
+
+```sh
+uv --directory backend run python live_check.py /tmp/live-check.json
+```
+
 The [Makefile](Makefile) is the one place that defines these commands, including the underlying `uv` and `pnpm` calls.
 
 ## Configuration
 
-Settings come from environment variables, optionally from a git-ignored `.env` in the repository root ([.env.example](.env.example) lists them). Local development needs none: `make backend` turns on debug mode itself. With debug off (the default, so a deployment is safe unless configured otherwise) `DJANGO_SECRET_KEY` must be set. Tests ignore `.env` and use dummy values.
+Settings come from environment variables, optionally from a git-ignored `.env` in the repository root ([.env.example](.env.example) lists them). Local development needs no Django setting: `make backend` turns on debug mode itself. The routes endpoint needs `TOMTOM_API_KEY`; without it the endpoint answers 503 with a clear message and the rest of the app works. With debug off (the default, so a deployment is safe unless configured otherwise) `DJANGO_SECRET_KEY` must be set. Tests ignore `.env` and use dummy values.
 
 ## Repository layout
 
 ```
 backend/    Django + Django Ninja API on uvicorn (ASGI), Python 3.13, managed by uv
             risk_rules/ holds the risk and ranking rules (plain Python, no Django)
+            routing/ holds route computations: checkpoints, ETAs, overlap (plain Python)
+            providers/ holds outbound HTTP to TomTom and the shared request policy
 frontend/   React + TypeScript + Vite + Material UI app, managed by pnpm
-docs/       architecture.md, logic.md (the risk and ranking rules)
+docs/       architecture.md, logic.md (the risk and ranking rules), assumptions.md
 Makefile    install / run / test / check commands
 spikes/     throwaway feasibility experiments, each with its own README
 ```

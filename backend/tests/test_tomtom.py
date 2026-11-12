@@ -1,0 +1,218 @@
+import logging
+from datetime import UTC, datetime
+
+import httpx
+import pytest
+
+from providers import (
+    MalformedResponse,
+    NoRouteFound,
+    Outbound,
+    ProviderError,
+    ProviderNotConfigured,
+    ProviderRateLimited,
+    ProviderTimeout,
+    ProviderUnavailable,
+    calculate_routes,
+)
+from providers.tomtom import pounds_to_kilograms
+from routing import Via
+from tests.route_fixtures import tomtom_body, tomtom_route
+
+KEY = "test-tomtom-key"
+ORIGIN, DESTINATION = (41.0, -100.0), (41.0, -85.0)
+DEPARTURE = datetime(2026, 11, 13, 8, 0, tzinfo=UTC)
+
+
+async def call(**overrides):
+    args = {
+        "origin": ORIGIN,
+        "destination": DESTINATION,
+        "departure": DEPARTURE,
+        "load_lb": 80_000,
+        "alternatives": 2,
+    }
+    async with Outbound() as outbound:
+        return await calculate_routes(outbound, KEY, **{**args, **overrides})
+
+
+def test_pounds_convert_to_kilograms():
+    assert pounds_to_kilograms(80_000) == 36_287
+    assert pounds_to_kilograms(2.2046) == 1
+
+
+async def test_request_carries_kilograms_truck_mode_and_coded_instructions(provider_mock):
+    route = provider_mock.get(host="api.tomtom.com").respond(
+        json=tomtom_body(tomtom_route([ORIGIN, DESTINATION]))
+    )
+
+    await call()
+
+    request = route.calls.last.request
+    params = request.url.params
+    assert request.url.path.endswith("/41.00000,-100.00000:41.00000,-85.00000/json")
+    assert params["vehicleWeight"] == "36287"
+    assert params["travelMode"] == "truck"
+    assert params["instructionsType"] == "coded"
+    assert params["maxAlternatives"] == "2"
+    assert params["departAt"] == "2026-11-13T08:00:00+00:00"
+    assert params["key"] == KEY
+
+
+async def test_a_via_point_goes_between_origin_and_destination_and_tags_the_route(provider_mock):
+    via = Via("Chicago", 41.8781, -87.6298)
+    route = provider_mock.get(host="api.tomtom.com").respond(
+        json=tomtom_body(tomtom_route([ORIGIN, (41.8781, -87.6298), DESTINATION]))
+    )
+
+    routes = await call(via=via, alternatives=0)
+
+    assert "41.87810,-87.62980" in route.calls.last.request.url.path
+    assert route.calls.last.request.url.params["maxAlternatives"] == "0"
+    assert routes[0].via == via
+    assert routes[0].source == "via_city"
+
+
+async def test_routes_are_parsed_across_legs_with_cumulative_knots(provider_mock):
+    provider_mock.get(host="api.tomtom.com").respond(
+        json=tomtom_body(
+            tomtom_route([ORIGIN, (41.8781, -87.6298), DESTINATION]),
+            tomtom_route([ORIGIN, (45.0, -92.0), DESTINATION]),
+        )
+    )
+
+    routes = await call()
+
+    assert len(routes) == 2
+    assert routes[0].source == "provider"
+    assert routes[0].knots[0] == (0.0, 0.0)
+    assert routes[0].knots[-1][1] == routes[0].travel_time_s
+    assert routes[0].points[0] == ORIGIN and routes[0].points[-1] == DESTINATION
+
+
+async def test_a_missing_key_is_an_error_at_call_time():
+    async with Outbound() as outbound:
+        with pytest.raises(ProviderNotConfigured):
+            await calculate_routes(
+                outbound,
+                "",
+                origin=ORIGIN,
+                destination=DESTINATION,
+                departure=DEPARTURE,
+                load_lb=1000,
+                alternatives=0,
+            )
+
+
+@pytest.mark.parametrize(
+    ("response", "error"),
+    [
+        (httpx.Response(200, json={"routes": []}), NoRouteFound),
+        (
+            httpx.Response(400, json={"detailedError": {"code": "MAP_MATCHING_FAILURE"}}),
+            NoRouteFound,
+        ),
+        (httpx.Response(400, json={"detailedError": {"code": "BAD_INPUT"}}), ProviderUnavailable),
+        (httpx.Response(400, text="not json"), ProviderUnavailable),
+        (httpx.Response(401), ProviderRateLimited),
+        (httpx.Response(403), ProviderRateLimited),
+        (httpx.Response(429), ProviderRateLimited),
+        (httpx.Response(404), ProviderUnavailable),
+        (httpx.Response(500), ProviderUnavailable),
+        (httpx.Response(200, text="<html>"), MalformedResponse),
+        (httpx.Response(200, json={"nothing": 1}), MalformedResponse),
+        (httpx.Response(200, json={"routes": [{"summary": {}}]}), MalformedResponse),
+    ],
+)
+async def test_provider_failures_become_neutral_errors(provider_mock, response, error):
+    provider_mock.get(host="api.tomtom.com").mock(return_value=response)
+
+    with pytest.raises(error):
+        await call()
+
+
+async def test_a_route_with_time_knots_that_go_backwards_is_malformed(provider_mock):
+    bad = tomtom_route([ORIGIN, DESTINATION])
+    bad["guidance"]["instructions"][2]["travelTimeInSeconds"] = 1
+    provider_mock.get(host="api.tomtom.com").respond(json=tomtom_body(bad))
+
+    with pytest.raises(MalformedResponse):
+        await call()
+
+
+async def test_a_second_leg_that_restarts_its_offsets_is_malformed(provider_mock):
+    # Instruction offsets that restart at each leg would break the knot rule; fail, don't guess.
+    bad = tomtom_route([ORIGIN, (41.5, -92.0), DESTINATION])
+    instructions = bad["guidance"]["instructions"]
+    half = len(instructions) // 2
+    for instruction in instructions[half:]:
+        instruction["routeOffsetInMeters"] -= instructions[half]["routeOffsetInMeters"]
+        instruction["travelTimeInSeconds"] -= instructions[half]["travelTimeInSeconds"]
+    provider_mock.get(host="api.tomtom.com").respond(json=tomtom_body(bad))
+
+    with pytest.raises(MalformedResponse):
+        await call()
+
+
+async def test_a_timeout_is_retried_once_then_reported(provider_mock):
+    route = provider_mock.get(host="api.tomtom.com").mock(side_effect=httpx.ReadTimeout("slow"))
+
+    with pytest.raises(ProviderTimeout):
+        await call()
+
+    assert route.call_count == 2
+
+
+async def test_a_5xx_is_retried_once_and_a_good_second_answer_is_used(provider_mock):
+    route = provider_mock.get(host="api.tomtom.com").mock(
+        side_effect=[
+            httpx.Response(500),
+            httpx.Response(200, json=tomtom_body(tomtom_route([ORIGIN, DESTINATION]))),
+        ]
+    )
+
+    routes = await call()
+
+    assert len(routes) == 1
+    assert route.call_count == 2
+
+
+@pytest.mark.parametrize("status", [400, 403, 404, 429])
+async def test_a_4xx_is_never_retried(provider_mock, status):
+    route = provider_mock.get(host="api.tomtom.com").mock(return_value=httpx.Response(status))
+
+    with pytest.raises(ProviderError):
+        await call()
+
+    assert route.call_count == 1
+
+
+async def test_a_transport_error_is_reported_without_the_url(provider_mock):
+    provider_mock.get(host="api.tomtom.com").mock(side_effect=httpx.ConnectError("boom"))
+
+    with pytest.raises(ProviderUnavailable) as caught:
+        await call()
+
+    assert KEY not in str(caught.value)
+    assert caught.value.__cause__ is None and caught.value.__suppress_context__
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(200, json=tomtom_body(tomtom_route([ORIGIN, DESTINATION]))),
+        httpx.Response(500, text="the key is test-tomtom-key"),
+        httpx.Response(400, json={"detailedError": {"code": "X", "message": KEY}}),
+    ],
+)
+async def test_the_key_appears_in_no_log_record_at_debug_level(provider_mock, caplog, response):
+    provider_mock.get(host="api.tomtom.com").mock(return_value=response)
+    caplog.set_level(logging.DEBUG)
+
+    try:
+        await call()
+    except Exception:
+        pass
+
+    assert KEY not in caplog.text
+    assert all(KEY not in record.getMessage() for record in caplog.records)

@@ -82,6 +82,6 @@ A cap on how much extra time a safer route may cost is not part of the assessmen
 ## 4. What the callers must supply
 
 - Weather in the units above, with no forecast represented as an absent level.
-- Checkpoints with a mark at mile 0, ascending, inside the route.
+- Checkpoints with a mark at mile 0, ascending, inside the route. The routes endpoint produces them in this form, with a final checkpoint at the destination ([architecture.md](architecture.md)).
 - Unique route ids, two or three routes per ranking, and one checkpoint interval for the request.
 - Travel time in seconds.
