@@ -1,9 +1,13 @@
 """TomTom Routing, truck mode: the only module that knows TomTom's URL and field names."""
 
+import asyncio
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any, TypedDict
+
+from pydantic import Field, TypeAdapter, ValidationError
 
 from routing import Point, Route, Via
+from routing.route import RouteContractError
 
 from .errors import MalformedResponse, NoRouteFound, ProviderNotConfigured, ProviderUnavailable
 from .outbound import Outbound, UpstreamBadRequest
@@ -16,6 +20,45 @@ KILOGRAMS_PER_POUND = 0.45359237
 
 NO_ROUTE_CODES = {"MAP_MATCHING_FAILURE", "NO_ROUTE_FOUND"}
 """TomTom's 400 error codes that mean the points cannot be joined by a road."""
+
+
+Number = Annotated[float, Field(allow_inf_nan=False)]
+
+
+class _Point(TypedDict):
+    latitude: Number
+    longitude: Number
+
+
+class _Leg(TypedDict):
+    points: list[_Point]
+
+
+class _Instruction(TypedDict):
+    routeOffsetInMeters: Number
+    travelTimeInSeconds: Number
+
+
+class _Guidance(TypedDict):
+    instructions: Annotated[list[_Instruction], Field(min_length=1)]
+
+
+class _Summary(TypedDict):
+    lengthInMeters: Number
+    travelTimeInSeconds: Number
+
+
+class _Route(TypedDict):
+    summary: _Summary
+    legs: list[_Leg]
+    guidance: _Guidance
+
+
+class _Response(TypedDict):
+    routes: list[_Route]
+
+
+_RESPONSE = TypeAdapter(_Response)
 
 
 def pounds_to_kilograms(pounds: float) -> int:
@@ -61,13 +104,12 @@ async def calculate_routes(
             raise NoRouteFound from None
         raise ProviderUnavailable from None
     try:
-        routes = body["routes"]
-        if not routes:
-            raise NoRouteFound
-        return [_parse_route(route, via) for route in routes]
-    except (KeyError, TypeError, ValueError, IndexError):
-        # RouteContractError is a ValueError, so a route that breaks the contract lands here too.
+        routes = await asyncio.to_thread(_parse_routes, body, via)
+    except (ValidationError, RouteContractError):
         raise MalformedResponse from None
+    if not routes:
+        raise NoRouteFound
+    return routes
 
 
 def _error_code(body: Any) -> str:
@@ -78,19 +120,21 @@ def _error_code(body: Any) -> str:
     return code if isinstance(code, str) else ""
 
 
-def _parse_route(route: dict[str, Any], via: Via | None) -> Route:
-    summary = route["summary"]
-    points = tuple(
-        (float(p["latitude"]), float(p["longitude"]))
-        for leg in route["legs"]
-        for p in leg["points"]
-    )
-    knots = [
-        (float(i["routeOffsetInMeters"]), float(i["travelTimeInSeconds"]))
+def _parse_routes(body: Any, via: Via | None) -> list[Route]:
+    """Validate TomTom's answer against the fields used, and build the routes.
+
+    Runs in a thread: a long route has tens of thousands of points to validate and measure.
+    Raises `ValidationError` for a body of the wrong shape and `RouteContractError` for a route
+    that breaks the rules `routing.Route` enforces.
+    """
+    return [_build_route(route, via) for route in _RESPONSE.validate_python(body)["routes"]]
+
+
+def _build_route(route: _Route, via: Via | None) -> Route:
+    points = tuple((p["latitude"], p["longitude"]) for leg in route["legs"] for p in leg["points"])
+    knots = tuple(
+        (i["routeOffsetInMeters"], i["travelTimeInSeconds"])
         for i in route["guidance"]["instructions"]
-    ]
-    length_m = float(summary["lengthInMeters"])
-    travel_time_s = float(summary["travelTimeInSeconds"])
-    if knots[0][0] > 0:
-        knots.insert(0, (0.0, 0.0))
-    return Route(points, length_m, travel_time_s, tuple(knots), via)
+    )
+    summary = route["summary"]
+    return Route(points, summary["lengthInMeters"], summary["travelTimeInSeconds"], knots, via)

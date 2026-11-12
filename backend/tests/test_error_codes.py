@@ -2,6 +2,14 @@ import typing
 
 from api.schemas import ErrorCode, ErrorOut
 from providers import ProviderError
+from providers.errors import (
+    MalformedResponse,
+    NoRouteFound,
+    ProviderNotConfigured,
+    ProviderRateLimited,
+    ProviderTimeout,
+    ProviderUnavailable,
+)
 
 
 def subclasses(cls: type) -> set[type]:
@@ -26,3 +34,15 @@ def test_provider_errors_have_distinct_codes_and_no_provider_specific_wording():
 
 def test_the_validation_code_is_declared():
     assert "validation_error" in typing.get_args(ErrorCode)
+
+
+def test_each_error_class_answers_with_its_http_status():
+    assert {
+        NoRouteFound: 422,
+        ProviderTimeout: 504,
+        ProviderUnavailable: 502,
+        MalformedResponse: 502,
+        ProviderRateLimited: 503,
+        ProviderNotConfigured: 503,
+        ProviderError: 502,
+    } == {error: error.status for error in subclasses(ProviderError)}

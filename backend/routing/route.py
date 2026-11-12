@@ -2,6 +2,7 @@
 
 import bisect
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from .geo import METERS_PER_MILE, Point, haversine_m
@@ -12,6 +13,16 @@ KNOT_TIME_TOLERANCE_S = 1.0
 
 class RouteContractError(ValueError):
     """A route's data breaks the rules the checkpoint and summary code rely on."""
+
+
+def _locate(xs: Sequence[float], x: float) -> tuple[int, float]:
+    """The segment of the ascending `xs` that holds x, and how far along it x lies (0 to 1).
+
+    x must lie within xs, and xs must have at least two entries.
+    """
+    j = min(bisect.bisect_right(xs, x) - 1, len(xs) - 2)
+    span = xs[j + 1] - xs[j]
+    return j, (x - xs[j]) / span if span > 0 else 0.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +50,8 @@ class Route:
     knots: tuple[tuple[float, float], ...]
     via: Via | None = None
     _cumulative_m: tuple[float, ...] = field(init=False, repr=False, compare=False)
+    _knot_meters: tuple[float, ...] = field(init=False, repr=False, compare=False)
+    _knot_seconds: tuple[float, ...] = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if len(self.points) < 2:
@@ -64,6 +77,11 @@ class Route:
             raise RouteContractError("a route's points must not all coincide")
         scale = self.length_m / cumulative[-1]
         object.__setattr__(self, "_cumulative_m", tuple(d * scale for d in cumulative))
+        # Time runs in from 0 at the start, so a first knot after the start gets one there.
+        start = [] if self.knots[0][0] == 0 else [(0.0, 0.0)]
+        meters, seconds = zip(*[*start, *self.knots], strict=True)
+        object.__setattr__(self, "_knot_meters", meters)
+        object.__setattr__(self, "_knot_seconds", seconds)
 
     @property
     def total_miles(self) -> float:
@@ -76,28 +94,22 @@ class Route:
     def seconds_at(self, meters: float) -> float:
         """Seconds from departure at a distance along the route, interpolated between knots.
 
-        Before the first knot the time runs in from 0, and past the last it stays at the last.
+        At the start the time is 0, and past the last knot it stays at the travel time.
         """
-        knots = self.knots
-        if meters >= knots[-1][0]:
+        if meters >= self._knot_meters[-1]:
             return self.travel_time_s
         if meters <= 0:
             return 0.0
-        xs = [x for x, _ in knots]
-        j = bisect.bisect_right(xs, meters)
-        x0, t0 = knots[j - 1] if j > 0 else (0.0, 0.0)
-        x1, t1 = knots[j]
-        return t0 + (t1 - t0) * ((meters - x0) / (x1 - x0)) if x1 > x0 else t1
+        j, fraction = _locate(self._knot_meters, meters)
+        t0, t1 = self._knot_seconds[j], self._knot_seconds[j + 1]
+        return t0 + (t1 - t0) * fraction
 
     def position_at(self, meters: float) -> Point:
         """The point on the polyline at a distance along the route, interpolated between points."""
-        cumulative = self._cumulative_m
         if meters <= 0:
             return self.points[0]
-        if meters >= cumulative[-1]:
+        if meters >= self._cumulative_m[-1]:
             return self.points[-1]
-        j = bisect.bisect_right(cumulative, meters)
-        d0, d1 = cumulative[j - 1], cumulative[j]
-        fraction = (meters - d0) / (d1 - d0) if d1 > d0 else 0.0
-        (lat0, lon0), (lat1, lon1) = self.points[j - 1], self.points[j]
+        j, fraction = _locate(self._cumulative_m, meters)
+        (lat0, lon0), (lat1, lon1) = self.points[j], self.points[j + 1]
         return (lat0 + (lat1 - lat0) * fraction, lon0 + (lon1 - lon0) * fraction)

@@ -5,7 +5,8 @@ import httpx
 import pytest
 from django.test import AsyncClient
 
-from providers import Outbound, ProviderNotConfigured, autocomplete
+from providers import Outbound, autocomplete
+from providers.errors import ProviderNotConfigured
 
 KEY = "test-geoapify-key"
 
@@ -138,50 +139,30 @@ async def test_the_adapter_refuses_an_empty_key():
             await autocomplete(outbound, "", "Dallas")
 
 
-async def test_a_failed_call_is_not_retried(provider_mock):
-    route = provider_mock.get(host="api.geoapify.com").mock(return_value=httpx.Response(500))
+@pytest.mark.parametrize(
+    "upstream",
+    [
+        httpx.Response(400, json={"message": f"bad {KEY}"}),
+        httpx.Response(200, text="<html>"),
+        httpx.Response(200, json={"nothing": 1}),
+        httpx.Response(200, json={"results": "no"}),
+        httpx.Response(200, json=[1, 2]),
+    ],
+)
+async def test_geoapifys_own_failures_are_gateway_errors(provider_mock, upstream):
+    provider_mock.get(host="api.geoapify.com").mock(return_value=upstream)
 
     response = await search()
 
     assert response.status_code == 502
+    assert response.json()["code"] in {"provider_unavailable", "provider_malformed_response"}
+
+
+async def test_a_failed_call_is_made_once(provider_mock):
+    route = provider_mock.get(host="api.geoapify.com").mock(return_value=httpx.Response(500))
+
+    assert (await search()).status_code == 502
     assert route.call_count == 1
-
-
-@pytest.mark.parametrize(
-    ("upstream", "status", "code"),
-    [
-        (httpx.Response(400, json={"message": f"bad {KEY}"}), 502, "provider_unavailable"),
-        (httpx.Response(400, text=KEY), 502, "provider_unavailable"),
-        (httpx.Response(401, text=KEY), 503, "provider_limited"),
-        (httpx.Response(403), 503, "provider_limited"),
-        (httpx.Response(429), 503, "provider_limited"),
-        (httpx.Response(404), 502, "provider_unavailable"),
-        (httpx.Response(500, text=f"the key is {KEY}"), 502, "provider_unavailable"),
-        (httpx.Response(200, text="<html>"), 502, "provider_malformed_response"),
-        (httpx.Response(200, json={"nothing": 1}), 502, "provider_malformed_response"),
-        (httpx.Response(200, json={"results": "no"}), 502, "provider_malformed_response"),
-        (httpx.Response(200, json=[1, 2]), 502, "provider_malformed_response"),
-        (httpx.ReadTimeout(f"slow {KEY}"), 504, "provider_timeout"),
-        (httpx.ConnectError(f"cannot reach {KEY}"), 502, "provider_unavailable"),
-    ],
-)
-async def test_provider_failures_surface_as_api_errors_without_the_key(
-    provider_mock, caplog, upstream, status, code
-):
-    caplog.set_level(logging.DEBUG)
-    route = provider_mock.get(host="api.geoapify.com")
-    if isinstance(upstream, Exception):
-        route.mock(side_effect=upstream)
-    else:
-        route.mock(return_value=upstream)
-
-    response = await search()
-
-    assert response.status_code == status
-    assert set(response.json()) == {"code", "message"}
-    assert response.json()["code"] == code
-    assert KEY not in response.content.decode()
-    assert KEY not in caplog.text
 
 
 async def test_the_key_appears_in_no_log_record_or_body_on_success(provider_mock, caplog):

@@ -9,34 +9,34 @@ DEFAULT_TOLERANCE_DEGREES = 0.001
 """About 100 m: a point is dropped when the line stays within this distance without it."""
 
 
-def _distance(p: Point, a: Point, b: Point, lon_scale: float) -> float:
-    """Distance in degrees from p to the segment a-b, with longitudes shrunk by `lon_scale`."""
-    ax, ay = a[1] * lon_scale, a[0]
-    bx, by = b[1] * lon_scale, b[0]
-    px, py = p[1] * lon_scale, p[0]
-    dx, dy = bx - ax, by - ay
-    length_sq = dx * dx + dy * dy
-    t = 0.0 if length_sq == 0 else max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / length_sq))
-    return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
-
-
 def simplify_line(
     points: Sequence[Point], tolerance: float = DEFAULT_TOLERANCE_DEGREES
 ) -> list[Point]:
-    """Douglas-Peucker reduction that keeps the first and last point."""
+    """Douglas-Peucker reduction that keeps the first and last point.
+
+    Distances are in degrees, with longitudes shrunk by the cosine of the line's mean latitude.
+    """
     if len(points) <= 2:
         return list(points)
     lon_scale = math.cos(math.radians(sum(p[0] for p in points) / len(points)))
+    ys = [p[0] for p in points]
+    xs = [p[1] * lon_scale for p in points]
     keep = [False] * len(points)
     keep[0] = keep[-1] = True
     stack = [(0, len(points) - 1)]
     while stack:
         first, last = stack.pop()
-        worst, worst_distance = -1, tolerance
+        ax, ay = xs[first], ys[first]
+        dx, dy = xs[last] - ax, ys[last] - ay
+        length_sq = dx * dx + dy * dy
+        worst, worst_sq = -1, tolerance * tolerance
         for i in range(first + 1, last):
-            d = _distance(points[i], points[first], points[last], lon_scale)
-            if d > worst_distance:
-                worst, worst_distance = i, d
+            px, py = xs[i] - ax, ys[i] - ay
+            t = max(0.0, min(1.0, (px * dx + py * dy) / length_sq)) if length_sq else 0.0
+            ex, ey = px - t * dx, py - t * dy
+            distance_sq = ex * ex + ey * ey
+            if distance_sq > worst_sq:
+                worst, worst_sq = i, distance_sq
         if worst >= 0:
             keep[worst] = True
             stack.append((first, worst))

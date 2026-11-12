@@ -8,7 +8,7 @@ adding a row.
 
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from itertools import zip_longest
 
 from .geo import Point, haversine_m
 from .route import Via
@@ -70,18 +70,11 @@ MAX_DETOUR_RATIO = 1.30
 MIN_OFF_ROUTE_M = 120_000.0
 """A via-city must be at least this far from every route in hand, so it sits on another corridor."""
 
-M_PER_DEGREE = 111_000.0
 ROUTE_SAMPLE_POINTS = 1000
 """Each route is sampled to about this many points for the distance test."""
 
 CANDIDATES_PER_SIDE = 3
 """How many cities on each side of the origin-destination line are offered, least detour first."""
-
-
-@dataclass(frozen=True, slots=True)
-class _Candidate:
-    detour_ratio: float
-    name: str
 
 
 def _along_and_side(origin: Point, destination: Point, city: Point) -> tuple[float, int]:
@@ -95,14 +88,6 @@ def _along_and_side(origin: Point, destination: Point, city: Point) -> tuple[flo
 
 def _sample(route: Sequence[Point]) -> Sequence[Point]:
     return route[:: max(1, len(route) // ROUTE_SAMPLE_POINTS)]
-
-
-def _off_route_m(city: Point, samples: Sequence[Point]) -> float:
-    k = math.cos(math.radians(city[0]))
-    return min(
-        math.hypot((lat - city[0]) * M_PER_DEGREE, (lon - city[1]) * M_PER_DEGREE * k)
-        for lat, lon in samples
-    )
 
 
 def via_candidates(
@@ -122,18 +107,18 @@ def via_candidates(
     if direct <= 0:
         return []
     samples = [point for route in routes for point in _sample(route)]
-    sides: dict[int, list[_Candidate]] = {1: [], -1: []}
+    sides: dict[int, list[tuple[float, str]]] = {1: [], -1: []}
     for name, city in CITIES.items():
         along, side = _along_and_side(origin, destination, city)
         if not MIN_ALONG <= along <= MAX_ALONG:
             continue
         detour = (haversine_m(origin, city) + haversine_m(city, destination)) / direct
-        if detour > MAX_DETOUR_RATIO or _off_route_m(city, samples) < MIN_OFF_ROUTE_M:
+        if detour > MAX_DETOUR_RATIO:
             continue
-        sides[side].append(_Candidate(detour, name))
-    ranked = [
-        sorted(found, key=lambda c: (c.detour_ratio, c.name))[:per_side] for found in sides.values()
+        if min(haversine_m(city, point) for point in samples) >= MIN_OFF_ROUTE_M:
+            sides[side].append((detour, name))
+    ranked = sorted(sorted(found)[:per_side] for found in sides.values() if found)
+    names = [
+        candidate[1] for rank in zip_longest(*ranked) for candidate in rank if candidate is not None
     ]
-    ranked.sort(key=lambda found: (found[0].detour_ratio, found[0].name) if found else (9, ""))
-    names = [found[rank].name for rank in range(per_side) for found in ranked if rank < len(found)]
     return [Via(name, *CITIES[name]) for name in names]

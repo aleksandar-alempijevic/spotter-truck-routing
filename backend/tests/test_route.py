@@ -1,6 +1,8 @@
 import pytest
 
-from routing import METERS_PER_MILE, Route, RouteContractError, haversine_m
+from routing import Route
+from routing.geo import METERS_PER_MILE, haversine_m
+from routing.route import RouteContractError
 from tests.route_fixtures import lerp
 
 START, END = (40.0, -100.0), (40.0, -90.0)

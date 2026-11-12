@@ -3,7 +3,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from risk_rules import Checkpoint, Level, summarize_route
-from routing import build_checkpoints, checkpoint_marks
+from routing import build_checkpoints
+from routing.checkpoints import checkpoint_marks
 from tests.route_fixtures import route_from
 
 DEPARTURE = datetime(2026, 11, 13, 8, 0, tzinfo=UTC)

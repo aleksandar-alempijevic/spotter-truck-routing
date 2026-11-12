@@ -13,23 +13,17 @@ an unroutable pair to record how TomTom reports it.
 import asyncio
 import json
 import logging
-import os
 import sys
 import time
 from datetime import UTC, datetime, timedelta
 
-os.environ.setdefault("DJANGO_DEBUG", "1")
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+from live_common import record_calls, start_django, write_summary
 
-import django  # noqa: E402
-
-django.setup()
+start_django()
 
 from django.test import AsyncClient  # noqa: E402
-from django.test.utils import setup_test_environment  # noqa: E402
 
-from providers.outbound import Outbound, UpstreamBadRequest  # noqa: E402
-from routing import CITIES  # noqa: E402
+from routing.via_cities import CITIES  # noqa: E402
 
 MAX_CALLS = 25
 TRIPS = [
@@ -43,7 +37,6 @@ TRIPS = [
 ]
 UNROUTABLE_ORIGIN = (30.0, -60.0)  # open Atlantic
 
-calls: list[dict] = []
 planner_log: list[str] = []
 
 
@@ -54,32 +47,13 @@ class PlannerLog(logging.Handler):
         planner_log.append(record.getMessage())
 
 
-real_get_json = Outbound.get_json
-
-
-async def counting_get_json(self, url, params, **kwargs):
-    if len(calls) >= MAX_CALLS:
-        raise RuntimeError("TomTom call budget reached")
+def label(url: str) -> dict:
     separators = url.split("//", 1)[-1].count(":")  # one per extra waypoint
-    record = {"kind": "via" if separators == 2 else "base", "outcome": None}
-    calls.append(record)
-    started = time.monotonic()
-    try:
-        body = await real_get_json(self, url, params, **kwargs)
-    except UpstreamBadRequest as bad:
-        try:
-            record["outcome"] = f"400 {bad.body['detailedError']['code']}"
-        except (KeyError, TypeError):
-            record["outcome"] = "400"
-        raise
-    except Exception as error:
-        record["outcome"] = type(error).__name__
-        raise
-    finally:
-        record["seconds"] = round(time.monotonic() - started, 1)
-    record["outcome"] = "ok"
-    record["routes"] = [describe(route) for route in body.get("routes", [])]
-    return body
+    return {"kind": "via" if separators == 2 else "base"}
+
+
+def describe_body(body: dict) -> dict:
+    return {"routes": [describe(route) for route in body.get("routes", [])]}
 
 
 def describe(route: dict) -> dict:
@@ -98,7 +72,7 @@ def describe(route: dict) -> dict:
     }
 
 
-async def run_trip(client: AsyncClient, origin: tuple, destination: tuple) -> dict:
+async def run_trip(client: AsyncClient, calls: list, origin: tuple, destination: tuple) -> dict:
     departure = datetime.now(UTC) + timedelta(hours=1)
     body = {
         "origin": {"lat": origin[0], "lon": origin[1]},
@@ -147,27 +121,23 @@ async def run_trip(client: AsyncClient, origin: tuple, destination: tuple) -> di
 
 
 async def main(output: str, only: list[str]) -> None:
-    Outbound.get_json = counting_get_json
+    calls = record_calls(MAX_CALLS, label, describe_body)
     planner_logger = logging.getLogger("api.planner")
     planner_logger.setLevel(logging.INFO)
     planner_logger.addHandler(PlannerLog())
-    setup_test_environment()
     client = AsyncClient()
     results = {}
     for origin, destination in TRIPS:
         if only and f"{origin}-{destination}" not in only:
             continue
         results[f"{origin} - {destination}"] = await run_trip(
-            client, CITIES[origin], CITIES[destination]
+            client, calls, CITIES[origin], CITIES[destination]
         )
     if not only:
         results["unroutable probe (open Atlantic to Los Angeles)"] = await run_trip(
-            client, UNROUTABLE_ORIGIN, CITIES["Los Angeles"]
+            client, calls, UNROUTABLE_ORIGIN, CITIES["Los Angeles"]
         )
-    summary = {"tomtom_calls_total": len(calls), "trips": results}
-    with open(output, "w") as out:
-        json.dump(summary, out, indent=1)
-    print(json.dumps(summary, indent=1))
+    write_summary(output, {"tomtom_calls_total": len(calls), "trips": results})
 
 
 if __name__ == "__main__":

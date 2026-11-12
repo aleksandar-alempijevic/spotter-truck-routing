@@ -1,6 +1,7 @@
 """Synthetic routes and TomTom response bodies for tests."""
 
-from routing import Point, Route, haversine_m
+from routing import Point, Route
+from routing.geo import haversine_m
 
 
 def lerp(a: Point, b: Point, steps: int) -> list[Point]:
@@ -52,6 +53,6 @@ def tomtom_body(*routes: dict) -> dict:
 
 def route_from(waypoints: list[Point], **kwargs) -> Route:
     """A `routing.Route` built the way the TomTom adapter builds one."""
-    from providers.tomtom import _parse_route
+    from providers.tomtom import _parse_routes
 
-    return _parse_route(tomtom_route(waypoints, **kwargs), None)
+    return _parse_routes(tomtom_body(tomtom_route(waypoints, **kwargs)), None)[0]

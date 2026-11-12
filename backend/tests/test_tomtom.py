@@ -4,16 +4,12 @@ from datetime import UTC, datetime
 import httpx
 import pytest
 
-from providers import (
+from providers import Outbound, calculate_routes
+from providers.errors import (
     MalformedResponse,
     NoRouteFound,
-    Outbound,
-    ProviderError,
     ProviderNotConfigured,
-    ProviderRateLimited,
-    ProviderTimeout,
     ProviderUnavailable,
-    calculate_routes,
 )
 from providers.tomtom import pounds_to_kilograms
 from routing import Via
@@ -112,19 +108,15 @@ async def test_a_missing_key_is_an_error_at_call_time():
             httpx.Response(400, json={"detailedError": {"code": "MAP_MATCHING_FAILURE"}}),
             NoRouteFound,
         ),
+        (httpx.Response(400, json={"detailedError": {"code": "NO_ROUTE_FOUND"}}), NoRouteFound),
         (httpx.Response(400, json={"detailedError": {"code": "BAD_INPUT"}}), ProviderUnavailable),
         (httpx.Response(400, text="not json"), ProviderUnavailable),
-        (httpx.Response(401), ProviderRateLimited),
-        (httpx.Response(403), ProviderRateLimited),
-        (httpx.Response(429), ProviderRateLimited),
-        (httpx.Response(404), ProviderUnavailable),
-        (httpx.Response(500), ProviderUnavailable),
-        (httpx.Response(200, text="<html>"), MalformedResponse),
         (httpx.Response(200, json={"nothing": 1}), MalformedResponse),
         (httpx.Response(200, json={"routes": [{"summary": {}}]}), MalformedResponse),
+        (httpx.Response(200, json={"routes": "none"}), MalformedResponse),
     ],
 )
-async def test_provider_failures_become_neutral_errors(provider_mock, response, error):
+async def test_tomtoms_own_failures_become_neutral_errors(provider_mock, response, error):
     provider_mock.get(host="api.tomtom.com").mock(return_value=response)
 
     with pytest.raises(error):
@@ -152,49 +144,6 @@ async def test_a_second_leg_that_restarts_its_offsets_is_malformed(provider_mock
 
     with pytest.raises(MalformedResponse):
         await call()
-
-
-async def test_a_timeout_is_retried_once_then_reported(provider_mock):
-    route = provider_mock.get(host="api.tomtom.com").mock(side_effect=httpx.ReadTimeout("slow"))
-
-    with pytest.raises(ProviderTimeout):
-        await call()
-
-    assert route.call_count == 2
-
-
-async def test_a_5xx_is_retried_once_and_a_good_second_answer_is_used(provider_mock):
-    route = provider_mock.get(host="api.tomtom.com").mock(
-        side_effect=[
-            httpx.Response(500),
-            httpx.Response(200, json=tomtom_body(tomtom_route([ORIGIN, DESTINATION]))),
-        ]
-    )
-
-    routes = await call()
-
-    assert len(routes) == 1
-    assert route.call_count == 2
-
-
-@pytest.mark.parametrize("status", [400, 403, 404, 429])
-async def test_a_4xx_is_never_retried(provider_mock, status):
-    route = provider_mock.get(host="api.tomtom.com").mock(return_value=httpx.Response(status))
-
-    with pytest.raises(ProviderError):
-        await call()
-
-    assert route.call_count == 1
-
-
-async def test_a_transport_error_is_reported_without_the_url(provider_mock):
-    provider_mock.get(host="api.tomtom.com").mock(side_effect=httpx.ConnectError("boom"))
-
-    with pytest.raises(ProviderUnavailable) as caught:
-        await call()
-
-    assert KEY not in str(caught.value)
-    assert caught.value.__cause__ is None and caught.value.__suppress_context__
 
 
 @pytest.mark.parametrize(

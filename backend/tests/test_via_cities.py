@@ -1,4 +1,5 @@
-from routing import CITIES, via_candidates
+from routing import via_candidates
+from routing.via_cities import CITIES
 from tests.route_fixtures import lerp
 
 LA, NY = CITIES["Los Angeles"], CITIES["New York"]

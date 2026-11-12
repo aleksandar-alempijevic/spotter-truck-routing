@@ -8,22 +8,14 @@ a request URL. It stops before exceeding MAX_CALLS calls.
 """
 
 import asyncio
-import json
-import os
 import sys
 import time
 
-os.environ.setdefault("DJANGO_DEBUG", "1")
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+from live_common import record_calls, start_django, write_summary
 
-import django  # noqa: E402
-
-django.setup()
+start_django()
 
 from django.test import AsyncClient  # noqa: E402
-from django.test.utils import setup_test_environment  # noqa: E402
-
-from providers.outbound import Outbound  # noqa: E402
 
 MAX_CALLS = 10
 QUERIES = [
@@ -37,36 +29,31 @@ QUERIES = [
     "Amarillo, TX",
 ]
 
-raw_results: list[dict] = []
-real_get_json = Outbound.get_json
 
-
-async def recording_get_json(self, url, params, **kwargs):
-    if len(raw_results) >= MAX_CALLS:
-        raise RuntimeError("Geoapify call budget reached")
-    record: dict = {}
-    raw_results.append(record)
-    body = await real_get_json(self, url, params, **kwargs)
+def describe_body(body: dict) -> dict:
     results = body.get("results", [])
-    record["raw_results"] = len(results)
-    record["with_timezone"] = sum(1 for r in results if r.get("timezone"))
-    record["timezone_shapes"] = sorted({type(r.get("timezone")).__name__ for r in results})
-    record["result_types"] = [r.get("result_type") for r in results]
-    record["country_codes"] = sorted({str(r.get("country_code")) for r in results})
-    return body
+    return {
+        "raw_results": len(results),
+        "with_timezone": sum(1 for r in results if r.get("timezone")),
+        "timezone_shapes": sorted({type(r.get("timezone")).__name__ for r in results}),
+        "result_types": [r.get("result_type") for r in results],
+        "country_codes": sorted({str(r.get("country_code")) for r in results}),
+    }
 
 
 async def main(output: str) -> None:
-    Outbound.get_json = recording_get_json
-    setup_test_environment()
+    calls = record_calls(MAX_CALLS, describe=describe_body)
     client = AsyncClient()
     results = {}
     for query in QUERIES:
         started = time.monotonic()
         response = await client.get("/api/address-search", {"q": query})
-        seconds = round(time.monotonic() - started, 2)
         body = response.json()
-        entry = {"status": response.status_code, "seconds": seconds, **raw_results[-1]}
+        entry = {
+            "status": response.status_code,
+            "seconds": round(time.monotonic() - started, 2),
+            **calls[-1],
+        }
         if response.status_code == 200:
             entry["suggestions"] = [
                 {"label": s["label"], "timezone": s["timezone"]} for s in body["suggestions"]
@@ -75,10 +62,7 @@ async def main(output: str) -> None:
         else:
             entry["error_code"] = body.get("code")
         results[query] = entry
-    summary = {"geoapify_calls_total": len(raw_results), "queries": results}
-    with open(output, "w") as out:
-        json.dump(summary, out, indent=1)
-    print(json.dumps(summary, indent=1))
+    write_summary(output, {"geoapify_calls_total": len(calls), "queries": results})
 
 
 if __name__ == "__main__":

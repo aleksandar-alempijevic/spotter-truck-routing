@@ -2,34 +2,27 @@
 reduction and route ordering.
 
 Standard library only, and independent of `risk_rules`. The API layer calls this package and the
-providers return its `Route` type; it imports nothing else of ours.
+providers return its `Route` type; it imports nothing else of ours. The package exports what the
+other packages use; the rest is reached through its modules.
 """
 
-from .checkpoints import RouteCheckpoint, build_checkpoints, checkpoint_marks
-from .geo import METERS_PER_MILE, Point, haversine_m
+from .checkpoints import RouteCheckpoint, build_checkpoints
+from .geo import Point
 from .ordering import order_routes
-from .overlap import MAX_OVERLAP, is_distinct, near_cells, overlap_share, worst_overlap
-from .route import Route, RouteContractError, Via
+from .overlap import measure_overlap, near_cells
+from .route import Route, Via
 from .simplify import simplify_line
-from .via_cities import CITIES, via_candidates
+from .via_cities import via_candidates
 
 __all__ = [
-    "CITIES",
-    "MAX_OVERLAP",
-    "METERS_PER_MILE",
     "Point",
     "Route",
     "RouteCheckpoint",
-    "RouteContractError",
     "Via",
     "build_checkpoints",
-    "checkpoint_marks",
-    "haversine_m",
-    "is_distinct",
+    "measure_overlap",
     "near_cells",
     "order_routes",
-    "overlap_share",
     "simplify_line",
     "via_candidates",
-    "worst_overlap",
 ]

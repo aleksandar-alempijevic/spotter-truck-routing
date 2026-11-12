@@ -2,12 +2,12 @@
 and one retry.
 
 The providers carry their keys in the query string, and httpx logs the full URL of every request
-at INFO level and puts it in its exception text. So the `httpx` logger is silenced here, and every
-httpx failure is turned into a provider-neutral error without a URL or upstream body.
+at INFO level and puts it in its exception text. Every httpx failure is therefore turned into a
+provider-neutral error without a URL or upstream body, and the project's `LOGGING` setting
+(`config/base.py`) keeps the `httpx` and `httpcore` loggers at WARNING.
 """
 
 import asyncio
-import logging
 from types import TracebackType
 from typing import Any, Self
 
@@ -19,8 +19,6 @@ from .errors import (
     ProviderTimeout,
     ProviderUnavailable,
 )
-
-logging.getLogger("httpx").setLevel(logging.WARNING)
 
 MAX_CONCURRENT_CALLS = 4
 """Calls in flight at once within one planning request; further calls wait their turn."""
@@ -49,7 +47,6 @@ class Outbound:
     """
 
     def __init__(self, max_concurrent: int = MAX_CONCURRENT_CALLS) -> None:
-        self._max_concurrent = max_concurrent
         self._client: httpx.AsyncClient | None = None
         self._slots = asyncio.Semaphore(max_concurrent)
 
@@ -81,36 +78,19 @@ class Outbound:
         neutral errors from `providers.errors`. A 400 raises `UpstreamBadRequest` so the adapter
         can tell its provider's cases apart.
         """
-        attempts = 2 if retry else 1
-        for attempt in range(attempts):
-            last = attempt == attempts - 1
+        for _ in range(2 if retry else 1):
             try:
                 async with self._slots:
                     response = await self._send(url, params, timeout)
             except httpx.TimeoutException:
-                if last:
-                    raise ProviderTimeout from None
-                continue
+                failure = ProviderTimeout
             except httpx.HTTPError:
-                if last:
-                    raise ProviderUnavailable from None
-                continue
-            status = response.status_code
-            if status in RETRY_STATUSES:
-                if last:
-                    raise ProviderUnavailable
-                continue
-            if status in RATE_LIMIT_STATUSES:
-                raise ProviderRateLimited
-            if status == 400:
-                raise UpstreamBadRequest(_json_or_none(response))
-            if status >= 400:
-                raise ProviderUnavailable
-            try:
-                return response.json()
-            except ValueError:
-                raise MalformedResponse from None
-        raise AssertionError("unreachable")  # pragma: no cover
+                failure = ProviderUnavailable
+            else:
+                if response.status_code not in RETRY_STATUSES:
+                    return _decode(response)
+                failure = ProviderUnavailable
+        raise failure from None
 
     async def _send(self, url: str, params: dict[str, Any], timeout: float) -> httpx.Response:
         assert self._client is not None, "Outbound must be used as a context manager"
@@ -119,8 +99,19 @@ class Outbound:
         )
 
 
-def _json_or_none(response: httpx.Response) -> Any:
+def _decode(response: httpx.Response) -> Any:
+    """The parsed JSON of an answer below 500, or the neutral error for its status."""
+    status = response.status_code
+    if status in RATE_LIMIT_STATUSES:
+        raise ProviderRateLimited
     try:
-        return response.json()
+        body = response.json()
     except ValueError:
-        return None
+        body = None
+    if status == 400:
+        raise UpstreamBadRequest(body)
+    if status >= 400:
+        raise ProviderUnavailable
+    if body is None:
+        raise MalformedResponse
+    return body

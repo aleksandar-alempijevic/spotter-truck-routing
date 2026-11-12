@@ -10,6 +10,8 @@ class ProviderError(Exception):
 
     code = "provider_error"
     message = "A data provider request failed."
+    status = 502
+    """The HTTP status the API answers with."""
 
     def __init__(self) -> None:
         super().__init__(self.message)
@@ -17,6 +19,7 @@ class ProviderError(Exception):
 
 class ProviderTimeout(ProviderError):
     code = "provider_timeout"
+    status = 504
     message = "A data provider took too long to answer."
 
 
@@ -27,6 +30,7 @@ class ProviderUnavailable(ProviderError):
 
 class ProviderRateLimited(ProviderError):
     code = "provider_limited"
+    status = 503
     message = (
         "A data provider is refusing requests (rate limit, quota or credentials). Try again later."
     )
@@ -34,11 +38,13 @@ class ProviderRateLimited(ProviderError):
 
 class ProviderNotConfigured(ProviderError):
     code = "provider_not_configured"
+    status = 503
     message = "A data provider is not configured on this server."
 
 
 class NoRouteFound(ProviderError):
     code = "no_route"
+    status = 422
     message = "No route could be found between these points."
 
 

@@ -9,7 +9,7 @@ from django.test import AsyncClient
 
 from api import planner
 from risk_rules import Checkpoint, Level, summarize_route
-from routing import CITIES
+from routing.via_cities import CITIES
 from tests.route_fixtures import tomtom_body, tomtom_route
 
 KEY = "test-tomtom-key"
@@ -159,14 +159,30 @@ async def test_two_provider_routes_are_filled_with_a_distinct_via_city_route(pro
     assert all(c.url.params["maxAlternatives"] == "0" for c in via_calls)
 
 
-async def test_once_the_gap_is_filled_no_further_candidate_is_tried(provider_mock):
-    calls = mock_tomtom(
-        provider_mock, base=[MAIN, NORTH], via=via_returns({"Albuquerque": SOUTH_ROUTE})
-    )
+async def test_once_the_gap_is_filled_the_calls_still_pending_are_cancelled(provider_mock):
+    started = cancelled = 0
+    south = via_returns({"Albuquerque": SOUTH_ROUTE})
 
-    await post(payload())
+    async def answer(request):
+        nonlocal started, cancelled
+        started += 1
+        if f"{ALBUQUERQUE[0]:.5f}" in request.url.path:
+            return await south(request)
+        try:
+            await asyncio.sleep(30)
+        except asyncio.CancelledError:
+            cancelled += 1
+            raise
 
-    assert len([c for c in calls if is_via_call(c)]) == 4
+    mock_tomtom(provider_mock, base=[MAIN, NORTH], via=answer)
+
+    body = (await post(payload())).json()
+
+    assert body["shortfall"] is None
+    # Four calls start at once (the cap). Albuquerque's answer frees a slot for a fifth, and the
+    # sixth never starts: it is cancelled while it waits.
+    assert started == 5
+    assert cancelled == 4
 
 
 async def test_a_later_candidate_is_tried_when_earlier_ones_overlap(provider_mock):
@@ -290,44 +306,15 @@ async def test_a_base_call_that_exceeds_the_budget_is_a_gateway_timeout(provider
     assert response.json()["code"] == "provider_timeout"
 
 
-@pytest.mark.parametrize(
-    ("upstream", "status", "code"),
-    [
-        (httpx.Response(200, json={"routes": []}), 422, "no_route"),
-        (
-            httpx.Response(400, json={"detailedError": {"code": "MAP_MATCHING_FAILURE"}}),
-            422,
-            "no_route",
-        ),
-        (httpx.Response(500), 502, "provider_unavailable"),
-        (httpx.Response(200, text="oops"), 502, "provider_malformed_response"),
-        (
-            httpx.Response(200, json={"routes": [{"summary": {}}]}),
-            502,
-            "provider_malformed_response",
-        ),
-        (httpx.Response(429, text=KEY), 503, "provider_limited"),
-        (httpx.Response(403), 503, "provider_limited"),
-        (httpx.ReadTimeout("slow"), 504, "provider_timeout"),
-        (httpx.ConnectError(f"cannot reach host with {KEY}"), 502, "provider_unavailable"),
-    ],
-)
-async def test_provider_failures_surface_as_api_errors_without_the_key(
-    provider_mock, caplog, upstream, status, code
-):
-    caplog.set_level(logging.DEBUG)
-    route = provider_mock.get(host="api.tomtom.com")
-    if isinstance(upstream, Exception):
-        route.mock(side_effect=upstream)
-    else:
-        route.mock(return_value=upstream)
+async def test_no_route_between_the_points_is_a_422(provider_mock):
+    provider_mock.get(host="api.tomtom.com").respond(
+        400, json={"detailedError": {"code": "MAP_MATCHING_FAILURE"}}
+    )
 
     response = await post(payload())
 
-    assert response.status_code == status
-    assert set(response.json()) == {"code", "message"}
-    assert response.json()["code"] == code
-    assert_no_key(response, caplog)
+    assert response.status_code == 422
+    assert response.json()["code"] == "no_route"
 
 
 async def test_a_missing_key_is_a_clear_error_not_a_crash(settings):

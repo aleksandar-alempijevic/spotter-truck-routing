@@ -84,10 +84,32 @@ class ViaOut(Schema):
 
 
 class RouteOut(RouteCore):
+    # Built from the planner's `PlannedRoute`; the resolvers below read what its route holds. A
+    # docstring would end up in the OpenAPI schema and the generated types.
     line: list[tuple[float, float]]
     """The route's line for the map as [lon, lat] pairs, reduced on the server."""
     source: Literal["provider", "via_city"]
     via: ViaOut | None
+
+    @staticmethod
+    def resolve_travel_time_seconds(obj) -> int:
+        return round(obj.route.travel_time_s)
+
+    @staticmethod
+    def resolve_total_miles(obj) -> float:
+        return obj.route.total_miles
+
+    @staticmethod
+    def resolve_line(obj) -> list[tuple[float, float]]:
+        return [(lon, lat) for lat, lon in obj.line]
+
+    @staticmethod
+    def resolve_source(obj) -> str:
+        return obj.route.source
+
+    @staticmethod
+    def resolve_via(obj):
+        return obj.route.via
 
 
 class ShortfallOut(Schema):
