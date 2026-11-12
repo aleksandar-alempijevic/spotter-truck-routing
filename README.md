@@ -2,7 +2,7 @@
 
 A web app that recommends the safest of three truck routes between two places, using the weather along each route at the time the truck will be there, the load weight and the travel time. Full-stack take-home: React frontend, Django backend.
 
-**Status:** project skeleton. The React page calls a Django health endpoint and shows the answer. Routing, weather, risk rules and the map come in later steps; [docs/architecture.md](docs/architecture.md) says where each will go.
+**Status:** project skeleton. The React page calls a Django health endpoint and shows the answer. The risk and ranking rules exist as plain Python ([docs/logic.md](docs/logic.md)) but nothing calls them yet. Routing, weather and the map come in later steps; [docs/architecture.md](docs/architecture.md) says where each will go.
 
 ## Prerequisites
 
@@ -30,7 +30,7 @@ The browser only talks to the Vite dev server, which forwards `/api` requests to
 ## Tests and checks
 
 ```sh
-make test    # backend (pytest) and frontend (vitest) tests
+make test    # backend (pytest, including the risk rules) and frontend (vitest) tests
 make check   # the tests, then ruff lint and format checks (backend), and tsc, ESLint and Prettier checks (frontend)
 ```
 
@@ -44,8 +44,9 @@ Settings come from environment variables, optionally from a git-ignored `.env` i
 
 ```
 backend/    Django + Django Ninja API on uvicorn (ASGI), Python 3.13, managed by uv
+            risk_rules/ holds the risk and ranking rules (plain Python, no Django)
 frontend/   React + TypeScript + Vite + Material UI app, managed by pnpm
-docs/       architecture.md
+docs/       architecture.md, logic.md (the risk and ranking rules)
 Makefile    install / run / test / check commands
 spikes/     throwaway feasibility experiments, each with its own README
 ```
