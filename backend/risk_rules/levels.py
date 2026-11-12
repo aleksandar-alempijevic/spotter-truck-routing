@@ -71,10 +71,11 @@ class WeatherReading:
 
 @dataclass(frozen=True, slots=True)
 class Classification:
-    """A level, the condition that decided it, and whether a load rule raised it."""
+    """A level, the condition that decided it (none at Low), and whether a load rule raised it."""
 
     level: Level
-    condition: Condition
+    condition: Condition | None
+    """The deciding condition; None at Low, where nothing decided the level."""
     load_raised: bool
 
 
@@ -117,8 +118,9 @@ def classify_weather(reading: WeatherReading, load_lb: float) -> Classification:
     """Classify one reading for a load.
 
     The level is the worst of wind, rain and snow. When several conditions share the worst level,
-    wind is named before rain and rain before snow. `load_raised` is true when a load rule lifted
-    the level above what the weather alone gives; the deciding condition is then wind.
+    wind is named before rain and rain before snow; at Low no condition is named. `load_raised`
+    is true when a load rule lifted the level above what the weather alone gives; the deciding
+    condition is then wind.
 
     Every field must be a finite number of at least 0. A missing forecast is the caller's to
     represent as an absent level, never as a number.
@@ -139,4 +141,6 @@ def classify_weather(reading: WeatherReading, load_lb: float) -> Classification:
     loaded_wind = _wind_level(reading.wind_mph, load_lb)
     if loaded_wind > level:
         return Classification(level=loaded_wind, condition=Condition.WIND, load_raised=True)
-    return Classification(level=level, condition=condition, load_raised=False)
+    return Classification(
+        level=level, condition=None if level is Level.LOW else condition, load_raised=False
+    )

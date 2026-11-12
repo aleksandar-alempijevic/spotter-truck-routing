@@ -108,7 +108,12 @@ def test_tie_between_conditions_names_wind_then_rain_then_snow():
 
 def test_all_low_reading_is_low():
     result = classify_weather(WeatherReading(0, 0, 0), LIGHT)
-    assert (result.level, result.condition, result.load_raised) == (L, Condition.WIND, False)
+    assert (result.level, result.condition, result.load_raised) == (L, None, False)
+
+
+def test_a_condition_is_named_from_moderate_up():
+    assert classify_weather(WeatherReading(25, 0, 0), LIGHT).condition is Condition.WIND
+    assert classify_weather(WeatherReading(0, 0, 0.5), LIGHT).condition is Condition.SNOW
 
 
 def test_load_raised_is_reported_only_when_a_load_rule_changed_the_deciding_wind_level():

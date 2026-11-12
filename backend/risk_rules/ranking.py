@@ -37,11 +37,27 @@ class RouteCandidate:
 
 
 @dataclass(frozen=True, slots=True)
+class StepMeasure:
+    """What a route was measured against at the step where it dropped out."""
+
+    best_route_id: str
+    """The best route among those still in the contest at that step."""
+    route_value: float | None
+    """The dropped route's value at the step; None if it had none (no average risk)."""
+    best_value: float | None
+    """The best route's value at the step; None at the route-id step, which compares no value."""
+    tolerance: float
+    """How far above the best the dropped route could be and still stay in."""
+
+
+@dataclass(frozen=True, slots=True)
 class RouteComparison:
     """How a route differs from the recommended-order winner: its value minus the winner's."""
 
     dropped_at: RankingStep
     """The step at which the route left the contest for first place."""
+    dropped_against: StepMeasure
+    """What the route lost to at that step. That route is the step's best, not always the winner."""
     travel_time_seconds: float
     no_travel_miles: float
     severe_miles: float
@@ -69,62 +85,82 @@ class Ranking:
     """The step after which only the first-ranked route remained."""
 
 
-def _within(
-    candidates: list[RouteCandidate], value: Callable[[RouteCandidate], float], slack: float
-):
-    best = min(value(c) for c in candidates)
-    return [c for c in candidates if value(c) <= best + slack + FLOAT_MARGIN]
+@dataclass(frozen=True, slots=True)
+class _Step:
+    step: RankingStep
+    value: Callable[[RouteCandidate], float | None]
+    """The quantity compared; None means the route has no value and compares worse than any."""
+    tolerance: Callable[[RouteCandidate], float]
+    """How far above the best a route's value may be and still stay in the contest."""
 
 
-def _average_risk_step(
-    candidates: list[RouteCandidate], interval_miles: float
-) -> list[RouteCandidate]:
-    scored = [c for c in candidates if c.summary.average_risk is not None]
-    if not scored:
-        return candidates
-    # A route with no average risk compares as worse than any number, so it is dropped here.
-    # Each route has its own tolerance: one full-interval checkpoint moving one level shifts its
-    # average by interval / its forecast miles. A route stays in if lowering its average by that
-    # much would make it no worse than the best. Another route never changes this verdict.
-    best = min(c.summary.average_risk for c in scored)
+def _steps(interval_miles: float) -> list[_Step]:
+    def zero(_: RouteCandidate) -> float:
+        return 0.0
+
+    def one_interval(_: RouteCandidate) -> float:
+        return interval_miles
+
+    def average_risk_tolerance(c: RouteCandidate) -> float:
+        # One full-interval checkpoint moving one level shifts a route's average by
+        # interval / its forecast miles, capped at one level for routes forecast for less than
+        # an interval. Only called for routes that have an average, so forecast miles are > 0.
+        return min(1.0, interval_miles / c.summary.forecast_miles)
+
     return [
-        c
-        for c in scored
-        if c.summary.average_risk - interval_miles / c.summary.forecast_miles <= best + FLOAT_MARGIN
+        _Step(RankingStep.NO_TRAVEL, lambda c: c.summary.no_travel_miles, zero),
+        _Step(RankingStep.SEVERE, lambda c: c.summary.severe_miles, zero),
+        _Step(RankingStep.HIGH, lambda c: c.summary.high_miles, one_interval),
+        _Step(RankingStep.AVERAGE_RISK, lambda c: c.summary.average_risk, average_risk_tolerance),
+        _Step(RankingStep.TRAVEL_TIME, lambda c: c.travel_time_seconds, zero),
+        _Step(RankingStep.MILES, lambda c: c.total_miles, zero),
     ]
 
 
-def _steps(
-    interval_miles: float,
-) -> list[tuple[RankingStep, Callable[[list[RouteCandidate]], list[RouteCandidate]]]]:
-    return [
-        (RankingStep.NO_TRAVEL, lambda cs: _within(cs, lambda c: c.summary.no_travel_miles, 0)),
-        (RankingStep.SEVERE, lambda cs: _within(cs, lambda c: c.summary.severe_miles, 0)),
-        (RankingStep.HIGH, lambda cs: _within(cs, lambda c: c.summary.high_miles, interval_miles)),
-        (RankingStep.AVERAGE_RISK, lambda cs: _average_risk_step(cs, interval_miles)),
-        (RankingStep.TRAVEL_TIME, lambda cs: _within(cs, lambda c: c.travel_time_seconds, 0)),
-        (RankingStep.MILES, lambda cs: _within(cs, lambda c: c.total_miles, 0)),
-        (RankingStep.ROUTE_ID, lambda cs: [min(cs, key=lambda c: c.route_id)]),
-    ]
+def _apply_step(
+    step: _Step, survivors: list[RouteCandidate]
+) -> tuple[list[RouteCandidate], dict[str, StepMeasure]]:
+    """Keep the survivors within their tolerance of the best; say what each dropped one lost to.
+
+    The best is the lowest value among the survivors, so a route is compared with the best route
+    still in the contest, not with the route that eventually wins. A step where no survivor has a
+    value keeps everyone.
+    """
+    valued = [c for c in survivors if step.value(c) is not None]
+    if not valued:
+        return survivors, {}
+    best_route = min(valued, key=lambda c: (step.value(c), c.route_id))
+    best = step.value(best_route)
+    kept, dropped = [], {}
+    for c in survivors:
+        value = step.value(c)
+        if value is not None and value - step.tolerance(c) <= best + FLOAT_MARGIN:
+            kept.append(c)
+        else:
+            tolerance = step.tolerance(c) if value is not None else 0.0
+            dropped[c.route_id] = StepMeasure(best_route.route_id, value, best, tolerance)
+    return kept, dropped
 
 
 def _first_place(
     candidates: list[RouteCandidate], interval_miles: float
-) -> tuple[RouteCandidate, RankingStep, dict[str, RankingStep]]:
-    """Filter step by step; return the winner, the deciding step and the step each loser left at."""
+) -> tuple[RouteCandidate, RankingStep, dict[str, tuple[RankingStep, StepMeasure]]]:
+    """Filter step by step; return the winner, the deciding step and where each loser dropped."""
     survivors = candidates
-    dropped_at: dict[str, RankingStep] = {}
-    decided_by = RankingStep.ROUTE_ID
-    for step, keep in _steps(interval_miles):
-        kept = keep(survivors)
-        for candidate in survivors:
-            if candidate not in kept:
-                dropped_at[candidate.route_id] = step
-        survivors = kept
+    drops: dict[str, tuple[RankingStep, StepMeasure]] = {}
+    for step in _steps(interval_miles):
+        survivors, dropped = _apply_step(step, survivors)
+        drops.update({route_id: (step.step, measure) for route_id, measure in dropped.items()})
         if len(survivors) == 1:
-            decided_by = step
-            break
-    return survivors[0], decided_by, dropped_at
+            return survivors[0], step.step, drops
+    winner = min(survivors, key=lambda c: c.route_id)
+    for c in survivors:
+        if c is not winner:
+            drops[c.route_id] = (
+                RankingStep.ROUTE_ID,
+                StepMeasure(winner.route_id, None, None, 0.0),
+            )
+    return winner, RankingStep.ROUTE_ID, drops
 
 
 def rank_routes(candidates: Sequence[RouteCandidate], checkpoint_interval_miles: float) -> Ranking:
@@ -132,8 +168,10 @@ def rank_routes(candidates: Sequence[RouteCandidate], checkpoint_interval_miles:
 
     Steps, in order: fewest No Travel miles; fewest Severe miles; High miles within one
     checkpoint interval of the best; average risk within the route's own tolerance of the best
-    (one interval divided by its forecast miles); shortest travel time; fewest
-    miles; route id. Second and third place repeat the steps without the routes already placed.
+    (one interval divided by its forecast miles, at most one level); shortest travel time;
+    fewest miles; route id. Each tolerance is measured against the best route still in the
+    contest at that step, so ties do not chain: adding a route can change the winner between
+    two others. Second and third place repeat the steps without the routes already placed.
     """
     if not 2 <= len(candidates) <= 3:
         raise ValueError(f"ranking takes two or three routes, got {len(candidates)}")
@@ -150,7 +188,7 @@ def rank_routes(candidates: Sequence[RouteCandidate], checkpoint_interval_miles:
     remaining = list(candidates)
     ordered: list[RouteCandidate] = []
     decided_by = RankingStep.ROUTE_ID
-    first_round_drops: dict[str, RankingStep] = {}
+    first_round_drops: dict[str, tuple[RankingStep, StepMeasure]] = {}
     while remaining:
         if len(remaining) == 1:
             winner = remaining[0]
@@ -171,8 +209,10 @@ def rank_routes(candidates: Sequence[RouteCandidate], checkpoint_interval_miles:
                 if c.summary.average_risk is not None and first.summary.average_risk is not None
                 else None
             )
+            dropped_at, dropped_against = first_round_drops[c.route_id]
             comparison = RouteComparison(
-                dropped_at=first_round_drops[c.route_id],
+                dropped_at=dropped_at,
+                dropped_against=dropped_against,
                 travel_time_seconds=c.travel_time_seconds - first.travel_time_seconds,
                 no_travel_miles=c.summary.no_travel_miles - first.summary.no_travel_miles,
                 severe_miles=c.summary.severe_miles - first.summary.severe_miles,

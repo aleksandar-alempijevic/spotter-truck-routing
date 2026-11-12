@@ -101,8 +101,8 @@ def test_high_gap_of_one_interval_counts_as_a_tie_despite_float_rounding():
 
 
 def test_high_gap_a_little_over_one_interval_is_not_a_tie():
-    # Both routes have the same average risk, so only the High step separates them: "b" has
-    # 0.101 High miles against "a"'s 0, beyond one 0.1-mile interval plus the float margin.
+    # "b" has 0.101 High miles against "a"'s 0, beyond one 0.1-mile interval plus the float
+    # margin. It is riskier on average too, but the High step comes first, so it drops there.
     interval = 0.1
     marks_a = [Checkpoint(sum([0.1] * i), M if i in (1, 2) else L) for i in range(11)]
     a = RouteCandidate("a", 3000.0, summarize_route(1.1, marks_a))
@@ -213,21 +213,43 @@ def test_result_is_order_independent_with_ties_everywhere():
     assert order(next(iter(results))) == ["x", "y", "z"]
 
 
-@pytest.mark.parametrize("count", [0, 1, 4])
-def test_fewer_than_two_or_more_than_three_routes_are_rejected(count):
-    routes = [route(f"r{i}", [L, L]) for i in range(count)]
-    with pytest.raises(ValueError):
-        rank_routes(routes, INTERVAL)
+def two_routes(**changes):
+    a = route("a", [L, L], **changes)
+    return [a, route("b", [L, L])]
 
 
-def test_duplicate_ids_and_bad_inputs_are_rejected():
-    a = route("a", [L, L])
+@pytest.mark.parametrize(
+    ("candidates", "interval"),
+    [
+        ([], INTERVAL),
+        ([route("a", [L, L])], INTERVAL),
+        ([route(f"r{i}", [L, L]) for i in range(4)], INTERVAL),
+        ([route("a", [L, L]), route("a", [L, L])], INTERVAL),
+        (two_routes(minutes=-1), INTERVAL),
+        (two_routes(minutes=float("nan")), INTERVAL),
+        (two_routes(minutes=float("inf")), INTERVAL),
+        (two_routes(), 0),
+        (two_routes(), -25),
+        (two_routes(), float("nan")),
+        (two_routes(), float("inf")),
+    ],
+    ids=[
+        "no routes",
+        "one route",
+        "four routes",
+        "duplicate id",
+        "negative time",
+        "nan time",
+        "infinite time",
+        "zero interval",
+        "negative interval",
+        "nan interval",
+        "infinite interval",
+    ],
+)
+def test_invalid_ranking_inputs_are_rejected(candidates, interval):
     with pytest.raises(ValueError):
-        rank_routes([a, a], INTERVAL)
-    with pytest.raises(ValueError):
-        rank_routes([a, route("b", [L, L])], 0)
-    with pytest.raises(ValueError):
-        rank_routes([a, route("b", [L, L], minutes=float("nan"))], INTERVAL)
+        rank_routes(candidates, interval)
 
 
 def marked_route(route_id, marks, total, minutes=600):
@@ -307,11 +329,9 @@ def test_each_route_has_its_own_tolerance_from_its_own_length():
 
     assert order(ranking) == ["short", "long"]
     assert ranking.decided_by is RankingStep.AVERAGE_RISK
-    # The short route, judged by its own wider tolerance, would tie with the long one.
-    assert short.summary.average_risk == 0
 
 
-def test_a_third_route_does_not_change_the_outcome_between_two_others():
+def test_unrelated_route_length_and_coverage_leave_the_other_two_unchanged():
     slow_clean = route("a", [L] * 40, minutes=900)
     fast_moderate = route("b", [M] * 20 + [L] * 20, minutes=300)  # 500 Moderate miles
     # Forecast for the first 50 miles only, then nothing: a wide tolerance of its own.
@@ -327,6 +347,82 @@ def test_a_third_route_does_not_change_the_outcome_between_two_others():
     assert trio.decided_by is RankingStep.TRAVEL_TIME
     b_in_trio = next(r for r in trio.routes if r.route_id == "b")
     assert b_in_trio.vs_first.dropped_at is RankingStep.AVERAGE_RISK
+
+
+def three_500_mile_routes():
+    # 20 checkpoints at 25 miles. Average risk: a 0, b 0.05, c 0.10; each tolerance is 0.05.
+    a = route("a", [L] * 20, minutes=900)
+    b = route("b", [M] + [L] * 19, minutes=600)
+    c = route("c", [M, M] + [L] * 18, minutes=300)
+    return a, b, c
+
+
+def test_ties_are_against_the_best_route_in_contention_so_a_third_route_can_change_the_winner():
+    a, b, c = three_500_mile_routes()
+
+    pair = rank(b, c)
+    trio = rank(a, b, c)
+
+    # b and c are one level of one checkpoint apart: a tie, and the faster c wins on time.
+    assert order(pair) == ["c", "b"]
+    assert pair.decided_by is RankingStep.TRAVEL_TIME
+    # With a all Low in the contest, c is two checkpoint-levels above the best and drops, but b
+    # is one level above it and stays, so b wins.
+    assert order(trio) == ["b", "a", "c"]
+    assert trio.decided_by is RankingStep.TRAVEL_TIME
+    assert trio.routes[2].vs_first.dropped_at is RankingStep.AVERAGE_RISK
+
+
+def test_a_dropped_route_reports_what_it_was_measured_against_at_its_step():
+    a, b, c = three_500_mile_routes()
+
+    trio = rank(a, b, c)
+
+    dropped_c = trio.routes[2].vs_first
+    assert dropped_c.dropped_against.best_route_id == "a"  # the step's best, not the winner b
+    assert dropped_c.dropped_against.route_value == pytest.approx(0.1)
+    assert dropped_c.dropped_against.best_value == 0
+    assert dropped_c.dropped_against.tolerance == pytest.approx(0.05)
+    dropped_a = trio.routes[1].vs_first
+    assert dropped_a.dropped_at is RankingStep.TRAVEL_TIME
+    assert dropped_a.dropped_against.best_route_id == "b"
+    assert dropped_a.dropped_against.route_value == 900 * 60
+    assert dropped_a.dropped_against.best_value == 600 * 60
+
+
+def test_route_id_drop_is_measured_against_the_winner():
+    x, y = route("x", [L, L], total=100), route("y", [L, L], total=100)
+
+    dropped = rank(x, y).routes[1].vs_first
+
+    assert dropped.dropped_at is RankingStep.ROUTE_ID
+    assert dropped.dropped_against.best_route_id == "x"
+    assert dropped.dropped_against.route_value is None
+
+
+def test_dropping_for_having_no_average_risk_reports_no_value():
+    blind = route("blind", [None] * 4)
+    sighted = route("sighted", [L] * 4)
+
+    dropped = rank(blind, sighted).routes[1].vs_first
+
+    assert dropped.dropped_at is RankingStep.AVERAGE_RISK
+    assert dropped.dropped_against.best_route_id == "sighted"
+    assert dropped.dropped_against.route_value is None
+    assert dropped.dropped_against.best_value == 0
+
+
+def test_average_risk_tolerance_is_capped_at_one_level():
+    # 20 forecast miles at a 50-mile interval would give a tolerance of 2.5 levels, which would
+    # tie an all-High route with an all-Low one. The cap of 1 level makes the all-High route lose.
+    clear = route("clear", [L, L], minutes=900, interval=10)
+    high = route("high", [H, H], minutes=300, interval=10)
+
+    ranking = rank_routes([clear, high], 50)
+
+    assert order(ranking) == ["clear", "high"]
+    assert ranking.decided_by is RankingStep.AVERAGE_RISK
+    assert ranking.routes[1].vs_first.dropped_against.tolerance == 1.0
 
 
 def test_tolerance_uses_forecast_miles_not_total_miles():
@@ -400,7 +496,7 @@ def test_a_route_eliminated_earlier_does_not_rescue_a_route_at_average_risk():
     assert ranking.routes[1].vs_first.dropped_at is RankingStep.AVERAGE_RISK
 
 
-def test_route_without_forecast_drops_at_average_risk_and_does_not_set_the_tolerance():
+def test_route_without_forecast_drops_at_average_risk_while_the_others_tie_on_it():
     blind = route("blind", [None] * 4, minutes=100)
     slow = route("slow", [L] * 4, minutes=900)
     fast = route("fast", [M, L, L, L], minutes=300)  # average 0.25 == 25 / 100: a tie

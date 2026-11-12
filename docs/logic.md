@@ -6,7 +6,7 @@ Units throughout are the assessment's: sustained wind in mph, rain and snow in i
 
 ## 1. Risk level at one checkpoint
 
-`classify_weather(reading, load_lb)` takes a reading (sustained wind, rain rate, snow rate) and the load weight, and returns the level, the condition that decided it, and whether a load rule raised it.
+`classify_weather(reading, load_lb)` takes a reading (sustained wind, rain rate, snow rate) and the load weight, and returns the level, the condition that decided it (none at Low, where nothing decided it) and whether a load rule raised it.
 
 Levels, lowest to highest: Low, Moderate, High, Severe, No Travel.
 
@@ -28,7 +28,7 @@ Levels, lowest to highest: Low, Moderate, High, Severe, No Travel.
 
 A load of exactly 30,000 or 40,000 lb does not trigger its rule. Rain and snow ignore the load.
 
-**Combining conditions.** First the three conditions are levelled on the weather alone, with no load rule. The worst of those is the weather-alone level, and when more than one condition has it, wind is named before rain and rain before snow. Then the load rules are applied to wind. If the load-adjusted wind level is above every weather-alone level, the checkpoint takes that level, the condition is wind and `load_raised` is true, which is what lets the UI explain a Severe at 38 mph. Otherwise the weather-alone level and condition stand and `load_raised` is false. So a heavy load at 40 mph with rain already Severe is Severe because of rain, not because of the load.
+**Combining conditions.** First the three conditions are levelled on the weather alone, with no load rule. The worst of those is the weather-alone level, and when more than one condition has it, wind is named before rain and rain before snow. At Low no condition is named. Then the load rules are applied to wind. If the load-adjusted wind level is above every weather-alone level, the checkpoint takes that level, the condition is wind and `load_raised` is true, which is what lets the UI explain a Severe at 38 mph. Otherwise the weather-alone level and condition stand and `load_raised` is false. So a heavy load at 40 mph with rain already Severe is Severe because of rain, not because of the load.
 
 **Gusts** are not part of the reading. They are shown beside the level and never change it: the assessment says "wind", read here as sustained wind.
 
@@ -54,7 +54,7 @@ The routes are filtered in the assessment's order of preference. At each step th
 | 1. No Travel | fewest No Travel miles | none |
 | 2. Severe | fewest Severe miles | none |
 | 3. High | High miles no more than the best plus one checkpoint interval | one interval |
-| 4. Average risk | routes whose average risk, lowered by their own tolerance, is no higher than the best average among the routes still in | one interval / the route's own forecast miles |
+| 4. Average risk | routes whose average risk, lowered by their own tolerance, is no higher than the best average among the routes still in | one interval / the route's own forecast miles, at most one level |
 | 5. Travel time | shortest travel time | none |
 | 6. Miles | fewest total miles | none |
 | 7. Route id | smallest id | none |
@@ -65,7 +65,9 @@ The first step that leaves a single route decides first place, and the ranking r
 
 **No Travel.** The assessment's list leaves No Travel out. Any route with No Travel miles ranks below every route without them, and among routes that all have them the one with the fewest No Travel miles ranks first. A first-ranked route that has No Travel miles is not recommended: the result's `recommended_id` is empty and the UI should say no route is safe to recommend.
 
-**The average-risk tolerance** belongs to each route: one checkpoint interval divided by that route's own forecast miles (miles whose checkpoint has a forecast). That is exactly how far one full-interval checkpoint moving by one level shifts the route's mile-weighted average, so it is in the same unit as the average and holds for routes whose length is not a multiple of the interval. A route stays in the contest when its average risk, lowered by its own tolerance, is no higher than the lowest average among the routes still in. Put differently, a route is tied with the best if one of its checkpoints scoring one level lower would make it the safest. Because each route is judged by its own tolerance, another route's length or forecast coverage never changes the outcome between two routes. A route with no average risk (no forecasted miles) counts as worse than any average, so it drops at step 4 whenever another route has one. If no route has an average, the step is skipped.
+**The average-risk tolerance** belongs to each route: one checkpoint interval divided by that route's own forecast miles (miles whose checkpoint has a forecast), at most one level. That is how far one full-interval checkpoint moving by one level shifts the route's mile-weighted average, so it is in the same unit as the average and holds for routes whose length is not a multiple of the interval. The cap keeps a route forecast for less than one interval from getting a tolerance of more than one level. A route stays in the contest when its average risk, lowered by its own tolerance, is no higher than the lowest average among the routes still in. Put differently, a route is tied with the best if one of its checkpoints scoring one level lower would make it the safest. A route's tolerance depends only on that route, so another route's length or forecast coverage does not change it. A route with no average risk (no forecasted miles) counts as worse than any average, so it drops at step 4 whenever another route has one. If no route has an average, the step is skipped.
+
+**Ties do not chain.** At each step a route is compared with the best route still in the contest, not with every other route. Adding a third route can therefore occasionally change which of the other two wins. Example: three routes of 500 miles at a 25-mile interval. Route a is all Low and takes 900 minutes, route b has one Moderate checkpoint and takes 600, route c has two Moderate checkpoints and takes 300. Each route's tolerance is 0.05, and the averages are 0, 0.05 and 0.10. Ranking only b and c: they are within tolerance, so the faster c wins on time. Ranking all three: the best average is a's 0, b is within tolerance of it and c is not, so c drops at average risk and b wins on time. This is accepted. Pairwise, the result still does not depend on the order the routes are given in.
 
 **One High checkpoint against none.** A route with one High checkpoint and an otherwise identical all-Low route are one interval apart in High miles, so the route survives the High step. It then loses at average risk: High against Low is a two-level difference, and the tolerance absorbs one level. A tie at the High step is therefore not a tie overall. The route reaches the time step only if its average risk is also within tolerance, for example when the other route has comparable Moderate miles.
 
@@ -73,7 +75,7 @@ The first step that leaves a single route decides first place, and the ranking r
 
 **No-forecast miles** do not enter any step, so a route that is mostly past the forecast range is compared on the part that has a forecast, with a tolerance sized to that part. The ranking returns each route's no-forecast miles so the UI can show them.
 
-**Output.** For each route in rank order: its rank, its no-forecast miles, and, for every route except the first, the step at which it left the contest for first place and its differences from the first route (travel time in seconds, No Travel, Severe and High miles, and average risk; each is the route's value minus the first route's). The UI uses these for lines like "+38 min, avoids 50 Severe miles" and to show which values were ties: a route that survived a step was within tolerance on it. The first route's deciding step names the reason for the recommendation.
+**Output.** For each route in rank order: its rank, its no-forecast miles, and, for every route except the first, the step at which it left the contest for first place, what it was measured against there (the best route still in the contest at that step, the dropped route's value, the best value and the dropped route's tolerance) and its differences from the first route (travel time in seconds, No Travel, Severe and High miles, and average risk; each is the route's value minus the first route's). The UI uses these for lines like "+38 min, avoids 50 Severe miles" and to show which values were ties: a route that survived a step was within tolerance on it. The first route's deciding step names the reason for the recommendation. The route a dropped route lost to at its step is not always the first route: in the example above, c drops at average risk against a, while b wins.
 
 A cap on how much extra time a safer route may cost is not part of the assessment and is not applied.
 

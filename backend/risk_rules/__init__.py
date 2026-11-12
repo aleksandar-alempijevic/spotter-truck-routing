@@ -12,6 +12,7 @@ from .ranking import (
     RankingStep,
     RouteCandidate,
     RouteComparison,
+    StepMeasure,
     rank_routes,
 )
 from .summary import Checkpoint, RouteSummary, summarize_route
@@ -28,6 +29,7 @@ __all__ = [
     "RouteCandidate",
     "RouteComparison",
     "RouteSummary",
+    "StepMeasure",
     "WeatherReading",
     "classify_weather",
     "rank_routes",
