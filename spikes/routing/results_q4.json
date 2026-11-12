@@ -1,0 +1,345 @@
+[
+ {
+  "case": "Los Angeles-New York no weight",
+  "http": 200,
+  "sec": 10.8,
+  "routes": [
+   [
+    2800,
+    39.95
+   ],
+   [
+    3018,
+    43.54
+   ]
+  ],
+  "err": null,
+  "note": ""
+ },
+ {
+  "case": "Los Angeles-New York 36000kg",
+  "http": 200,
+  "sec": 6.7,
+  "routes": [
+   [
+    2813,
+    40.12
+   ],
+   [
+    3040,
+    43.64
+   ]
+  ],
+  "err": null,
+  "note": "identical geometry per route: [False, False]"
+ },
+ {
+  "case": "Denver-Atlanta no weight",
+  "http": 200,
+  "sec": 3.4,
+  "routes": [
+   [
+    1405,
+    19.89
+   ],
+   [
+    1624,
+    22.86
+   ],
+   [
+    1590,
+    23.91
+   ]
+  ],
+  "err": null,
+  "note": ""
+ },
+ {
+  "case": "Denver-Atlanta 36000kg",
+  "http": 200,
+  "sec": 3.1,
+  "routes": [
+   [
+    1405,
+    19.89
+   ],
+   [
+    1544,
+    22.53
+   ],
+   [
+    1573,
+    23.42
+   ]
+  ],
+  "err": null,
+  "note": "identical geometry per route: [False, False, False]"
+ },
+ {
+  "case": "Chicago-Indianapolis no weight",
+  "http": 200,
+  "sec": 1.5,
+  "routes": [
+   [
+    183,
+    2.89
+   ],
+   [
+    262,
+    4.0
+   ],
+   [
+    190,
+    4.0
+   ]
+  ],
+  "err": null,
+  "note": ""
+ },
+ {
+  "case": "Chicago-Indianapolis 36000kg",
+  "http": 200,
+  "sec": 1.7,
+  "routes": [
+   [
+    192,
+    3.33
+   ],
+   [
+    218,
+    4.14
+   ],
+   [
+    222,
+    4.21
+   ]
+  ],
+  "err": null,
+  "note": "identical geometry per route: [False, False, False]"
+ },
+ {
+  "case": "Chicago-Indianapolis full truck profile",
+  "http": 200,
+  "sec": 1.1,
+  "routes": [
+   [
+    192,
+    3.52
+   ],
+   [
+    222,
+    4.26
+   ],
+   [
+    218,
+    4.25
+   ]
+  ],
+  "err": null,
+  "note": ""
+ },
+ {
+  "case": "Chicago-Indianapolis 80000 (lb entered as kg by mistake)",
+  "http": 200,
+  "sec": 1.3,
+  "routes": [
+   [
+    192,
+    3.33
+   ],
+   [
+    222,
+    4.21
+   ],
+   [
+    205,
+    4.18
+   ]
+  ],
+  "err": null,
+  "note": ""
+ },
+ {
+  "case": "LA via Albuquerque NYC maxAlternatives=2",
+  "http": 200,
+  "sec": 8.4,
+  "routes": [
+   [
+    2846,
+    41.75
+   ],
+   [
+    3039,
+    44.32
+   ],
+   [
+    3155,
+    45.37
+   ]
+  ],
+  "err": null,
+  "note": "n=3 legs/route=[2, 2, 2]"
+ },
+ {
+  "case": "Chicago via Louisville Indianapolis maxAlternatives=2",
+  "http": 200,
+  "sec": 2.6,
+  "routes": [
+   [
+    422,
+    6.69
+   ],
+   [
+    546,
+    9.15
+   ],
+   [
+    443,
+    8.98
+   ]
+  ],
+  "err": null,
+  "note": ""
+ },
+ {
+  "case": "maxAlternatives=6",
+  "http": 400,
+  "sec": 0.2,
+  "routes": null,
+  "err": "{\"message\": \"Invalid request: 'maxAlternatives' must be an integer in the range from 0 to 5 included.\", \"code\": \"BAD_INPUT\"}",
+  "note": ""
+ },
+ {
+  "case": "departAt in the past",
+  "http": 200,
+  "sec": 1.4,
+  "routes": [
+   [
+    192,
+    3.26
+   ],
+   [
+    219,
+    4.0
+   ],
+   [
+    222,
+    4.07
+   ]
+  ],
+  "err": null,
+  "note": ""
+ },
+ {
+  "case": "departAt +30 days",
+  "http": 200,
+  "sec": 1.4,
+  "routes": [
+   [
+    193,
+    3.22
+   ],
+   [
+    222,
+    4.14
+   ],
+   [
+    219,
+    4.09
+   ]
+  ],
+  "err": null,
+  "note": ""
+ },
+ {
+  "case": "departAt +5 days, alts=5",
+  "http": 200,
+  "sec": 3.0,
+  "routes": [
+   [
+    192,
+    3.3
+   ],
+   [
+    218,
+    4.1
+   ],
+   [
+    222,
+    4.17
+   ],
+   [
+    205,
+    3.62
+   ],
+   [
+    332,
+    5.05
+   ],
+   [
+    228,
+    4.63
+   ]
+  ],
+  "err": null,
+  "note": ""
+ },
+ {
+  "case": "computeBestOrder=true + alts=2",
+  "http": 400,
+  "sec": 0.3,
+  "routes": null,
+  "err": "{\"message\": \"Invalid request: cannot optimize waypoints and calculate alternative routes at same time!\", \"code\": \"BAD_INPUT\"}",
+  "note": ""
+ },
+ {
+  "case": "arriveAt + departAt",
+  "http": 400,
+  "sec": 0.2,
+  "routes": null,
+  "err": "{\"message\": \"Invalid request: Only one of departAt and arriveAt parameters can be specified.\", \"code\": \"BAD_INPUT\"}",
+  "note": ""
+ },
+ {
+  "case": "vehicleWeight=36000 and routeType=shortest",
+  "http": 200,
+  "sec": 1.9,
+  "routes": [
+   [
+    177,
+    4.17
+   ],
+   [
+    184,
+    4.82
+   ],
+   [
+    192,
+    5.35
+   ]
+  ],
+  "err": null,
+  "note": ""
+ },
+ {
+  "case": "Seattle-Miami maxAlternatives=5",
+  "http": 500,
+  "sec": 31.1,
+  "routes": null,
+  "err": "{\"message\": \"Engine error while executing route request: STOPPED: The request exceeded the internal compute time limit and was canceled. For more information, go to: https://developer.tomtom.com/knowledgebase/apis/faq/ro",
+  "note": ""
+ },
+ {
+  "case": "LA-NYC via ABQ routeType=shortest",
+  "http": 200,
+  "sec": 7.3,
+  "routes": [
+   [
+    2789,
+    42.07
+   ]
+  ],
+  "err": null,
+  "note": ""
+ }
+]

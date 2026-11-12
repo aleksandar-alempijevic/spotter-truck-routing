@@ -1,0 +1,219 @@
+[
+ {
+  "pair": "Los Angeles-New York",
+  "http": 200,
+  "sec": 27.1,
+  "err": null,
+  "n": 2,
+  "routes": [
+   {
+    "mi": 2813,
+    "h": 40.1,
+    "pts": 38644,
+    "dev_km": 0
+   },
+   {
+    "mi": 3040,
+    "h": 43.6,
+    "pts": 40167,
+    "dev_km": 66
+   }
+  ],
+  "overlap_vs_main": [
+   0.02
+  ],
+  "overlap_alt2_vs_alt1": null
+ },
+ {
+  "pair": "Seattle-Miami",
+  "http": 200,
+  "sec": 29.9,
+  "err": null,
+  "n": 3,
+  "routes": [
+   {
+    "mi": 3339,
+    "h": 47.9,
+    "pts": 42309,
+    "dev_km": 0
+   },
+   {
+    "mi": 3558,
+    "h": 50.8,
+    "pts": 48085,
+    "dev_km": 176
+   },
+   {
+    "mi": 3555,
+    "h": 51.1,
+    "pts": 49331,
+    "dev_km": 1300
+   }
+  ],
+  "overlap_vs_main": [
+   0.07,
+   0.37
+  ],
+  "overlap_alt2_vs_alt1": 0.07
+ },
+ {
+  "pair": "Chicago-Los Angeles",
+  "http": 200,
+  "sec": 10.3,
+  "err": null,
+  "n": 3,
+  "routes": [
+   {
+    "mi": 2018,
+    "h": 28.7,
+    "pts": 26226,
+    "dev_km": 0
+   },
+   {
+    "mi": 2239,
+    "h": 32.5,
+    "pts": 25896,
+    "dev_km": 1
+   },
+   {
+    "mi": 2527,
+    "h": 37.2,
+    "pts": 29749,
+    "dev_km": 1
+   }
+  ],
+  "overlap_vs_main": [
+   0.07,
+   0.02
+  ],
+  "overlap_alt2_vs_alt1": 0.03
+ },
+ {
+  "pair": "Dallas-San Francisco",
+  "http": 200,
+  "sec": 11.3,
+  "err": null,
+  "n": 3,
+  "routes": [
+   {
+    "mi": 1822,
+    "h": 27.4,
+    "pts": 20289,
+    "dev_km": 0
+   },
+   {
+    "mi": 1749,
+    "h": 27.7,
+    "pts": 21879,
+    "dev_km": 17
+   },
+   {
+    "mi": 2139,
+    "h": 30.1,
+    "pts": 26359,
+    "dev_km": 0
+   }
+  ],
+  "overlap_vs_main": [
+   0.04,
+   0.01
+  ],
+  "overlap_alt2_vs_alt1": 0.01
+ },
+ {
+  "pair": "Denver-Atlanta",
+  "http": 200,
+  "sec": 20.1,
+  "err": null,
+  "n": 3,
+  "routes": [
+   {
+    "mi": 1405,
+    "h": 19.9,
+    "pts": 17467,
+    "dev_km": 0
+   },
+   {
+    "mi": 1544,
+    "h": 22.5,
+    "pts": 20235,
+    "dev_km": 1
+   },
+   {
+    "mi": 1573,
+    "h": 23.4,
+    "pts": 20227,
+    "dev_km": 5
+   }
+  ],
+  "overlap_vs_main": [
+   0.01,
+   0.16
+  ],
+  "overlap_alt2_vs_alt1": 0.01
+ },
+ {
+  "pair": "Chicago-Indianapolis",
+  "http": 200,
+  "sec": 1.7,
+  "err": null,
+  "n": 3,
+  "routes": [
+   {
+    "mi": 192,
+    "h": 3.3,
+    "pts": 3219,
+    "dev_km": 0
+   },
+   {
+    "mi": 218,
+    "h": 4.1,
+    "pts": 3587,
+    "dev_km": 12
+   },
+   {
+    "mi": 222,
+    "h": 4.2,
+    "pts": 3794,
+    "dev_km": 52
+   }
+  ],
+  "overlap_vs_main": [
+   0.23,
+   0.19
+  ],
+  "overlap_alt2_vs_alt1": 0.15
+ },
+ {
+  "pair": "Dallas-Houston",
+  "http": 200,
+  "sec": 2.6,
+  "err": null,
+  "n": 3,
+  "routes": [
+   {
+    "mi": 238,
+    "h": 3.4,
+    "pts": 3187,
+    "dev_km": 0
+   },
+   {
+    "mi": 273,
+    "h": 4.4,
+    "pts": 5003,
+    "dev_km": 0
+   },
+   {
+    "mi": 309,
+    "h": 5.4,
+    "pts": 5561,
+    "dev_km": 5
+   }
+  ],
+  "overlap_vs_main": [
+   0.09,
+   0.08
+  ],
+  "overlap_alt2_vs_alt1": 0.05
+ }
+]

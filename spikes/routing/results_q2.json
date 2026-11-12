@@ -1,0 +1,116 @@
+[
+ {
+  "pair": "Los Angeles-New York",
+  "base_n": 2,
+  "base_mi": [
+   2813,
+   3040
+  ],
+  "vias": [
+   {
+    "via": "Kansas City",
+    "side": 1,
+    "detour_ratio_crow": 1.0,
+    "via_off_main_km": 258,
+    "mi": 2833,
+    "h": 40.6,
+    "overlap_vs_base_routes": [
+     0.37,
+     0.03
+    ],
+    "sec": 7.4
+   },
+   {
+    "via": "Albuquerque",
+    "side": -1,
+    "detour_ratio_crow": 1.01,
+    "via_off_main_km": 473,
+    "mi": 2846,
+    "h": 41.7,
+    "overlap_vs_base_routes": [
+     0.05,
+     0.09
+    ],
+    "sec": 11.3
+   }
+  ]
+ },
+ {
+  "pair": "Phoenix-Boston",
+  "base_n": 3,
+  "base_mi": [
+   2732,
+   2831,
+   2907
+  ],
+  "vias": [
+   {
+    "via": "Kansas City",
+    "side": 1,
+    "detour_ratio_crow": 1.0,
+    "via_off_main_km": 225,
+    "mi": 2822,
+    "h": 39.5,
+    "overlap_vs_base_routes": [
+     0.79,
+     0.03,
+     0.2
+    ],
+    "sec": 2.7
+   },
+   {
+    "via": "Louisville",
+    "side": -1,
+    "detour_ratio_crow": 1.01,
+    "via_off_main_km": 123,
+    "mi": 2750,
+    "h": 38.7,
+    "overlap_vs_base_routes": [
+     0.87,
+     0.03,
+     0.2
+    ],
+    "sec": 6.7
+   }
+  ]
+ },
+ {
+  "pair": "Houston-Minneapolis",
+  "base_n": 3,
+  "base_mi": [
+   1325,
+   1318,
+   1608
+  ],
+  "vias": [
+   {
+    "via": "Amarillo",
+    "side": 1,
+    "detour_ratio_crow": 1.27,
+    "via_off_main_km": 394,
+    "mi": 1746,
+    "h": 25.2,
+    "overlap_vs_base_routes": [
+     0.65,
+     0.25,
+     0.01
+    ],
+    "sec": 2.2
+   },
+   {
+    "via": "Little Rock",
+    "side": -1,
+    "detour_ratio_crow": 1.04,
+    "via_off_main_km": 444,
+    "mi": 1452,
+    "h": 20.8,
+    "overlap_vs_base_routes": [
+     0.37,
+     0.26,
+     0.01
+    ],
+    "sec": 1.7
+   }
+  ]
+ }
+]

@@ -1,0 +1,775 @@
+{
+  "mode": "shell",
+  "throttle": 1,
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)",
+  "results": [
+    {
+      "approach": "global",
+      "cells": 500,
+      "tick": {
+        "sync": {
+          "p50": 0.3,
+          "p95": 0.5,
+          "max": 0.5
+        },
+        "firstFrame": {
+          "p50": 11.2,
+          "p95": 12.4,
+          "max": 13.2
+        },
+        "visible": {
+          "p50": 111,
+          "p95": 112.7,
+          "max": 127.8
+        },
+        "idle": {
+          "p50": 152,
+          "p95": 155,
+          "max": 168.6
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 9669,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 43.8,
+          "p95": 50.6,
+          "max": 73.9
+        },
+        "frameGap": {
+          "p50": 33.3,
+          "p95": 50.1,
+          "max": 66.8
+        },
+        "framesOver50": 21,
+        "longTasks": 9,
+        "longTaskTotal": 486,
+        "longTaskMax": 73,
+        "mapRenders": 192,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "global-array",
+      "cells": 500,
+      "tick": {
+        "sync": {
+          "p50": 0.4,
+          "p95": 0.4,
+          "max": 0.5
+        },
+        "firstFrame": {
+          "p50": 11.1,
+          "p95": 12.2,
+          "max": 16.1
+        },
+        "visible": {
+          "p50": 110.8,
+          "p95": 134.6,
+          "max": 199.3
+        },
+        "idle": {
+          "p50": 152.1,
+          "p95": 189.3,
+          "max": 240.7
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 9671,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 44.4,
+          "p95": 50.2,
+          "max": 73.1
+        },
+        "frameGap": {
+          "p50": 33.3,
+          "p95": 50.1,
+          "max": 66.6
+        },
+        "framesOver50": 19,
+        "longTasks": 7,
+        "longTaskTotal": 401,
+        "longTaskMax": 72,
+        "mapRenders": 192,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "global-lean",
+      "cells": 500,
+      "tick": {
+        "sync": {
+          "p50": 0.3,
+          "p95": 0.5,
+          "max": 0.5
+        },
+        "firstFrame": {
+          "p50": 11,
+          "p95": 12.3,
+          "max": 17.5
+        },
+        "visible": {
+          "p50": 110.9,
+          "p95": 112.2,
+          "max": 267
+        },
+        "idle": {
+          "p50": 151.9,
+          "p95": 169.6,
+          "max": 313.3
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 9604,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 43.7,
+          "p95": 46.2,
+          "max": 76.5
+        },
+        "frameGap": {
+          "p50": 33.3,
+          "p95": 50,
+          "max": 66.7
+        },
+        "framesOver50": 14,
+        "longTasks": 3,
+        "longTaskTotal": 183,
+        "longTaskMax": 76,
+        "mapRenders": 192,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "paint",
+      "cells": 500,
+      "tick": {
+        "sync": {
+          "p50": 0.2,
+          "p95": 0.2,
+          "max": 0.3
+        },
+        "firstFrame": {
+          "p50": 11.4,
+          "p95": 12.5,
+          "max": 13.1
+        },
+        "visible": {
+          "p50": 110.7,
+          "p95": 112.2,
+          "max": 113.2
+        },
+        "idle": {
+          "p50": 151.8,
+          "p95": 153.5,
+          "max": 159.1
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 9659,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 43.6,
+          "p95": 49.3,
+          "max": 71.9
+        },
+        "frameGap": {
+          "p50": 33.3,
+          "p95": 50,
+          "max": 66.7
+        },
+        "framesOver50": 12,
+        "longTasks": 7,
+        "longTaskTotal": 387,
+        "longTaskMax": 71,
+        "mapRenders": 192,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "feature",
+      "cells": 500,
+      "tick": {
+        "sync": {
+          "p50": 0.1,
+          "p95": 0.2,
+          "max": 0.2
+        },
+        "firstFrame": {
+          "p50": 16.2,
+          "p95": 18.2,
+          "max": 18.6
+        },
+        "visible": {
+          "p50": 16.2,
+          "p95": 18.2,
+          "max": 18.6
+        },
+        "idle": {
+          "p50": 58.1,
+          "p95": 60.9,
+          "max": 64.3
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 6531,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 44.8,
+          "p95": 50.2,
+          "max": 56.5
+        },
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 33.4,
+          "max": 50.1
+        },
+        "framesOver50": 2,
+        "longTasks": 5,
+        "longTaskTotal": 259,
+        "longTaskMax": 56,
+        "mapRenders": 96,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "feature-diff",
+      "cells": 500,
+      "tick": {
+        "sync": {
+          "p50": 0.1,
+          "p95": 0.2,
+          "max": 0.2
+        },
+        "firstFrame": {
+          "p50": 16,
+          "p95": 17.5,
+          "max": 18.4
+        },
+        "visible": {
+          "p50": 16,
+          "p95": 17.5,
+          "max": 18.4
+        },
+        "idle": {
+          "p50": 57.7,
+          "p95": 59.9,
+          "max": 60.9
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 6509,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 43.3,
+          "p95": 48,
+          "max": 73.4
+        },
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 33.4,
+          "max": 66.6
+        },
+        "framesOver50": 1,
+        "longTasks": 2,
+        "longTaskTotal": 127,
+        "longTaskMax": 73,
+        "mapRenders": 96,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "layers",
+      "cells": 500,
+      "tick": {
+        "sync": {
+          "p50": 0.1,
+          "p95": 0.1,
+          "max": 0.2
+        },
+        "firstFrame": {
+          "p50": 12.2,
+          "p95": 16.2,
+          "max": 17.2
+        },
+        "visible": {
+          "p50": 110.3,
+          "p95": 123.6,
+          "max": 133.6
+        },
+        "idle": {
+          "p50": 152.5,
+          "p95": 175.1,
+          "max": 192
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 9672,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 42.8,
+          "p95": 53,
+          "max": 78.8
+        },
+        "frameGap": {
+          "p50": 33.3,
+          "p95": 50.1,
+          "max": 66.7
+        },
+        "framesOver50": 18,
+        "longTasks": 10,
+        "longTaskTotal": 571,
+        "longTaskMax": 79,
+        "mapRenders": 192,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "rebuild",
+      "cells": 500,
+      "tick": {
+        "sync": {
+          "p50": 0.1,
+          "p95": 0.2,
+          "max": 0.2
+        },
+        "firstFrame": {
+          "p50": 15.6,
+          "p95": 17.7,
+          "max": 19.3
+        },
+        "visible": {
+          "p50": 15.6,
+          "p95": 18.1,
+          "max": 72.9
+        },
+        "idle": {
+          "p50": 57.5,
+          "p95": 113.5,
+          "max": 192
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 6366,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 1.5,
+          "p95": 1.7,
+          "max": 1.8
+        },
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 33.4,
+          "max": 33.4
+        },
+        "framesOver50": 0,
+        "longTasks": 0,
+        "longTaskTotal": 0,
+        "longTaskMax": 0,
+        "mapRenders": 96,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "global",
+      "cells": 2001,
+      "tick": {
+        "sync": {
+          "p50": 0.4,
+          "p95": 0.5,
+          "max": 0.7
+        },
+        "firstFrame": {
+          "p50": 8.8,
+          "p95": 10,
+          "max": 10.2
+        },
+        "visible": {
+          "p50": 108.8,
+          "p95": 109.8,
+          "max": 125
+        },
+        "idle": {
+          "p50": 151.8,
+          "p95": 153.5,
+          "max": 168.5
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 9603,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 45.9,
+          "p95": 48.2,
+          "max": 75
+        },
+        "frameGap": {
+          "p50": 33.3,
+          "p95": 50.1,
+          "max": 66.7
+        },
+        "framesOver50": 17,
+        "longTasks": 2,
+        "longTaskTotal": 124,
+        "longTaskMax": 74,
+        "mapRenders": 192,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "global-array",
+      "cells": 2001,
+      "tick": {
+        "sync": {
+          "p50": 0.4,
+          "p95": 0.5,
+          "max": 0.5
+        },
+        "firstFrame": {
+          "p50": 6.8,
+          "p95": 9.2,
+          "max": 11.2
+        },
+        "visible": {
+          "p50": 107.9,
+          "p95": 125,
+          "max": 135.8
+        },
+        "idle": {
+          "p50": 153.1,
+          "p95": 180.4,
+          "max": 182.9
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 10418,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 48.8,
+          "p95": 62.5,
+          "max": 79.5
+        },
+        "frameGap": {
+          "p50": 33.4,
+          "p95": 50.1,
+          "max": 66.7
+        },
+        "framesOver50": 39,
+        "longTasks": 64,
+        "longTaskTotal": 3515,
+        "longTaskMax": 79,
+        "mapRenders": 192,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "global-lean",
+      "cells": 2001,
+      "tick": {
+        "sync": {
+          "p50": 0.4,
+          "p95": 0.5,
+          "max": 0.5
+        },
+        "firstFrame": {
+          "p50": 8.2,
+          "p95": 16.2,
+          "max": 17.7
+        },
+        "visible": {
+          "p50": 109.5,
+          "p95": 142.3,
+          "max": 150.5
+        },
+        "idle": {
+          "p50": 156.3,
+          "p95": 203.6,
+          "max": 213.9
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 9939,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 47.2,
+          "p95": 56.1,
+          "max": 74.1
+        },
+        "frameGap": {
+          "p50": 33.3,
+          "p95": 50.1,
+          "max": 66.7
+        },
+        "framesOver50": 22,
+        "longTasks": 29,
+        "longTaskTotal": 1579,
+        "longTaskMax": 73,
+        "mapRenders": 192,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "paint",
+      "cells": 2001,
+      "tick": {
+        "sync": {
+          "p50": 0.2,
+          "p95": 0.3,
+          "max": 0.3
+        },
+        "firstFrame": {
+          "p50": 9,
+          "p95": 10.3,
+          "max": 10.7
+        },
+        "visible": {
+          "p50": 108.9,
+          "p95": 127.3,
+          "max": 139.5
+        },
+        "idle": {
+          "p50": 152.3,
+          "p95": 174.7,
+          "max": 182.4
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 10375,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 46.3,
+          "p95": 72.9,
+          "max": 158.9
+        },
+        "frameGap": {
+          "p50": 33.4,
+          "p95": 50.1,
+          "max": 166.7
+        },
+        "framesOver50": 25,
+        "longTasks": 25,
+        "longTaskTotal": 1844,
+        "longTaskMax": 176,
+        "mapRenders": 192,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "feature",
+      "cells": 2001,
+      "tick": {
+        "sync": {
+          "p50": 0.2,
+          "p95": 0.3,
+          "max": 0.4
+        },
+        "firstFrame": {
+          "p50": 13.6,
+          "p95": 22.1,
+          "max": 24.1
+        },
+        "visible": {
+          "p50": 13.6,
+          "p95": 22.1,
+          "max": 24.1
+        },
+        "idle": {
+          "p50": 57.3,
+          "p95": 69.6,
+          "max": 75.4
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 7990,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 52.9,
+          "p95": 59.4,
+          "max": 61.1
+        },
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 50.1,
+          "max": 50.1
+        },
+        "framesOver50": 18,
+        "longTasks": 96,
+        "longTaskTotal": 5074,
+        "longTaskMax": 61,
+        "mapRenders": 96,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "feature-diff",
+      "cells": 2001,
+      "tick": {
+        "sync": {
+          "p50": 0.1,
+          "p95": 0.2,
+          "max": 0.2
+        },
+        "firstFrame": {
+          "p50": 11.2,
+          "p95": 12.7,
+          "max": 14.9
+        },
+        "visible": {
+          "p50": 11.2,
+          "p95": 12.7,
+          "max": 14.9
+        },
+        "idle": {
+          "p50": 55.3,
+          "p95": 58.4,
+          "max": 62
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 6632,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 46.4,
+          "p95": 49.7,
+          "max": 58.3
+        },
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 33.4,
+          "max": 50.1
+        },
+        "framesOver50": 3,
+        "longTasks": 4,
+        "longTaskTotal": 221,
+        "longTaskMax": 58,
+        "mapRenders": 96,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "layers",
+      "cells": 2001,
+      "tick": {
+        "sync": {
+          "p50": 0.1,
+          "p95": 0.2,
+          "max": 0.2
+        },
+        "firstFrame": {
+          "p50": 8.6,
+          "p95": 10.1,
+          "max": 10.3
+        },
+        "visible": {
+          "p50": 108.8,
+          "p95": 109.8,
+          "max": 110
+        },
+        "idle": {
+          "p50": 152.3,
+          "p95": 156,
+          "max": 158.2
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 9716,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 42.8,
+          "p95": 48.6,
+          "max": 72.1
+        },
+        "frameGap": {
+          "p50": 33.3,
+          "p95": 50.1,
+          "max": 66.7
+        },
+        "framesOver50": 24,
+        "longTasks": 12,
+        "longTaskTotal": 651,
+        "longTaskMax": 72,
+        "mapRenders": 192,
+        "networkRequests": 0
+      },
+      "errors": []
+    },
+    {
+      "approach": "rebuild",
+      "cells": 2001,
+      "tick": {
+        "sync": {
+          "p50": 0.1,
+          "p95": 0.2,
+          "max": 0.3
+        },
+        "firstFrame": {
+          "p50": 24.7,
+          "p95": 26.8,
+          "max": 27.5
+        },
+        "visible": {
+          "p50": 25,
+          "p95": 67.8,
+          "max": 83.4
+        },
+        "idle": {
+          "p50": 69.8,
+          "p95": 132.6,
+          "max": 261.3
+        },
+        "changedTicks": 48
+      },
+      "drag": {
+        "ms": 9210,
+        "inputs": 96,
+        "inputToPaint": {
+          "p50": 5.2,
+          "p95": 53.4,
+          "max": 59.8
+        },
+        "frameGap": {
+          "p50": 16.7,
+          "p95": 50,
+          "max": 66.7
+        },
+        "framesOver50": 10,
+        "longTasks": 44,
+        "longTaskTotal": 2285,
+        "longTaskMax": 63,
+        "mapRenders": 153,
+        "networkRequests": 0
+      },
+      "errors": []
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+ "Chicago-Indianapolis": {
+  "points": 3219,
+  "instructions": 36,
+  "holdout_median_s": 6.6077746676910465,
+  "holdout_p95_s": 53.2251249760011,
+  "const_speed_p95_s": 1019.9064284461074
+ },
+ "Dallas-San Francisco": {
+  "points": 20289,
+  "instructions": 68,
+  "holdout_median_s": 3.3453425995248836,
+  "holdout_p95_s": 16.269461668722215,
+  "const_speed_p95_s": 4661.416884097547
+ }
+}
