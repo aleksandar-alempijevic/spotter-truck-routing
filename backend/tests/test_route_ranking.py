@@ -579,3 +579,61 @@ def test_no_travel_miles_above_the_float_margin_leave_nothing_recommended():
     ranking = rank(no_travel_gap_route("a", ABOVE_MARGIN, 300), no_travel_gap_route("b", 1, 900))
 
     assert ranking.recommended_id is None
+
+
+def test_every_ranked_routes_average_risk_tolerance_is_readable_including_the_winners():
+    # "w" has a forecast for only its first 25 miles (Moderate), so its average is the worst of
+    # the three, but its own tolerance is the full level and it stays in with the all-Low "a".
+    a = route("a", [L] * 20, minutes=15)
+    w = route("w", [M] + [None] * 19, minutes=5)
+    r = route("r", [M] * 4 + [L] * 16, minutes=10)
+
+    ranking = rank(a, w, r)
+
+    assert order(ranking) == ["w", "a", "r"]
+    assert ranking.decided_by is RankingStep.TRAVEL_TIME
+    tolerances = {x.route_id: x.average_risk_tolerance for x in ranking.routes}
+    assert tolerances == pytest.approx({"w": 1.0, "a": 0.05, "r": 0.05})
+    dropped_r = ranking.routes[2].vs_first
+    assert dropped_r.dropped_against.best_route_id == "a"
+    assert dropped_r.dropped_against.tolerance == pytest.approx(0.05)
+
+
+def test_a_route_without_an_average_has_no_tolerance():
+    ranking = rank(route("blind", [None] * 4), route("sighted", [L] * 4))
+
+    assert {x.route_id: x.average_risk_tolerance for x in ranking.routes}["blind"] is None
+
+
+def equal_valued_survivors_at_average_risk():
+    # "x" and "y" are identical in every value except their ids; "z" drops at average risk.
+    return [
+        route("x", [L] * 4, minutes=600),
+        route("y", [L] * 4, minutes=600),
+        route("z", [M, M, L, L], minutes=300),
+    ]
+
+
+def equal_valued_survivors_at_travel_time():
+    # Equal average risk and time; only the miles differ, then ties on miles too.
+    return [
+        route("p", [L] * 4, minutes=600, total=100),
+        route("q", [L] * 4, minutes=600, total=100),
+        route("s", [L] * 4, minutes=600, total=100.5),
+    ]
+
+
+@pytest.mark.parametrize(
+    "fixture",
+    [
+        three_500_mile_routes,
+        equal_valued_survivors_at_average_risk,
+        equal_valued_survivors_at_travel_time,
+    ],
+)
+def test_full_ranking_including_what_dropped_routes_lost_to_is_independent_of_input_order(fixture):
+    routes = fixture()
+
+    results = {rank_routes(list(p), INTERVAL) for p in itertools.permutations(routes)}
+
+    assert len(results) == 1

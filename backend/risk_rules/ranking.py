@@ -43,7 +43,8 @@ class StepMeasure:
     best_route_id: str
     """The best route among those still in the contest at that step."""
     route_value: float | None
-    """The dropped route's value at the step; None if it had none (no average risk)."""
+    """The dropped route's value at the step. None in two cases: it had no value (no average
+    risk), or the step is the route-id step, which compares no values (best_value is None too)."""
     best_value: float | None
     """The best route's value at the step; None at the route-id step, which compares no value."""
     tolerance: float
@@ -71,6 +72,9 @@ class RankedRoute:
     route_id: str
     rank: int
     no_forecast_miles: float
+    average_risk_tolerance: float | None
+    """The route's own tolerance at the average-risk step, whether or not it dropped there;
+    None if the route has no average risk."""
     vs_first: RouteComparison | None
     """None for the first-ranked route."""
 
@@ -94,6 +98,13 @@ class _Step:
     """How far above the best a route's value may be and still stay in the contest."""
 
 
+def _average_risk_tolerance(summary: RouteSummary, interval_miles: float) -> float:
+    """One full-interval checkpoint moving one level shifts a route's average by
+    interval / its forecast miles, capped at one level for routes forecast for less than an
+    interval."""
+    return min(1.0, interval_miles / summary.forecast_miles)
+
+
 def _steps(interval_miles: float) -> list[_Step]:
     def zero(_: RouteCandidate) -> float:
         return 0.0
@@ -102,10 +113,8 @@ def _steps(interval_miles: float) -> list[_Step]:
         return interval_miles
 
     def average_risk_tolerance(c: RouteCandidate) -> float:
-        # One full-interval checkpoint moving one level shifts a route's average by
-        # interval / its forecast miles, capped at one level for routes forecast for less than
-        # an interval. Only called for routes that have an average, so forecast miles are > 0.
-        return min(1.0, interval_miles / c.summary.forecast_miles)
+        # Only called for routes that have an average, so forecast miles are > 0.
+        return _average_risk_tolerance(c.summary, interval_miles)
 
     return [
         _Step(RankingStep.NO_TRAVEL, lambda c: c.summary.no_travel_miles, zero),
@@ -219,6 +228,13 @@ def rank_routes(candidates: Sequence[RouteCandidate], checkpoint_interval_miles:
                 high_miles=c.summary.high_miles - first.summary.high_miles,
                 average_risk=average,
             )
-        ranked.append(RankedRoute(c.route_id, rank, c.summary.no_forecast_miles, comparison))
+        tolerance = (
+            _average_risk_tolerance(c.summary, checkpoint_interval_miles)
+            if c.summary.average_risk is not None
+            else None
+        )
+        ranked.append(
+            RankedRoute(c.route_id, rank, c.summary.no_forecast_miles, tolerance, comparison)
+        )
     recommended = first.route_id if first.summary.no_travel_miles <= FLOAT_MARGIN else None
     return Ranking(tuple(ranked), recommended, decided_by)
