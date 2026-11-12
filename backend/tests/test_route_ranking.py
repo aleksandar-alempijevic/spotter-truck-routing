@@ -63,12 +63,6 @@ def test_one_severe_checkpoint_loses_to_none_however_much_faster():
     assert ranking.recommended_id == "safe"
 
 
-def test_severe_miles_beyond_float_noise_still_lose():
-    safe = route("safe", [L, L, L, L], minutes=900)
-    fast = route("fast", [L, L, L, S], minutes=60, total=100.00001)
-    assert order(rank(fast, safe)) == ["safe", "fast"]
-
-
 def test_high_difference_of_more_than_one_interval_decides():
     clean = route("clean", [L, L, L, L], minutes=900)
     two_high = route("two", [L, H, H, L], minutes=300)
@@ -113,55 +107,6 @@ def test_high_gap_a_little_over_one_interval_is_not_a_tie():
     b = RouteCandidate("b", 1000.0, 1.1, summarize_route(1.1, marks_b))
 
     assert order(rank_routes([a, b], interval)) == ["a", "b"]
-
-
-def test_average_risk_gap_under_one_over_n_falls_through_to_time():
-    # Eight forecasted checkpoints each: one Moderate mile-quarter changes the average by 1/8.
-    steady = route("steady", [L] * 8, minutes=900)
-    one_moderate = route("one", [M] + [L] * 7, minutes=300)
-
-    ranking = rank(steady, one_moderate)
-
-    assert order(ranking) == ["one", "steady"]
-    assert ranking.decided_by is RankingStep.TRAVEL_TIME
-
-
-def test_average_risk_gap_over_one_over_n_decides():
-    steady = route("steady", [L] * 4, minutes=900)
-    two_moderate = route("two", [M, M, L, L], minutes=300)  # average 0.5 > 1/4
-
-    ranking = rank(steady, two_moderate)
-
-    assert order(ranking) == ["steady", "two"]
-    assert ranking.decided_by is RankingStep.AVERAGE_RISK
-
-
-def test_average_risk_gap_of_exactly_one_over_n_is_a_tie():
-    steady = route("steady", [L] * 4, minutes=900)
-    one_moderate = route("one", [M, L, L, L], minutes=300)  # average 0.25 == 1/4
-
-    assert order(rank(steady, one_moderate)) == ["one", "steady"]
-
-
-def test_average_risk_edge_holds_despite_float_noise_in_the_miles():
-    interval = 0.1
-    total = 0.4
-    marks = [Checkpoint(sum([0.1] * i), L) for i in range(4)]
-    marks_m = [Checkpoint(sum([0.1] * i), M if i == 0 else L) for i in range(4)]
-    a = RouteCandidate("a", 3000.0, total, summarize_route(total, marks))
-    b = RouteCandidate("b", 1000.0, total, summarize_route(total, marks_m))
-
-    assert order(rank_routes([a, b], interval)) == ["b", "a"]
-
-
-def test_n_is_the_fewest_forecasted_checkpoints_among_the_routes_still_in_contention():
-    # 2 checkpoints on one route makes the tolerance 1/2, so a 0.4 gap is a tie.
-    short = route("short", [L, L], minutes=900, interval=50)
-    long_ = route("long", [M, M, L, L, L, L, L, L, L, L], minutes=300, interval=10)  # avg 0.2
-    assert order(rank_routes([short, long_], 50)) == ["long", "short"]
-    # With 10 checkpoints on both, the same 0.2 gap exceeds 1/10.
-    short10 = route("short", [L] * 10, minutes=900, interval=10)
-    assert order(rank_routes([short10, long_], 10)) == ["short", "long"]
 
 
 def test_route_with_no_forecast_compares_worse_than_any_average_risk_and_is_reported():
@@ -276,3 +221,205 @@ def test_duplicate_ids_and_bad_inputs_are_rejected():
         rank_routes([a, route("b", [L, L])], 0)
     with pytest.raises(ValueError):
         rank_routes([a, route("b", [L, L], minutes=float("nan"))], INTERVAL)
+
+
+def marked_route(route_id, marks, total, minutes=600):
+    """A route from explicit (mile, level) marks, for float-edge cases."""
+    checkpoints = [Checkpoint(mile, level) for mile, level in marks]
+    return RouteCandidate(route_id, minutes * 60.0, total, summarize_route(total, checkpoints))
+
+
+def test_average_risk_gap_beyond_the_tolerance_decides():
+    steady = route("steady", [L] * 4, minutes=900)
+    two_moderate = route("two", [M, M, L, L], minutes=300)  # average 0.5 > 25 / 100
+
+    ranking = rank(steady, two_moderate)
+
+    assert order(ranking) == ["steady", "two"]
+    assert ranking.decided_by is RankingStep.AVERAGE_RISK
+
+
+def test_average_risk_gap_of_exactly_the_tolerance_is_a_tie():
+    steady = route("steady", [L] * 4, minutes=900)
+    one_moderate = route("one", [M, L, L, L], minutes=300)  # average 0.25 == 25 / 100
+
+    assert order(rank(steady, one_moderate)) == ["one", "steady"]
+
+
+def test_average_risk_gap_below_the_tolerance_on_a_short_last_segment_falls_through_to_time():
+    # 7 full checkpoints and a 10-mile last one: 185 forecast miles, tolerance 25 / 185.
+    steady = route("steady", [L] * 8, minutes=900, total=185)
+    short_moderate = route("short", [L] * 7 + [M], minutes=300, total=185)  # 10 / 185
+
+    ranking = rank(steady, short_moderate)
+
+    assert order(ranking) == ["short", "steady"]
+    assert ranking.decided_by is RankingStep.TRAVEL_TIME
+
+
+def test_one_level_step_at_one_checkpoint_ties_when_the_length_is_not_a_multiple_of_the_interval():
+    # 1010 miles at 25-mile spacing: 41 checkpoints, the last standing for 10 miles. Moderate
+    # against High at one full-interval checkpoint is a gap of exactly 25 / 1010.
+    levels_a = [L] * 41
+    levels_a[3] = M
+    levels_b = [L] * 41
+    levels_b[3] = H
+    slower = route("slower", levels_a, minutes=900, total=1010)
+    faster = route("faster", levels_b, minutes=300, total=1010)
+
+    ranking = rank(slower, faster)
+
+    assert order(ranking) == ["faster", "slower"]
+    assert ranking.decided_by is RankingStep.TRAVEL_TIME
+
+
+def test_two_levels_at_one_checkpoint_exceed_the_tolerance_at_1010_miles():
+    levels_a = [L] * 41
+    levels_b = [L] * 41
+    levels_b[3] = M
+    levels_b[4] = M
+    slower = route("slower", levels_a, minutes=900, total=1010)
+    faster = route("faster", levels_b, minutes=300, total=1010)
+
+    ranking = rank(slower, faster)
+
+    assert order(ranking) == ["slower", "faster"]
+    assert ranking.decided_by is RankingStep.AVERAGE_RISK
+
+
+def test_tolerance_comes_from_the_route_with_the_fewest_forecast_miles():
+    # Tolerance is 25 / 100 = 0.25, set by the 100-mile route, even though the long route alone
+    # would allow only 25 / 1010.
+    short = route("short", [L] * 4, minutes=900)
+    levels = [L] * 41
+    levels[1:5] = [M] * 4  # average 100 / 1010 = 0.099, within 0.25 of the short route's 0
+    long_ok = route("long", levels, minutes=300, total=1010)
+    assert order(rank(short, long_ok)) == ["long", "short"]
+
+    levels[1:13] = [M] * 12  # average 300 / 1010 = 0.297, beyond 0.25
+    long_bad = route("long", levels, minutes=300, total=1010)
+    ranking = rank(short, long_bad)
+    assert order(ranking) == ["short", "long"]
+    assert ranking.decided_by is RankingStep.AVERAGE_RISK
+
+
+def test_average_risk_edge_with_float_noise_in_the_marks_is_a_tie():
+    # Marks accumulated by repeated addition carry rounding error. The one-level gap here is
+    # 5.5e-17 above the tolerance in floating point, and equal to it on paper.
+    interval = 0.1
+    positions = []
+    position = 0.0
+    for _ in range(5):
+        positions.append(position)
+        position += interval
+    total = position + interval * 0.4
+    flat = marked_route("flat", [(p, L) for p in positions], total, minutes=900)
+    levels = [M if i == 2 else L for i in range(5)]
+    bumped = marked_route("bumped", list(zip(positions, levels, strict=True)), total, minutes=300)
+    raw_gap = bumped.summary.average_risk - flat.summary.average_risk
+    assert raw_gap > interval / flat.summary.forecast_miles  # on the wrong side by noise alone
+
+    ranking = rank_routes([flat, bumped], interval)
+
+    assert order(ranking) == ["bumped", "flat"]
+    assert ranking.decided_by is RankingStep.TRAVEL_TIME
+
+
+def test_a_route_eliminated_earlier_does_not_set_the_average_risk_tolerance():
+    # Counted, the 50-mile route would widen the tolerance to 25 / 50 and let "two" tie with
+    # "flat". It loses on Severe miles first, so the tolerance is 25 / 200 and "two" loses.
+    flat = route("flat", [L] * 8, minutes=900)
+    two_moderate = route("two", [M, M] + [L] * 6, minutes=300)  # average 0.25 > 0.125
+    severe_short = route("severe", [L, S], minutes=100)
+
+    ranking = rank(severe_short, two_moderate, flat)
+
+    assert order(ranking) == ["flat", "two", "severe"]
+    assert ranking.decided_by is RankingStep.AVERAGE_RISK
+    assert ranking.routes[2].vs_first.dropped_at is RankingStep.SEVERE
+    assert ranking.routes[1].vs_first.dropped_at is RankingStep.AVERAGE_RISK
+
+
+def test_route_without_forecast_drops_at_average_risk_and_does_not_set_the_tolerance():
+    blind = route("blind", [None] * 4, minutes=100)
+    slow = route("slow", [L] * 4, minutes=900)
+    fast = route("fast", [M, L, L, L], minutes=300)  # average 0.25 == 25 / 100: a tie
+
+    ranking = rank(blind, slow, fast)
+
+    assert order(ranking) == ["fast", "slow", "blind"]
+    assert ranking.decided_by is RankingStep.TRAVEL_TIME
+    assert ranking.routes[2].vs_first.dropped_at is RankingStep.AVERAGE_RISK
+    assert ranking.routes[2].vs_first.average_risk is None
+    assert ranking.routes[2].no_forecast_miles == 100
+
+
+def test_when_no_route_has_an_average_risk_the_step_is_skipped_and_time_decides():
+    slow = route("slow", [None] * 4, minutes=900)
+    fast = route("fast", [None] * 4, minutes=300)
+
+    ranking = rank(slow, fast)
+
+    assert order(ranking) == ["fast", "slow"]
+    assert ranking.decided_by is RankingStep.TRAVEL_TIME
+    assert ranking.routes[1].vs_first.average_risk is None
+
+
+SUB_MARGIN = 1e-9
+ABOVE_MARGIN = 1e-3
+
+
+def severe_gap_route(route_id, gap, minutes):
+    """100 miles with `25 + gap` Severe miles, then Low."""
+    return marked_route(route_id, [(0, L), (25, S), (50 + gap, L)], 100, minutes)
+
+
+def test_severe_gap_below_the_float_margin_is_a_tie_and_time_decides():
+    ranking = rank(severe_gap_route("a", 0, 900), severe_gap_route("b", SUB_MARGIN, 300))
+
+    assert order(ranking) == ["b", "a"]
+    assert ranking.decided_by is RankingStep.TRAVEL_TIME
+
+
+def test_severe_gap_above_the_float_margin_decides():
+    ranking = rank(severe_gap_route("a", 0, 900), severe_gap_route("b", ABOVE_MARGIN, 300))
+
+    assert order(ranking) == ["a", "b"]
+    assert ranking.decided_by is RankingStep.SEVERE
+
+
+def no_travel_gap_route(route_id, miles, minutes):
+    return marked_route(route_id, [(0, L), (100 - miles, N)], 100, minutes)
+
+
+def test_no_travel_gap_below_the_float_margin_is_a_tie_and_time_decides():
+    ranking = rank(
+        no_travel_gap_route("a", SUB_MARGIN, 900), no_travel_gap_route("b", 2 * SUB_MARGIN, 300)
+    )
+
+    assert order(ranking) == ["b", "a"]
+    assert ranking.decided_by is RankingStep.TRAVEL_TIME
+
+
+def test_no_travel_gap_above_the_float_margin_decides():
+    ranking = rank(
+        no_travel_gap_route("a", ABOVE_MARGIN, 900), no_travel_gap_route("b", 2 * ABOVE_MARGIN, 300)
+    )
+
+    assert order(ranking) == ["a", "b"]
+    assert ranking.decided_by is RankingStep.NO_TRAVEL
+
+
+def test_sub_margin_no_travel_miles_do_not_stop_a_route_being_recommended():
+    nearly_clear = no_travel_gap_route("a", SUB_MARGIN, 300)
+    clear = route("b", [L] * 4, minutes=900)
+
+    ranking = rank(nearly_clear, clear)
+
+    assert ranking.recommended_id == "a"
+
+
+def test_no_travel_miles_above_the_float_margin_leave_nothing_recommended():
+    ranking = rank(no_travel_gap_route("a", ABOVE_MARGIN, 300), no_travel_gap_route("b", 1, 900))
+
+    assert ranking.recommended_id is None

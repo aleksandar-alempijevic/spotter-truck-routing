@@ -1,8 +1,9 @@
 """From a route's checkpoints to the route summary the ranking compares."""
 
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from types import MappingProxyType
 
 from .levels import Level
 
@@ -17,26 +18,58 @@ class Checkpoint:
 
 @dataclass(frozen=True, slots=True)
 class RouteSummary:
-    """Miles at each level, the miles with no forecast, and the mile-weighted average risk."""
+    """Miles at each level, the miles with no forecast, and the mile-weighted average risk.
 
-    miles_by_level: dict[Level, float]
+    Construction checks the summary's own invariants: every mileage is finite and at least 0, and
+    the average risk is present exactly when some miles have a forecast, and equals the
+    mile-weighted average of the level scores.
+    """
+
+    low_miles: float
+    moderate_miles: float
+    high_miles: float
+    severe_miles: float
+    no_travel_miles: float
     no_forecast_miles: float
     average_risk: float | None
     """Mile-weighted average of the level scores over forecasted miles; None if there are none."""
-    forecast_checkpoints: int
-    """Checkpoints that have a forecast and stand for more than zero miles."""
+
+    def __post_init__(self) -> None:
+        miles = (*self._level_miles(), self.no_forecast_miles)
+        if not all(math.isfinite(m) and m >= 0 for m in miles):
+            raise ValueError("summary miles must be finite numbers of at least 0")
+        forecast_miles = self.forecast_miles
+        if forecast_miles <= 0:
+            if self.average_risk is not None:
+                raise ValueError("a summary without forecasted miles has no average risk")
+            return
+        if self.average_risk is None:
+            raise ValueError("a summary with forecasted miles needs an average risk")
+        expected = (
+            sum(level.score * m for level, m in zip(Level, self._level_miles(), strict=True))
+            / forecast_miles
+        )
+        if not math.isclose(self.average_risk, expected, rel_tol=1e-9, abs_tol=1e-9):
+            raise ValueError("average risk does not match the miles at each level")
+
+    def _level_miles(self) -> tuple[float, ...]:
+        return (
+            self.low_miles,
+            self.moderate_miles,
+            self.high_miles,
+            self.severe_miles,
+            self.no_travel_miles,
+        )
 
     @property
-    def no_travel_miles(self) -> float:
-        return self.miles_by_level[Level.NO_TRAVEL]
+    def miles_by_level(self) -> Mapping[Level, float]:
+        """Read-only miles at each of the five levels."""
+        return MappingProxyType(dict(zip(Level, self._level_miles(), strict=True)))
 
     @property
-    def severe_miles(self) -> float:
-        return self.miles_by_level[Level.SEVERE]
-
-    @property
-    def high_miles(self) -> float:
-        return self.miles_by_level[Level.HIGH]
+    def forecast_miles(self) -> float:
+        """Miles whose checkpoint has a forecast."""
+        return sum(self._level_miles())
 
 
 def summarize_route(total_miles: float, checkpoints: Sequence[Checkpoint]) -> RouteSummary:
@@ -63,16 +96,13 @@ def summarize_route(total_miles: float, checkpoints: Sequence[Checkpoint]) -> Ro
 
     miles_by_level = dict.fromkeys(Level, 0.0)
     no_forecast_miles = 0.0
-    forecast_checkpoints = 0
     ends = [*marks[1:], total_miles]
     for checkpoint, end in zip(checkpoints, ends, strict=True):
         miles = end - checkpoint.mile
         if checkpoint.level is None:
             no_forecast_miles += miles
-            continue
-        miles_by_level[checkpoint.level] += miles
-        if miles > 0:
-            forecast_checkpoints += 1
+        else:
+            miles_by_level[checkpoint.level] += miles
 
     forecast_miles = sum(miles_by_level.values())
     average_risk = (
@@ -81,8 +111,11 @@ def summarize_route(total_miles: float, checkpoints: Sequence[Checkpoint]) -> Ro
         else None
     )
     return RouteSummary(
-        miles_by_level=miles_by_level,
+        low_miles=miles_by_level[Level.LOW],
+        moderate_miles=miles_by_level[Level.MODERATE],
+        high_miles=miles_by_level[Level.HIGH],
+        severe_miles=miles_by_level[Level.SEVERE],
+        no_travel_miles=miles_by_level[Level.NO_TRAVEL],
         no_forecast_miles=no_forecast_miles,
         average_risk=average_risk,
-        forecast_checkpoints=forecast_checkpoints,
     )

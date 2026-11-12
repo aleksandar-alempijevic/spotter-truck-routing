@@ -146,3 +146,47 @@ def test_levels_order_and_score():
     assert L < M < H < S < N
     assert max(M, S) is S
     assert Level.NO_TRAVEL.value == "no_travel"
+
+
+def test_wire_names_are_pinned():
+    from risk_rules import RankingStep
+
+    assert {m.name: m.value for m in Level} == {
+        "LOW": "low",
+        "MODERATE": "moderate",
+        "HIGH": "high",
+        "SEVERE": "severe",
+        "NO_TRAVEL": "no_travel",
+    }
+    assert {m.name: m.value for m in Condition} == {
+        "WIND": "wind",
+        "RAIN": "rain",
+        "SNOW": "snow",
+    }
+    assert {m.name: m.value for m in RankingStep} == {
+        "NO_TRAVEL": "no_travel",
+        "SEVERE": "severe",
+        "HIGH": "high",
+        "AVERAGE_RISK": "average_risk",
+        "TRAVEL_TIME": "travel_time",
+        "MILES": "miles",
+        "ROUTE_ID": "route_id",
+    }
+
+
+def test_wire_enums_are_strings():
+    from risk_rules import RankingStep
+
+    assert Level.HIGH == "high"
+    assert f"{Level.HIGH}" == "high"
+    assert Condition.WIND == "wind"
+    assert RankingStep.TRAVEL_TIME == "travel_time"
+    assert all(isinstance(m, str) for enum in (Level, Condition, RankingStep) for m in enum)
+
+
+def test_levels_compare_by_severity_not_alphabetically():
+    assert Level.SEVERE > Level.HIGH >= Level.HIGH
+    assert Level.LOW <= Level.LOW < Level.NO_TRAVEL
+    assert sorted([Level.SEVERE, Level.LOW, Level.NO_TRAVEL, Level.HIGH, Level.MODERATE]) == list(
+        Level
+    )

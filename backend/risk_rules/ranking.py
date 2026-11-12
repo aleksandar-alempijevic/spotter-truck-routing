@@ -72,12 +72,16 @@ def _within(
     return [c for c in candidates if value(c) <= best + slack + FLOAT_MARGIN]
 
 
-def _average_risk_step(candidates: list[RouteCandidate]) -> list[RouteCandidate]:
+def _average_risk_step(
+    candidates: list[RouteCandidate], interval_miles: float
+) -> list[RouteCandidate]:
     scored = [c for c in candidates if c.summary.average_risk is not None]
     if not scored:
         return candidates
     # A route with no average risk compares as worse than any number, so it is dropped here.
-    slack = 1 / min(c.summary.forecast_checkpoints for c in scored)
+    # One checkpoint of a full interval changing by one level moves a route's average by
+    # interval / forecast miles; the route with the fewest forecast miles moves the most.
+    slack = interval_miles / min(c.summary.forecast_miles for c in scored)
     return _within(scored, lambda c: c.summary.average_risk, slack)
 
 
@@ -88,7 +92,7 @@ def _steps(
         (RankingStep.NO_TRAVEL, lambda cs: _within(cs, lambda c: c.summary.no_travel_miles, 0)),
         (RankingStep.SEVERE, lambda cs: _within(cs, lambda c: c.summary.severe_miles, 0)),
         (RankingStep.HIGH, lambda cs: _within(cs, lambda c: c.summary.high_miles, interval_miles)),
-        (RankingStep.AVERAGE_RISK, _average_risk_step),
+        (RankingStep.AVERAGE_RISK, lambda cs: _average_risk_step(cs, interval_miles)),
         (RankingStep.TRAVEL_TIME, lambda cs: _within(cs, lambda c: c.travel_time_seconds, 0)),
         (RankingStep.MILES, lambda cs: _within(cs, lambda c: c.total_miles, 0)),
         (RankingStep.ROUTE_ID, lambda cs: [min(cs, key=lambda c: c.route_id)]),
@@ -118,8 +122,8 @@ def rank_routes(candidates: Sequence[RouteCandidate], checkpoint_interval_miles:
     """Rank two or three routes. The result does not depend on the order they are given in.
 
     Steps, in order: fewest No Travel miles; fewest Severe miles; High miles within one
-    checkpoint interval of the best; average risk within 1/N of the best (N is the fewest
-    forecasted checkpoints among the routes still in the contest); shortest travel time; fewest
+    checkpoint interval of the best; average risk within one interval divided by the forecast
+    miles of the route in the contest with the fewest of them; shortest travel time; fewest
     miles; route id. Second and third place repeat the steps without the routes already placed.
     """
     if not 2 <= len(candidates) <= 3:

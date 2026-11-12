@@ -28,7 +28,7 @@ Levels, lowest to highest: Low, Moderate, High, Severe, No Travel.
 
 A load of exactly 30,000 or 40,000 lb does not trigger its rule. Rain and snow ignore the load.
 
-**Combining conditions.** The checkpoint takes the worst of wind (after load rules), rain and snow. When more than one condition has the worst level, wind is named before rain and rain before snow. If a load rule lifted the level above what the weather alone gives, the condition is wind and the result says so (`load_raised`), which is what lets the UI explain a Severe at 38 mph.
+**Combining conditions.** First the three conditions are levelled on the weather alone, with no load rule. The worst of those is the weather-alone level, and when more than one condition has it, wind is named before rain and rain before snow. Then the load rules are applied to wind. If the load-adjusted wind level is above every weather-alone level, the checkpoint takes that level, the condition is wind and `load_raised` is true, which is what lets the UI explain a Severe at 38 mph. Otherwise the weather-alone level and condition stand and `load_raised` is false. So a heavy load at 40 mph with rain already Severe is Severe because of rain, not because of the load.
 
 **Gusts** are not part of the reading. They are shown beside the level and never change it: the assessment says "wind", read here as sustained wind.
 
@@ -36,7 +36,7 @@ A load of exactly 30,000 or 40,000 lb does not trigger its rule. Rain and snow i
 
 ## 2. Route summary
 
-`summarize_route(total_miles, checkpoints)` takes a route's length and its checkpoints, each a mile mark and a level (or none), and returns the miles at each level, the miles with no forecast, the average risk and the number of checkpoints with a forecast.
+`summarize_route(total_miles, checkpoints)` takes a route's length and its checkpoints, each a mile mark and a level (or none), and returns the miles at each level, the miles with no forecast and the average risk. The summary is immutable and checks its own consistency when built: miles are finite and non-negative, and the average risk is present exactly when some miles have a forecast and equals the mile-weighted average of the level scores.
 
 - **Each checkpoint stands for the road from its mark up to the next mark**; the last one stands for the road to the end of the route. A checkpoint at the destination stands for no miles.
 - **Marks must start at mile 0, strictly ascend and not pass the route's end.** A route that violates this is rejected, not repaired, so no road goes unattributed.
@@ -54,7 +54,7 @@ The routes are filtered in the assessment's order of preference. At each step th
 | 1. No Travel | fewest No Travel miles | none |
 | 2. Severe | fewest Severe miles | none |
 | 3. High | High miles no more than the best plus one checkpoint interval | one interval |
-| 4. Average risk | average risk no more than the best plus 1/N | 1/N |
+| 4. Average risk | average risk no more than the best plus one interval divided by the forecast miles of the shortest-forecast route in the contest | interval / forecast miles |
 | 5. Travel time | shortest travel time | none |
 | 6. Miles | fewest total miles | none |
 | 7. Route id | smallest id | none |
@@ -65,9 +65,9 @@ The first step that leaves a single route decides first place, and the ranking r
 
 **No Travel.** The assessment's list leaves No Travel out. Any route with No Travel miles ranks below every route without them, and among routes that all have them the one with the fewest No Travel miles ranks first. A first-ranked route that has No Travel miles is not recommended: the result's `recommended_id` is empty and the UI should say no route is safe to recommend.
 
-**N in the average-risk tolerance** is the number of checkpoints with a forecast that stand for more than zero miles, taken from the route that has the fewest of them among the routes still in the contest. The fewest gives the widest, most forgiving tolerance, because that route's average moves most per checkpoint. A route with no average risk (no forecasted miles) counts as worse than any average, so it drops at step 4 whenever another route has one.
+**The average-risk tolerance** is one checkpoint interval divided by the forecast miles (miles whose checkpoint has a forecast) of the route that has the fewest of them among the routes still in the contest. That is exactly how far one full-interval checkpoint moving by one level shifts that route's mile-weighted average, so it is in the same unit as the average and holds for routes whose length is not a multiple of the interval. The route with the fewest forecast miles gives the widest tolerance, because its average moves most per checkpoint. Routes that already dropped out at an earlier step do not count. A route with no average risk (no forecasted miles) counts as worse than any average, so it drops at step 4 whenever another route has one.
 
-**Interplay of steps 3 and 4.** One High checkpoint among N raises the average by 2/N, more than the 1/N tolerance. A one-interval High gap therefore reaches the time step only when the routes' average risk is also within tolerance, for example when the other route has comparable Moderate miles.
+**Interplay of steps 3 and 4.** One full-interval High checkpoint raises a route's average by twice as much as the tolerance allows (2 x interval / forecast miles against interval / forecast miles, for routes of equal forecast length). A one-interval High gap therefore reaches the time step only when the routes' average risk is also within tolerance, for example when the other route has comparable Moderate miles.
 
 **Tolerance edges and rounding.** A gap of exactly one interval is a tie. Segment miles are differences of floating-point marks, so a gap that is one interval on paper can come out a hair either side. Two values closer than `FLOAT_MARGIN` (0.000001, in miles, risk points or seconds) count as equal. Real differences are many orders of magnitude larger than the margin.
 

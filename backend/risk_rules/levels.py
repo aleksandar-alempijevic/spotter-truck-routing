@@ -7,13 +7,11 @@ pounds. Converting from a provider's fields to these units happens before this m
 import math
 from bisect import bisect_right
 from dataclasses import dataclass
-from enum import Enum, StrEnum
-from functools import total_ordering
+from enum import StrEnum
 
 
-@total_ordering
-class Level(Enum):
-    """A weather risk level. Members compare by severity; the values are the wire names."""
+class Level(StrEnum):
+    """A weather risk level. Members order by severity; the values are the wire names."""
 
     LOW = "low"
     MODERATE = "moderate"
@@ -26,10 +24,18 @@ class Level(Enum):
         """Weight in the average risk: Low 0, Moderate 1, High 2, Severe 3, No Travel 4."""
         return _ORDER.index(self)
 
+    # Severity ordering. Equality and hashing stay those of the wire string, like the other enums.
     def __lt__(self, other: object) -> bool:
-        if not isinstance(other, Level):
-            return NotImplemented
-        return self.score < other.score
+        return self.score < other.score if isinstance(other, Level) else NotImplemented
+
+    def __le__(self, other: object) -> bool:
+        return self.score <= other.score if isinstance(other, Level) else NotImplemented
+
+    def __gt__(self, other: object) -> bool:
+        return self.score > other.score if isinstance(other, Level) else NotImplemented
+
+    def __ge__(self, other: object) -> bool:
+        return self.score >= other.score if isinstance(other, Level) else NotImplemented
 
 
 _ORDER = list(Level)
