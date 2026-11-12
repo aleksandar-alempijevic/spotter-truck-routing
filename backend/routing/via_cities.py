@@ -68,18 +68,20 @@ MAX_DETOUR_RATIO = 1.30
 """Longest allowed crow-flies trip through the city, as a multiple of the direct distance."""
 
 MIN_OFF_ROUTE_M = 120_000.0
-"""A via-city must be at least this far from the main route, so it sits on another corridor."""
+"""A via-city must be at least this far from every route in hand, so it sits on another corridor."""
 
 M_PER_DEGREE = 111_000.0
-ROUTE_SAMPLE_POINTS = 2000
-"""The main route is sampled to about this many points for the distance test."""
+ROUTE_SAMPLE_POINTS = 1000
+"""Each route is sampled to about this many points for the distance test."""
+
+CANDIDATES_PER_SIDE = 3
+"""How many cities on each side of the origin-destination line are offered, least detour first."""
 
 
 @dataclass(frozen=True, slots=True)
 class _Candidate:
     detour_ratio: float
     name: str
-    side: int
 
 
 def _along_and_side(origin: Point, destination: Point, city: Point) -> tuple[float, int]:
@@ -91,35 +93,47 @@ def _along_and_side(origin: Point, destination: Point, city: Point) -> tuple[flo
     return along, 1 if vx * wy - vy * wx > 0 else -1
 
 
-def _off_route_m(city: Point, sample: Sequence[Point]) -> float:
+def _sample(route: Sequence[Point]) -> Sequence[Point]:
+    return route[:: max(1, len(route) // ROUTE_SAMPLE_POINTS)]
+
+
+def _off_route_m(city: Point, samples: Sequence[Point]) -> float:
     k = math.cos(math.radians(city[0]))
     return min(
         math.hypot((lat - city[0]) * M_PER_DEGREE, (lon - city[1]) * M_PER_DEGREE * k)
-        for lat, lon in sample
+        for lat, lon in samples
     )
 
 
-def via_candidates(origin: Point, destination: Point, main_route: Sequence[Point]) -> list[Via]:
-    """At most one city per side of the origin-destination line: the one with the least detour.
+def via_candidates(
+    origin: Point,
+    destination: Point,
+    routes: Sequence[Sequence[Point]],
+    per_side: int = CANDIDATES_PER_SIDE,
+) -> list[Via]:
+    """Cities to route through, up to `per_side` on each side of the origin-destination line.
 
     A city qualifies when it lies between the two ends, adds at most 30% to the crow-flies
-    distance and is at least 120 km from the main route. The result is ordered by detour, least
-    first.
+    distance and is at least 120 km from every route already in hand. Each side offers its
+    cities least detour first. The result alternates between the sides, so the best city of each
+    side comes before the second best of either.
     """
     direct = haversine_m(origin, destination)
     if direct <= 0:
         return []
-    stride = max(1, len(main_route) // ROUTE_SAMPLE_POINTS)
-    sample = main_route[::stride]
-    best: dict[int, _Candidate] = {}
+    samples = [point for route in routes for point in _sample(route)]
+    sides: dict[int, list[_Candidate]] = {1: [], -1: []}
     for name, city in CITIES.items():
         along, side = _along_and_side(origin, destination, city)
         if not MIN_ALONG <= along <= MAX_ALONG:
             continue
         detour = (haversine_m(origin, city) + haversine_m(city, destination)) / direct
-        if detour > MAX_DETOUR_RATIO or _off_route_m(city, sample) < MIN_OFF_ROUTE_M:
+        if detour > MAX_DETOUR_RATIO or _off_route_m(city, samples) < MIN_OFF_ROUTE_M:
             continue
-        if side not in best or (detour, name) < (best[side].detour_ratio, best[side].name):
-            best[side] = _Candidate(detour, name, side)
-    ordered = sorted(best.values(), key=lambda c: (c.detour_ratio, c.name))
-    return [Via(c.name, *CITIES[c.name]) for c in ordered]
+        sides[side].append(_Candidate(detour, name))
+    ranked = [
+        sorted(found, key=lambda c: (c.detour_ratio, c.name))[:per_side] for found in sides.values()
+    ]
+    ranked.sort(key=lambda found: (found[0].detour_ratio, found[0].name) if found else (9, ""))
+    names = [found[rank].name for rank in range(per_side) for found in ranked if rank < len(found)]
+    return [Via(name, *CITIES[name]) for name in names]

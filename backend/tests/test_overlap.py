@@ -1,4 +1,4 @@
-from routing import MAX_OVERLAP, is_distinct, near_cells, overlap_share
+from routing import MAX_OVERLAP, is_distinct, near_cells, overlap_share, worst_overlap
 from tests.route_fixtures import lerp
 
 LA, DENVER, NY = (34.05, -118.24), (39.74, -104.99), (40.71, -74.0)
@@ -39,3 +39,12 @@ def test_a_candidate_must_be_distinct_from_every_other_route():
 
 def test_the_threshold_is_half():
     assert MAX_OVERLAP == 0.5
+
+
+def test_the_worst_overlap_is_taken_over_every_other_route():
+    main = lerp((40.0, -120.0), (40.0, -100.0), 200)
+    far = lerp((30.0, -120.0), (30.0, -100.0), 200)
+
+    assert worst_overlap(main, [far]) == 0.0
+    assert worst_overlap(main, [far, main]) == 1.0
+    assert worst_overlap(main, []) == 0.0

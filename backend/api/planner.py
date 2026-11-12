@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from providers import (
+    MAX_CONCURRENT_CALLS,
     NoRouteFound,
     Outbound,
     ProviderError,
@@ -17,15 +18,16 @@ from providers import (
     calculate_routes,
 )
 from routing import (
+    MAX_OVERLAP,
     Point,
     Route,
     RouteCheckpoint,
     Via,
     build_checkpoints,
-    is_distinct,
     order_routes,
     simplify_line,
     via_candidates,
+    worst_overlap,
 )
 
 logger = logging.getLogger(__name__)
@@ -111,56 +113,90 @@ async def _fill(
     destination: Point,
     remaining: Callable[[], float],
 ) -> tuple[list[Route], Shortfall | None]:
-    """Try a via-city on each side of the main route at once; keep what is distinct enough."""
-    main = min(routes, key=lambda r: (r.travel_time_s, r.length_m))
-    vias = via_candidates(origin, destination, main.points)
-    tasks = [asyncio.ensure_future(route_call(via, 0)) for via in vias]
-    try:
-        if tasks:
-            await asyncio.wait(tasks, timeout=max(remaining(), 0.0))
-    finally:
-        for task in tasks:
-            task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
+    """Try via-cities until the gap is filled, a few at a time within the outbound cap.
 
-    incomplete = False
-    candidates: list[Route] = []
-    for task in tasks:
-        if task.cancelled() or not task.done():
-            incomplete = True
-        elif isinstance(task.exception(), NoRouteFound):
-            continue
-        elif task.exception() is not None:
-            if not isinstance(task.exception(), ProviderError):
-                raise task.exception()
-            logger.warning("via-city route failed: %s", type(task.exception()).__name__)
-            incomplete = True
-        else:
-            candidates.extend(task.result())
-
+    Candidates are chosen against every route in hand and come both sides of the trip at once.
+    As each answer arrives it is judged against the routes kept so far, and the next candidate
+    starts in its place; once three routes are kept the calls still pending are cancelled, so a
+    gap that is filled early costs few calls.
+    """
+    vias = via_candidates(origin, destination, [r.points for r in routes])
+    queue = list(vias)
+    pending: dict[asyncio.Future[list[Route]], Via] = {}
     kept = list(routes)
-    for candidate in sorted(candidates, key=lambda r: (r.travel_time_s, r.length_m)):
-        if len(kept) >= WANTED_ROUTES:
-            break
-        if is_distinct(candidate.points, [r.points for r in kept]):
-            kept.append(candidate)
+    judged: list[str] = []
+    incomplete = False
+    try:
+        while len(kept) < WANTED_ROUTES and (queue or pending):
+            while queue and len(pending) < MAX_CONCURRENT_CALLS:
+                via = queue.pop(0)
+                pending[asyncio.ensure_future(route_call(via, 0))] = via
+            done, _ = await asyncio.wait(
+                pending, timeout=max(remaining(), 0.0), return_when=asyncio.FIRST_COMPLETED
+            )
+            if not done:
+                incomplete = True
+                break
+            for task in done:
+                via = pending.pop(task)
+                if len(kept) >= WANTED_ROUTES:
+                    continue
+                outcome = _judge(task, via, kept)
+                if outcome is None:
+                    incomplete = True
+                else:
+                    judged.append(via.name)
+    finally:
+        for task in pending:
+            task.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
+
     if len(kept) >= WANTED_ROUTES:
         return kept, None
-    return kept, _shortfall(len(kept), incomplete)
+    return kept, _shortfall(len(kept), incomplete, bool(vias), judged)
 
 
-def _shortfall(count: int, incomplete: bool) -> Shortfall:
+def _judge(task: asyncio.Future[list[Route]], via: Via, kept: list[Route]) -> bool | None:
+    """Add the via route to `kept` if it is distinct enough. None when the call failed.
+
+    True when the candidate was judged (kept or rejected, or no road goes through the city).
+    """
+    if task.cancelled():
+        return None
+    error = task.exception()
+    if isinstance(error, NoRouteFound):
+        return True
+    if error is not None:
+        if not isinstance(error, ProviderError):
+            raise error
+        logger.warning("via-city route failed: %s", type(error).__name__)
+        return None
+    for candidate in sorted(task.result(), key=lambda r: (r.travel_time_s, r.length_m)):
+        overlap = worst_overlap(candidate.points, [r.points for r in kept])
+        logger.info("via-city %s: overlap %.2f with the routes in hand", via.name, overlap)
+        if overlap < MAX_OVERLAP and len(kept) < WANTED_ROUTES:
+            kept.append(candidate)
+    return True
+
+
+def _shortfall(count: int, incomplete: bool, had_candidates: bool, tried: list[str]) -> Shortfall:
     found = f"Only {count} route{'s' if count != 1 else ''}"
+    where = f" (routes through {', '.join(tried)} were tried)" if tried else ""
     if incomplete:
         return Shortfall(
             FILL_INCOMPLETE,
-            f"{found} could be found: the search for another route did not finish. "
+            f"{found} could be found{where}: the search for another route did not finish. "
             "Try again to look for a third route.",
+        )
+    if not had_candidates:
+        return Shortfall(
+            NO_DISTINCT_ALTERNATIVE,
+            f"{found} found, and no large city lies far enough from them to route through.",
         )
     return Shortfall(
         NO_DISTINCT_ALTERNATIVE,
-        f"{found} exist{'s' if count == 1 else ''} between these points: no other route differs "
-        "enough from the ones shown.",
+        f"{found} found. Routes through {', '.join(tried)} were tried and none differs enough "
+        "from the routes shown.",
     )
 
 

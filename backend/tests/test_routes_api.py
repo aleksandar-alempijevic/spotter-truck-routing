@@ -59,12 +59,15 @@ def mock_tomtom(provider_mock, *, base, via=None):
 
 
 def via_returns(waypoints_by_city: dict[str, list]):
+    """Answer a via call with the route given for its city, or else one that copies MAIN."""
+
     async def answer(request: httpx.Request) -> httpx.Response:
-        for city, waypoints in waypoints_by_city.items():
+        waypoints = SLOW_COPY_OF_MAIN
+        for city, candidate in waypoints_by_city.items():
             lat, lon = CITIES[city]
             if f"{lat:.5f},{lon:.5f}" in request.url.path:
-                return httpx.Response(200, json=tomtom_body(tomtom_route(waypoints, speed_mps=22)))
-        raise AssertionError(f"unexpected via call {request.url.path}")
+                waypoints = candidate
+        return httpx.Response(200, json=tomtom_body(tomtom_route(waypoints, speed_mps=22)))
 
     return answer
 
@@ -135,11 +138,14 @@ async def test_the_weather_send_back_subset_excludes_the_line(provider_mock):
     assert {"line", "source", "via"} <= set(body["routes"][0]) - send_back
 
 
+# For base routes MAIN and NORTH the via candidates, in the order they are tried, are
+# St. Louis, Albuquerque, Minneapolis, Louisville, Fargo and Amarillo; four start at once.
+CANDIDATES = ["St. Louis", "Albuquerque", "Minneapolis", "Louisville", "Fargo", "Amarillo"]
+
+
 async def test_two_provider_routes_are_filled_with_a_distinct_via_city_route(provider_mock):
     calls = mock_tomtom(
-        provider_mock,
-        base=[MAIN, NORTH],
-        via=via_returns({"Albuquerque": SOUTH_ROUTE, "Chicago": NORTH}),
+        provider_mock, base=[MAIN, NORTH], via=via_returns({"Albuquerque": SOUTH_ROUTE})
     )
 
     body = (await post(payload())).json()
@@ -150,16 +156,33 @@ async def test_two_provider_routes_are_filled_with_a_distinct_via_city_route(pro
     assert len(filled) == 1
     assert filled[0]["via"]["name"] == "Albuquerque"
     via_calls = [c for c in calls if is_via_call(c)]
-    assert len(via_calls) == 2
     assert all(c.url.params["maxAlternatives"] == "0" for c in via_calls)
 
 
-async def test_a_fill_that_overlaps_an_existing_route_is_dropped_with_the_reason(provider_mock):
-    mock_tomtom(
-        provider_mock,
-        base=[MAIN, NORTH],
-        via=via_returns({"Albuquerque": SLOW_COPY_OF_MAIN, "Chicago": NORTH}),
+async def test_once_the_gap_is_filled_no_further_candidate_is_tried(provider_mock):
+    calls = mock_tomtom(
+        provider_mock, base=[MAIN, NORTH], via=via_returns({"Albuquerque": SOUTH_ROUTE})
     )
+
+    await post(payload())
+
+    assert len([c for c in calls if is_via_call(c)]) == 4
+
+
+async def test_a_later_candidate_is_tried_when_earlier_ones_overlap(provider_mock):
+    calls = mock_tomtom(
+        provider_mock, base=[MAIN, NORTH], via=via_returns({"Amarillo": SOUTH_ROUTE})
+    )
+
+    body = (await post(payload())).json()
+
+    assert body["shortfall"] is None
+    assert [r["via"]["name"] for r in body["routes"] if r["via"]] == ["Amarillo"]
+    assert len([c for c in calls if is_via_call(c)]) == 6
+
+
+async def test_a_fill_that_overlaps_an_existing_route_is_dropped_with_the_reason(provider_mock):
+    calls = mock_tomtom(provider_mock, base=[MAIN, NORTH], via=via_returns({}))
 
     response = await post(payload())
 
@@ -168,6 +191,9 @@ async def test_a_fill_that_overlaps_an_existing_route_is_dropped_with_the_reason
     assert len(body["routes"]) == 2
     assert body["shortfall"]["reason"] == "no_distinct_alternative"
     assert "2 routes" in body["shortfall"]["message"]
+    for city in CANDIDATES:
+        assert city in body["shortfall"]["message"]
+    assert len([c for c in calls if is_via_call(c)]) == 6
 
 
 async def test_one_provider_route_and_unroutable_via_cities_return_the_one_route(provider_mock):
@@ -181,7 +207,8 @@ async def test_one_provider_route_and_unroutable_via_cities_return_the_one_route
     assert len(body["routes"]) == 1
     assert body["routes"][0]["id"] == "route-1"
     assert body["shortfall"]["reason"] == "no_distinct_alternative"
-    assert "1 route" in body["shortfall"]["message"]
+    assert "Only 1 route " in body["shortfall"]["message"]
+    assert "were tried" in body["shortfall"]["message"]
 
 
 async def test_a_failed_fill_is_not_a_failed_request(provider_mock, caplog):
@@ -222,26 +249,31 @@ async def test_when_the_budget_runs_out_during_the_fill_the_routes_in_hand_come_
     assert response.status_code == 200
     assert response.json()["shortfall"]["reason"] == "fill_incomplete"
     assert len(response.json()["routes"]) == 2
-    assert cancelled == 2
+    assert cancelled == 4
 
 
-async def test_both_via_sides_are_tried_at_once(provider_mock):
-    started = []
+async def test_candidates_run_concurrently_up_to_the_cap(provider_mock):
+    in_flight = peak = started = 0
     release = asyncio.Event()
 
     async def gated(request):
-        started.append(request.url.path)
-        if len(started) == 2:
+        nonlocal in_flight, peak, started
+        started += 1
+        in_flight += 1
+        peak = max(peak, in_flight)
+        if started == 4:
             release.set()
         await asyncio.wait_for(release.wait(), timeout=5)
-        return httpx.Response(200, json=tomtom_body(tomtom_route(SOUTH_ROUTE)))
+        in_flight -= 1
+        return httpx.Response(200, json=tomtom_body(tomtom_route(SLOW_COPY_OF_MAIN)))
 
     mock_tomtom(provider_mock, base=[MAIN, NORTH], via=gated)
 
     response = await post(payload())
 
     assert response.status_code == 200
-    assert len(started) == 2
+    assert peak == 4
+    assert started == 6
 
 
 async def test_a_base_call_that_exceeds_the_budget_is_a_gateway_timeout(provider_mock, monkeypatch):
@@ -357,3 +389,20 @@ async def test_the_openapi_schema_declares_the_error_body():
     responses = response.json()["paths"]["/api/routes"]["post"]["responses"]
     assert {"200", "422", "502", "503", "504"} <= set(responses)
     assert "ErrorOut" in json.dumps(responses["504"])
+
+
+async def test_a_short_trip_with_no_city_to_route_through_says_so(provider_mock):
+    chicago, indianapolis = CITIES["Chicago"], CITIES["Indianapolis"]
+    calls = mock_tomtom(provider_mock, base=[[chicago, indianapolis], [chicago, indianapolis]])
+
+    response = await post(
+        payload(
+            origin={"lat": chicago[0], "lon": chicago[1]},
+            destination={"lat": indianapolis[0], "lon": indianapolis[1]},
+        )
+    )
+
+    body = response.json()
+    assert body["shortfall"]["reason"] == "no_distinct_alternative"
+    assert "no large city" in body["shortfall"]["message"]
+    assert len(calls) == 1

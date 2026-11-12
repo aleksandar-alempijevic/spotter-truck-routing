@@ -1,7 +1,9 @@
 """Live check of POST /api/routes against TomTom, over the seven test trips of the feasibility
 spike. Not part of `make check` or pytest: it spends real TomTom calls.
 
-    uv --directory backend run python live_check.py OUTPUT.json
+    uv --directory backend run python live_check.py OUTPUT.json [ORIGIN-DESTINATION ...]
+
+With trip names (for example "Chicago-Los Angeles") only those trips run, with no probe.
 
 Reads the key from the repository's `.env` through the app's own settings and never prints it or
 a request URL. It stops before exceeding MAX_CALLS TomTom calls, and ends with one extra call on
@@ -10,6 +12,7 @@ an unroutable pair to record how TomTom reports it.
 
 import asyncio
 import json
+import logging
 import os
 import sys
 import time
@@ -41,6 +44,16 @@ TRIPS = [
 UNROUTABLE_ORIGIN = (30.0, -60.0)  # open Atlantic
 
 calls: list[dict] = []
+planner_log: list[str] = []
+
+
+class PlannerLog(logging.Handler):
+    """Collects the planner's per-candidate overlap lines (city names and numbers only)."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        planner_log.append(record.getMessage())
+
+
 real_get_json = Outbound.get_json
 
 
@@ -95,6 +108,7 @@ async def run_trip(client: AsyncClient, origin: tuple, destination: tuple) -> di
         "checkpoint_interval_miles": 25,
     }
     first_call = len(calls)
+    first_log = len(planner_log)
     started = time.monotonic()
     response = await client.post(
         "/api/routes", data=json.dumps(body), content_type="application/json"
@@ -105,12 +119,13 @@ async def run_trip(client: AsyncClient, origin: tuple, destination: tuple) -> di
         "seconds": seconds,
         "response_kb": round(len(response.content) / 1000),
         "tomtom_calls": calls[first_call:],
+        "planner_log": planner_log[first_log:],
     }
     payload = response.json()
     if response.status_code != 200:
         result["error_code"] = payload.get("code")
         return result
-    result["shortfall"] = payload["shortfall"] and payload["shortfall"]["reason"]
+    result["shortfall"] = payload["shortfall"]
     result["routes"] = [
         {
             "id": r["id"],
@@ -131,18 +146,24 @@ async def run_trip(client: AsyncClient, origin: tuple, destination: tuple) -> di
     return result
 
 
-async def main(output: str) -> None:
+async def main(output: str, only: list[str]) -> None:
     Outbound.get_json = counting_get_json
+    planner_logger = logging.getLogger("api.planner")
+    planner_logger.setLevel(logging.INFO)
+    planner_logger.addHandler(PlannerLog())
     setup_test_environment()
     client = AsyncClient()
     results = {}
     for origin, destination in TRIPS:
+        if only and f"{origin}-{destination}" not in only:
+            continue
         results[f"{origin} - {destination}"] = await run_trip(
             client, CITIES[origin], CITIES[destination]
         )
-    results["unroutable probe (open Atlantic to Los Angeles)"] = await run_trip(
-        client, UNROUTABLE_ORIGIN, CITIES["Los Angeles"]
-    )
+    if not only:
+        results["unroutable probe (open Atlantic to Los Angeles)"] = await run_trip(
+            client, UNROUTABLE_ORIGIN, CITIES["Los Angeles"]
+        )
     summary = {"tomtom_calls_total": len(calls), "trips": results}
     with open(output, "w") as out:
         json.dump(summary, out, indent=1)
@@ -150,4 +171,4 @@ async def main(output: str) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main(sys.argv[1]))
+    asyncio.run(main(sys.argv[1], sys.argv[2:]))

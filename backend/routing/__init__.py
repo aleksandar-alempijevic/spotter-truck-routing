@@ -8,7 +8,7 @@ providers return its `Route` type; it imports nothing else of ours.
 from .checkpoints import RouteCheckpoint, build_checkpoints, checkpoint_marks
 from .geo import METERS_PER_MILE, Point, haversine_m
 from .ordering import order_routes
-from .overlap import MAX_OVERLAP, is_distinct, near_cells, overlap_share
+from .overlap import MAX_OVERLAP, is_distinct, near_cells, overlap_share, worst_overlap
 from .route import Route, RouteContractError, Via
 from .simplify import simplify_line
 from .via_cities import CITIES, via_candidates
@@ -31,4 +31,5 @@ __all__ = [
     "overlap_share",
     "simplify_line",
     "via_candidates",
+    "worst_overlap",
 ]

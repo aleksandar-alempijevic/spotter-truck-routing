@@ -40,6 +40,11 @@ def overlap_share(candidate: Sequence[Point], other_cells: set[tuple[int, int]])
     return shared / total if total else 0.0
 
 
+def worst_overlap(candidate: Sequence[Point], others: Iterable[Sequence[Point]]) -> float:
+    """The largest overlap share of the candidate with any other route (0 when there are none)."""
+    return max((overlap_share(candidate, near_cells(other)) for other in others), default=0.0)
+
+
 def is_distinct(candidate: Sequence[Point], others: Iterable[Sequence[Point]]) -> bool:
     """True when the candidate overlaps every other route by less than `MAX_OVERLAP`."""
-    return all(overlap_share(candidate, near_cells(other)) < MAX_OVERLAP for other in others)
+    return worst_overlap(candidate, others) < MAX_OVERLAP
