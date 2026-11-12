@@ -45,7 +45,7 @@ A load of exactly 30,000 or 40,000 lb does not trigger its rule. Rain and snow i
 
 ## 3. Ranking
 
-`rank_routes(candidates, checkpoint_interval_miles)` takes two or three routes (id, travel time, total miles, summary) and the checkpoint spacing the request used (10, 25 or 50 miles).
+`rank_routes(candidates, checkpoint_interval_miles)` takes two or three routes (id, travel time, summary; the length comes from the summary) and the checkpoint spacing the request used (10, 25 or 50 miles).
 
 The routes are filtered in the assessment's order of preference. At each step the routes within a tolerance of the best value stay in; the rest drop out of the contest for first place:
 
@@ -54,7 +54,7 @@ The routes are filtered in the assessment's order of preference. At each step th
 | 1. No Travel | fewest No Travel miles | none |
 | 2. Severe | fewest Severe miles | none |
 | 3. High | High miles no more than the best plus one checkpoint interval | one interval |
-| 4. Average risk | average risk no more than the best plus one interval divided by the forecast miles of the shortest-forecast route in the contest | interval / forecast miles |
+| 4. Average risk | routes whose average risk, lowered by their own tolerance, is no higher than the best average among the routes still in | one interval / the route's own forecast miles |
 | 5. Travel time | shortest travel time | none |
 | 6. Miles | fewest total miles | none |
 | 7. Route id | smallest id | none |
@@ -65,13 +65,13 @@ The first step that leaves a single route decides first place, and the ranking r
 
 **No Travel.** The assessment's list leaves No Travel out. Any route with No Travel miles ranks below every route without them, and among routes that all have them the one with the fewest No Travel miles ranks first. A first-ranked route that has No Travel miles is not recommended: the result's `recommended_id` is empty and the UI should say no route is safe to recommend.
 
-**The average-risk tolerance** is one checkpoint interval divided by the forecast miles (miles whose checkpoint has a forecast) of the route that has the fewest of them among the routes still in the contest. That is exactly how far one full-interval checkpoint moving by one level shifts that route's mile-weighted average, so it is in the same unit as the average and holds for routes whose length is not a multiple of the interval. The route with the fewest forecast miles gives the widest tolerance, because its average moves most per checkpoint. Routes that already dropped out at an earlier step do not count. A route with no average risk (no forecasted miles) counts as worse than any average, so it drops at step 4 whenever another route has one.
+**The average-risk tolerance** belongs to each route: one checkpoint interval divided by that route's own forecast miles (miles whose checkpoint has a forecast). That is exactly how far one full-interval checkpoint moving by one level shifts the route's mile-weighted average, so it is in the same unit as the average and holds for routes whose length is not a multiple of the interval. A route stays in the contest when its average risk, lowered by its own tolerance, is no higher than the lowest average among the routes still in. Put differently, a route is tied with the best if one of its checkpoints scoring one level lower would make it the safest. Because each route is judged by its own tolerance, another route's length or forecast coverage never changes the outcome between two routes. A route with no average risk (no forecasted miles) counts as worse than any average, so it drops at step 4 whenever another route has one. If no route has an average, the step is skipped.
 
-**Interplay of steps 3 and 4.** One full-interval High checkpoint raises a route's average by twice as much as the tolerance allows (2 x interval / forecast miles against interval / forecast miles, for routes of equal forecast length). A one-interval High gap therefore reaches the time step only when the routes' average risk is also within tolerance, for example when the other route has comparable Moderate miles.
+**One High checkpoint against none.** A route with one High checkpoint and an otherwise identical all-Low route are one interval apart in High miles, so the route survives the High step. It then loses at average risk: High against Low is a two-level difference, and the tolerance absorbs one level. A tie at the High step is therefore not a tie overall. The route reaches the time step only if its average risk is also within tolerance, for example when the other route has comparable Moderate miles.
 
-**Tolerance edges and rounding.** A gap of exactly one interval is a tie. Segment miles are differences of floating-point marks, so a gap that is one interval on paper can come out a hair either side. Two values closer than `FLOAT_MARGIN` (0.000001, in miles, risk points or seconds) count as equal. Real differences are many orders of magnitude larger than the margin.
+**Tolerance edges and rounding.** A gap of exactly one interval is a tie. Segment miles are differences of floating-point marks, so a gap that is one interval on paper can come out a hair either side. Two values closer than `FLOAT_MARGIN` (0.000001, in miles, risk points or seconds) count as equal, including at the average-risk edge. Real differences are many orders of magnitude larger than the margin.
 
-**No-forecast miles** do not enter any step, so a route that is mostly past the forecast range is compared on the part that has a forecast. The ranking returns each route's no-forecast miles so the UI can show them.
+**No-forecast miles** do not enter any step, so a route that is mostly past the forecast range is compared on the part that has a forecast, with a tolerance sized to that part. The ranking returns each route's no-forecast miles so the UI can show them.
 
 **Output.** For each route in rank order: its rank, its no-forecast miles, and, for every route except the first, the step at which it left the contest for first place and its differences from the first route (travel time in seconds, No Travel, Severe and High miles, and average risk; each is the route's value minus the first route's). The UI uses these for lines like "+38 min, avoids 50 Severe miles" and to show which values were ties: a route that survived a step was within tolerance on it. The first route's deciding step names the reason for the recommendation.
 

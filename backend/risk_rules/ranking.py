@@ -28,8 +28,12 @@ class RankingStep(StrEnum):
 class RouteCandidate:
     route_id: str
     travel_time_seconds: float
-    total_miles: float
     summary: RouteSummary
+
+    @property
+    def total_miles(self) -> float:
+        """The route's length, derived from its summary so the two cannot disagree."""
+        return self.summary.forecast_miles + self.summary.no_forecast_miles
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,10 +83,15 @@ def _average_risk_step(
     if not scored:
         return candidates
     # A route with no average risk compares as worse than any number, so it is dropped here.
-    # One checkpoint of a full interval changing by one level moves a route's average by
-    # interval / forecast miles; the route with the fewest forecast miles moves the most.
-    slack = interval_miles / min(c.summary.forecast_miles for c in scored)
-    return _within(scored, lambda c: c.summary.average_risk, slack)
+    # Each route has its own tolerance: one full-interval checkpoint moving one level shifts its
+    # average by interval / its forecast miles. A route stays in if lowering its average by that
+    # much would make it no worse than the best. Another route never changes this verdict.
+    best = min(c.summary.average_risk for c in scored)
+    return [
+        c
+        for c in scored
+        if c.summary.average_risk - interval_miles / c.summary.forecast_miles <= best + FLOAT_MARGIN
+    ]
 
 
 def _steps(
@@ -122,8 +131,8 @@ def rank_routes(candidates: Sequence[RouteCandidate], checkpoint_interval_miles:
     """Rank two or three routes. The result does not depend on the order they are given in.
 
     Steps, in order: fewest No Travel miles; fewest Severe miles; High miles within one
-    checkpoint interval of the best; average risk within one interval divided by the forecast
-    miles of the route in the contest with the fewest of them; shortest travel time; fewest
+    checkpoint interval of the best; average risk within the route's own tolerance of the best
+    (one interval divided by its forecast miles); shortest travel time; fewest
     miles; route id. Second and third place repeat the steps without the routes already placed.
     """
     if not 2 <= len(candidates) <= 3:
@@ -136,10 +145,6 @@ def rank_routes(candidates: Sequence[RouteCandidate], checkpoint_interval_miles:
         if not math.isfinite(c.travel_time_seconds) or c.travel_time_seconds < 0:
             raise ValueError(
                 f"travel time of route {c.route_id!r} must be a finite number of at least 0"
-            )
-        if not math.isfinite(c.total_miles) or c.total_miles < 0:
-            raise ValueError(
-                f"total miles of route {c.route_id!r} must be a finite number of at least 0"
             )
 
     remaining = list(candidates)

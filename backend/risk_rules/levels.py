@@ -25,17 +25,25 @@ class Level(StrEnum):
         return _ORDER.index(self)
 
     # Severity ordering. Equality and hashing stay those of the wire string, like the other enums.
+    # Ordering against anything but a Level raises: returning NotImplemented would let Python
+    # fall back to comparing the strings alphabetically.
     def __lt__(self, other: object) -> bool:
-        return self.score < other.score if isinstance(other, Level) else NotImplemented
+        return self.score < _score_of(other)
 
     def __le__(self, other: object) -> bool:
-        return self.score <= other.score if isinstance(other, Level) else NotImplemented
+        return self.score <= _score_of(other)
 
     def __gt__(self, other: object) -> bool:
-        return self.score > other.score if isinstance(other, Level) else NotImplemented
+        return self.score > _score_of(other)
 
     def __ge__(self, other: object) -> bool:
-        return self.score >= other.score if isinstance(other, Level) else NotImplemented
+        return self.score >= _score_of(other)
+
+
+def _score_of(other: object) -> int:
+    if not isinstance(other, Level):
+        raise TypeError(f"levels order only against levels, not {type(other).__name__}")
+    return other.score
 
 
 _ORDER = list(Level)

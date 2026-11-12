@@ -19,7 +19,7 @@ def route(route_id, levels, minutes=600, interval=INTERVAL, total=None):
     """A route whose checkpoints sit every `interval` miles with the given levels."""
     marks = [Checkpoint(i * interval, level) for i, level in enumerate(levels)]
     total = total if total is not None else len(levels) * interval
-    return RouteCandidate(route_id, minutes * 60.0, total, summarize_route(total, marks))
+    return RouteCandidate(route_id, minutes * 60.0, summarize_route(total, marks))
 
 
 def order(ranking):
@@ -91,8 +91,8 @@ def test_high_gap_of_one_interval_counts_as_a_tie_despite_float_rounding():
     marks_a = [Checkpoint(sum([0.1] * i), M if i in (1, 2) else L) for i in range(11)]
     marks_b = [Checkpoint(sum([0.1] * i), H if i == 5 else L) for i in range(11)]
     total = 1.1
-    a = RouteCandidate("a", 3000.0, total, summarize_route(total, marks_a))
-    b = RouteCandidate("b", 1000.0, total, summarize_route(total, marks_b))
+    a = RouteCandidate("a", 3000.0, summarize_route(total, marks_a))
+    b = RouteCandidate("b", 1000.0, summarize_route(total, marks_b))
 
     ranking = rank_routes([a, b], interval)
 
@@ -101,12 +101,19 @@ def test_high_gap_of_one_interval_counts_as_a_tie_despite_float_rounding():
 
 
 def test_high_gap_a_little_over_one_interval_is_not_a_tie():
+    # Both routes have the same average risk, so only the High step separates them: "b" has
+    # 0.101 High miles against "a"'s 0, beyond one 0.1-mile interval plus the float margin.
     interval = 0.1
-    a = RouteCandidate("a", 3000.0, 1.1, summarize_route(1.1, [Checkpoint(0, L)]))
-    marks_b = [Checkpoint(0, L), Checkpoint(0.5, H), Checkpoint(0.5 + 0.1 + 1e-3, L)]
-    b = RouteCandidate("b", 1000.0, 1.1, summarize_route(1.1, marks_b))
+    marks_a = [Checkpoint(sum([0.1] * i), M if i in (1, 2) else L) for i in range(11)]
+    a = RouteCandidate("a", 3000.0, summarize_route(1.1, marks_a))
+    marks_b = [Checkpoint(0, M), Checkpoint(0.2, L), Checkpoint(0.5, H), Checkpoint(0.601, L)]
+    b = RouteCandidate("b", 1000.0, summarize_route(1.1, marks_b))
 
-    assert order(rank_routes([a, b], interval)) == ["a", "b"]
+    ranking = rank_routes([a, b], interval)
+
+    assert order(ranking) == ["a", "b"]
+    assert ranking.decided_by is RankingStep.HIGH
+    assert ranking.routes[1].vs_first.dropped_at is RankingStep.HIGH
 
 
 def test_route_with_no_forecast_compares_worse_than_any_average_risk_and_is_reported():
@@ -226,7 +233,7 @@ def test_duplicate_ids_and_bad_inputs_are_rejected():
 def marked_route(route_id, marks, total, minutes=600):
     """A route from explicit (mile, level) marks, for float-edge cases."""
     checkpoints = [Checkpoint(mile, level) for mile, level in marks]
-    return RouteCandidate(route_id, minutes * 60.0, total, summarize_route(total, checkpoints))
+    return RouteCandidate(route_id, minutes * 60.0, summarize_route(total, checkpoints))
 
 
 def test_average_risk_gap_beyond_the_tolerance_decides():
@@ -287,20 +294,73 @@ def test_two_levels_at_one_checkpoint_exceed_the_tolerance_at_1010_miles():
     assert ranking.decided_by is RankingStep.AVERAGE_RISK
 
 
-def test_tolerance_comes_from_the_route_with_the_fewest_forecast_miles():
-    # Tolerance is 25 / 100 = 0.25, set by the 100-mile route, even though the long route alone
-    # would allow only 25 / 1010.
+def test_each_route_has_its_own_tolerance_from_its_own_length():
+    # Tolerance is 25 / 100 for the short route and 25 / 1010 for the long one, and a route is
+    # judged by its own. The long route's average of 0.099 is not within 25 / 1010 of the short
+    # route's 0, so the long route loses even though it is faster.
     short = route("short", [L] * 4, minutes=900)
     levels = [L] * 41
-    levels[1:5] = [M] * 4  # average 100 / 1010 = 0.099, within 0.25 of the short route's 0
-    long_ok = route("long", levels, minutes=300, total=1010)
-    assert order(rank(short, long_ok)) == ["long", "short"]
+    levels[1:5] = [M] * 4
+    long_route = route("long", levels, minutes=300, total=1010)
 
-    levels[1:13] = [M] * 12  # average 300 / 1010 = 0.297, beyond 0.25
-    long_bad = route("long", levels, minutes=300, total=1010)
-    ranking = rank(short, long_bad)
+    ranking = rank(short, long_route)
+
     assert order(ranking) == ["short", "long"]
     assert ranking.decided_by is RankingStep.AVERAGE_RISK
+    # The short route, judged by its own wider tolerance, would tie with the long one.
+    assert short.summary.average_risk == 0
+
+
+def test_a_third_route_does_not_change_the_outcome_between_two_others():
+    slow_clean = route("a", [L] * 40, minutes=900)
+    fast_moderate = route("b", [M] * 20 + [L] * 20, minutes=300)  # 500 Moderate miles
+    # Forecast for the first 50 miles only, then nothing: a wide tolerance of its own.
+    mostly_blind = route("c", [L, L] + [None] * 38, minutes=1200)
+
+    pair = rank(slow_clean, fast_moderate)
+    trio = rank(slow_clean, fast_moderate, mostly_blind)
+
+    assert order(pair) == ["a", "b"]
+    assert pair.decided_by is RankingStep.AVERAGE_RISK
+    assert order(trio)[0] == "a"
+    assert order(trio).index("a") < order(trio).index("b")
+    assert trio.decided_by is RankingStep.TRAVEL_TIME
+    b_in_trio = next(r for r in trio.routes if r.route_id == "b")
+    assert b_in_trio.vs_first.dropped_at is RankingStep.AVERAGE_RISK
+
+
+def test_tolerance_uses_forecast_miles_not_total_miles():
+    # "partly" has a forecast for 100 of its 1000 miles. Its average of 0.25 is one level on one
+    # 25-mile checkpoint, which is within its tolerance of 25 / 100 of the all-Low route. Judged
+    # by total miles (25 / 1000) it would lose at average risk.
+    clear = route("clear", [L] * 40, minutes=900)
+    partly = route("partly", [L, M, L, L] + [None] * 36, minutes=300)
+
+    ranking = rank(clear, partly)
+
+    assert partly.total_miles == 1000
+    assert order(ranking) == ["partly", "clear"]
+    assert ranking.decided_by is RankingStep.TRAVEL_TIME
+
+
+def test_one_high_checkpoint_survives_the_high_step_but_loses_at_average_risk():
+    # High against Low is two levels; the tolerance absorbs one.
+    clear = route("clear", [L] * 4, minutes=900)
+    one_high = route("one_high", [H, L, L, L], minutes=300)
+
+    ranking = rank(clear, one_high)
+
+    assert order(ranking) == ["clear", "one_high"]
+    assert ranking.decided_by is RankingStep.AVERAGE_RISK
+    assert ranking.routes[1].vs_first.dropped_at is RankingStep.AVERAGE_RISK
+
+
+def test_candidate_length_is_derived_from_its_summary():
+    candidate = route("x", [L, None, L], total=80)
+
+    assert candidate.total_miles == pytest.approx(80)
+    with pytest.raises(TypeError):
+        RouteCandidate("x", 1.0, 80.0, candidate.summary)  # type: ignore[call-arg]
 
 
 def test_average_risk_edge_with_float_noise_in_the_marks_is_a_tie():
@@ -325,9 +385,9 @@ def test_average_risk_edge_with_float_noise_in_the_marks_is_a_tie():
     assert ranking.decided_by is RankingStep.TRAVEL_TIME
 
 
-def test_a_route_eliminated_earlier_does_not_set_the_average_risk_tolerance():
-    # Counted, the 50-mile route would widen the tolerance to 25 / 50 and let "two" tie with
-    # "flat". It loses on Severe miles first, so the tolerance is 25 / 200 and "two" loses.
+def test_a_route_eliminated_earlier_does_not_rescue_a_route_at_average_risk():
+    # The short Severe route has a wide tolerance of its own (25 / 50) but is out at the Severe
+    # step, and tolerances are per route, so "two" still loses to "flat" at average risk.
     flat = route("flat", [L] * 8, minutes=900)
     two_moderate = route("two", [M, M] + [L] * 6, minutes=300)  # average 0.25 > 0.125
     severe_short = route("severe", [L, S], minutes=100)

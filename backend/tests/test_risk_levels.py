@@ -190,3 +190,16 @@ def test_levels_compare_by_severity_not_alphabetically():
     assert sorted([Level.SEVERE, Level.LOW, Level.NO_TRAVEL, Level.HIGH, Level.MODERATE]) == list(
         Level
     )
+
+
+def test_ordering_against_a_non_level_raises_instead_of_comparing_strings():
+    for compare in (
+        lambda: Level.LOW < "high",
+        lambda: Level.LOW <= "high",
+        lambda: Level.HIGH > "low",
+        lambda: Level.HIGH >= "low",
+        lambda: "high" > Level.LOW,
+        lambda: Level.LOW < 3,
+    ):
+        with pytest.raises(TypeError):
+            compare()
