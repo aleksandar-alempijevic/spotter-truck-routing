@@ -38,8 +38,10 @@ import type { CheckpointPopup, MapInsets } from './types';
 // Vite emits the worker as its own file; MapLibre cannot find it next to its module otherwise.
 maplibregl.setWorkerUrl(workerUrl);
 
-export interface MapEvents {
+interface MapEvents {
   onReady(): void;
+  /** The map cannot go on: its WebGL context was lost. The page decides what to say. */
+  onFailed(): void;
   onSelectRoute(routeId: string): void;
   onSelectCheckpoint(ref: CheckpointRef): void;
   onBasemapUnavailable(): void;
@@ -54,10 +56,8 @@ export interface MapEvents {
 type GeoJsonSource = maplibregl.GeoJSONSource;
 const OUR_SOURCES: string[] = Object.values(SOURCE);
 const TAP_SLOP_PX = 14;
-// A popup on hover is for a mouse or a trackpad. A touch screen reports `hover: none`, and the
-// panel's list says all the popup does.
-/** Where the readout sits against its point, best first: above, then below, then to the sides. */
-const READOUT_ANCHORS = [
+/** Where a popup sits against its point, best first: above, then below, then to the sides. */
+const POPUP_ANCHORS = [
   'bottom',
   'top',
   'bottom-left',
@@ -67,6 +67,9 @@ const READOUT_ANCHORS = [
   'left',
   'right',
 ] as const;
+type PopupAnchor = (typeof POPUP_ANCHORS)[number];
+// A popup on hover is for a mouse or a trackpad. A touch screen reports `hover: none`, and the
+// panel's list says all the popup does.
 const HOVER_QUERY = '(hover: hover) and (pointer: fine)';
 
 /** The words of a popup as DOM, built with text nodes only. */
@@ -97,6 +100,12 @@ export class MapController {
   private userMoved = false;
   private popup: maplibregl.Popup | null = null;
   private popupKey: string | null = null;
+  /** The latest mouse position not yet looked at: hover is answered once per frame. */
+  private hoverPoint: maplibregl.Point | null = null;
+  private hoverFrame = 0;
+  /** The latest hour the slider asked for, applied once per frame. */
+  private pendingHour: number | null = null;
+  private hourFrame = 0;
   /** The heatmap cell the driver tapped, and its readout, which follows the slider's hour. */
   private readout: { cell: number; popup: maplibregl.Popup } | null = null;
 
@@ -137,7 +146,11 @@ export class MapController {
     this.map.on('error', (event) => this.onError(event));
     this.map.on('click', (event) => this.onClick(event.point));
     this.map.on('mousemove', (event) => this.onHover(event.point));
-    this.map.on('mouseout', () => this.hidePopup());
+    this.map.on('mouseout', () => {
+      this.hoverPoint = null;
+      this.hidePopup();
+    });
+    this.map.getCanvas().addEventListener('webglcontextlost', () => this.events.onFailed());
     const moved = (event: { originalEvent?: unknown }) => {
       if (event.originalEvent) this.userMoved = true;
     };
@@ -155,6 +168,8 @@ export class MapController {
   // ---------- inputs from React ----------
 
   setRoutes(routes: readonly RouteView[]): void {
+    // The same routes again, such as the empty list on a form keystroke: nothing to redo.
+    if (routes === this.routes) return;
     this.routes = routes;
     this.hideReadout();
     this.bounds = routeBounds(routes);
@@ -177,12 +192,13 @@ export class MapController {
   setGrid(model: GridModel | null, hour: HourHolder): void {
     this.unsubscribeHour?.();
     this.unsubscribeHour = null;
+    this.cancelHourFrame();
     this.hideReadout();
     this.grid = model;
     this.hour = hour;
     this.shownHour = hour.get();
     if (this.styleReady) this.pushGrid();
-    if (model) this.unsubscribeHour = hour.subscribe((h) => this.showHour(h));
+    if (model) this.unsubscribeHour = hour.subscribe((h) => this.queueHour(h));
   }
 
   setInsets(insets: MapInsets): void {
@@ -258,6 +274,9 @@ export class MapController {
 
   destroy(): void {
     this.cancelQueuedFit();
+    this.cancelHourFrame();
+    if (this.hoverFrame) cancelAnimationFrame(this.hoverFrame);
+    this.hoverFrame = 0;
     this.hideReadout();
     this.hidePopup();
     this.unsubscribeHour?.();
@@ -431,7 +450,25 @@ export class MapController {
     source.setData(gridCells(this.grid, this.shownHour));
   }
 
-  /** The slider's path: only the cells whose level differs from the hour on screen are touched. */
+  /** The slider's path, at most once per frame: a drag can report faster than the screen draws. */
+  private queueHour(hour: number): void {
+    this.pendingHour = hour;
+    if (this.hourFrame) return;
+    this.hourFrame = requestAnimationFrame(() => {
+      this.hourFrame = 0;
+      const next = this.pendingHour;
+      this.pendingHour = null;
+      if (next !== null) this.showHour(next);
+    });
+  }
+
+  private cancelHourFrame(): void {
+    if (this.hourFrame) cancelAnimationFrame(this.hourFrame);
+    this.hourFrame = 0;
+    this.pendingHour = null;
+  }
+
+  /** Only the cells whose level differs from the hour on screen are touched. */
   private showHour(hour: number): void {
     const grid = this.grid;
     if (!grid || !this.styleReady) return;
@@ -470,8 +507,20 @@ export class MapController {
     );
   }
 
-  /** The pointer cursor over anything clickable, and the popup over a checkpoint. */
+  /** Remembers the pointer; the cursor and the popup are worked out once per frame. */
   private onHover(point: maplibregl.Point): void {
+    this.hoverPoint = point;
+    if (this.hoverFrame) return;
+    this.hoverFrame = requestAnimationFrame(() => {
+      this.hoverFrame = 0;
+      const latest = this.hoverPoint;
+      this.hoverPoint = null;
+      if (latest) this.showHover(latest);
+    });
+  }
+
+  /** The pointer cursor over anything clickable, and the popup over a checkpoint. */
+  private showHover(point: maplibregl.Point): void {
     const checkpoint = this.hit(point, [LAYER.checkpoints])[0];
     this.map.getCanvas().style.cursor =
       checkpoint || this.hit(point, [LAYER.routeLine]).length > 0 ? 'pointer' : '';
@@ -488,20 +537,24 @@ export class MapController {
       return;
     }
     const content = popupContent(words);
+    const at = (checkpoint.geometry as unknown as { coordinates: [number, number] }).coordinates;
     this.hidePopup();
     this.popupKey = key;
-    this.popup = new maplibregl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-      closeOnMove: false,
-      focusAfterOpen: false,
-      offset: 16,
-      maxWidth: '280px',
-      className: 'checkpoint-popup',
-    })
-      .setLngLat((checkpoint.geometry as unknown as { coordinates: [number, number] }).coordinates)
-      .setDOMContent(content)
-      .addTo(this.map);
+    this.popup = this.openPopup((anchor) =>
+      new maplibregl.Popup({
+        anchor,
+        closeButton: false,
+        closeOnClick: false,
+        closeOnMove: false,
+        focusAfterOpen: false,
+        offset: 16,
+        maxWidth: '280px',
+        className: 'checkpoint-popup',
+      })
+        .setLngLat(at)
+        .setDOMContent(content)
+        .addTo(this.map),
+    );
   }
 
   /** What the cell's readout says at the hour on screen. */
@@ -513,14 +566,12 @@ export class MapController {
   }
 
   /**
-   * The readout opens beside the tapped point on the side that fits: inside the part of the map
-   * the panels leave open, and clear of anything lying over the map. Each anchor is tried in turn
-   * and measured, and if none fits the first stands.
+   * Opens a popup on the side of its point that fits: inside the part of the map the panels leave
+   * open, and clear of anything lying over the map, such as the key and the map's own controls.
+   * Each anchor is tried in turn and measured; if none is both, one inside the open part stands,
+   * and failing that the first.
    */
-  private showReadout(cell: number, at: maplibregl.LngLatLike): void {
-    this.hideReadout();
-    const words = this.readoutWords(cell);
-    if (!words) return;
+  private openPopup(make: (anchor: PopupAnchor) => maplibregl.Popup): maplibregl.Popup {
     const box = this.container.getBoundingClientRect();
     const open = {
       left: box.left + this.insets.left,
@@ -535,8 +586,23 @@ export class MapController {
       !covered.some(
         (c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top,
       );
+    const rects = POPUP_ANCHORS.map((anchor) => {
+      const trial = make(anchor);
+      const rect = trial.getElement().getBoundingClientRect();
+      trial.remove();
+      return rect;
+    });
+    const pick = rects.findIndex((r) => inOpenPart(r) && clearOfCovered(r));
+    const fallback = rects.findIndex(inOpenPart);
+    return make(POPUP_ANCHORS[pick >= 0 ? pick : Math.max(fallback, 0)]);
+  }
 
-    const place = (anchor: (typeof READOUT_ANCHORS)[number]) =>
+  /** The readout for a cell, opened beside the point that was tapped. */
+  private showReadout(cell: number, at: maplibregl.LngLatLike): void {
+    this.hideReadout();
+    const words = this.readoutWords(cell);
+    if (!words) return;
+    const popup = this.openPopup((anchor) =>
       new maplibregl.Popup({
         anchor,
         closeButton: true,
@@ -549,23 +615,12 @@ export class MapController {
       })
         .setLngLat(at)
         .setDOMContent(popupContent(words))
-        .addTo(this.map);
-    // Measure every anchor, then keep the best: in the open part and clear of what lies over the
-    // map; failing that, in the open part; failing that, the first.
-    const rects = READOUT_ANCHORS.map((anchor) => {
-      const trial = place(anchor);
-      const rect = trial.getElement().getBoundingClientRect();
-      trial.remove();
-      return rect;
+        .addTo(this.map),
+    );
+    popup.on('close', () => {
+      if (this.readout?.popup === popup) this.readout = null;
     });
-    const pick = rects.findIndex((r) => inOpenPart(r) && clearOfCovered(r));
-    const fallback = rects.findIndex(inOpenPart);
-    const popup = place(READOUT_ANCHORS[pick >= 0 ? pick : Math.max(fallback, 0)]);
-    const shown = popup;
-    shown.on('close', () => {
-      if (this.readout?.popup === shown) this.readout = null;
-    });
-    this.readout = { cell, popup: shown };
+    this.readout = { cell, popup };
   }
 
   private hideReadout(): void {
@@ -588,12 +643,11 @@ export class MapController {
       this.events.onSelectCheckpoint({ routeId, index });
       return;
     }
+    // A tap on a route line selects the route, and reads the heatmap cell under the finger as
+    // well: at the default fit a cell is narrower than a line's tap reach, so the line would
+    // otherwise always win and the cell could not be read without zooming in.
     const line = this.hit(point, [LAYER.routeLine])[0];
-    if (line) {
-      this.events.onSelectRoute((line.properties as { id: string }).id);
-      return;
-    }
-    // Nothing else under the finger: the heatmap cell there, read at the slider's hour.
+    if (line) this.events.onSelectRoute((line.properties as { id: string }).id);
     const cell =
       this.styleReady && this.grid
         ? this.map.queryRenderedFeatures(point, { layers: [LAYER.gridFill] })[0]

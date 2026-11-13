@@ -51,11 +51,15 @@ export function HourSlider({
 
   return (
     <Box sx={{ px: 2, py: 1 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, minHeight: 24 }}>
-        <Typography variant="body2" component="span" sx={{ fontWeight: 600 }}>
+      {/* The bar is the same height whether the weather has landed or not and whatever the hour
+          says: every line here is one line tall, cut short with an ellipsis if it must be. A change
+          of height would re-fit the map in the middle of a drag. The clock label is not a live
+          region: the slider announces its own value as it moves. */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, height: 24 }}>
+        <Typography variant="body2" component="span" noWrap sx={{ fontWeight: 600, flexShrink: 0 }}>
           Forecast hour
         </Typography>
-        <Typography variant="body2" component="span" aria-live="polite">
+        <Typography variant="body2" component="span" noWrap sx={{ minWidth: 0 }}>
           {model
             ? `${label} · +${hour} h${atDeparture ? ' · departure' : ''}`
             : weatherFailed
@@ -65,7 +69,7 @@ export function HourSlider({
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Button
-          aria-label="Back one hour"
+          aria-label="−1 h, back one hour"
           variant="outlined"
           size="small"
           sx={STEP_SX}
@@ -95,11 +99,12 @@ export function HourSlider({
             '& .MuiSlider-markLabel[data-index="0"]': { transform: 'none' },
             // A 44 px tall touch band around the thin rail, with room for the mark labels.
             py: '19px',
-            mb: marks.some((m) => m.label) ? 2 : 0,
+            // Room for the mark labels, kept before the marks exist so the bar does not grow.
+            mb: 2,
           }}
         />
         <Button
-          aria-label="Forward one hour"
+          aria-label="+1 h, forward one hour"
           variant="outlined"
           size="small"
           sx={STEP_SX}
@@ -109,7 +114,14 @@ export function HourSlider({
           +1 h
         </Button>
       </Box>
-      <Typography variant="caption" color="text.secondary" component="p" sx={{ minHeight: 20 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        component="p"
+        noWrap
+        sx={{ height: 20, lineHeight: '20px' }}
+      >
+        {/* Cut short by the ellipsis, whole to a screen reader. */}
         {trucks.length > 0 ? `Trucks: ${trucks.map(describeTruck).join(' · ')}` : ''}
       </Typography>
     </Box>

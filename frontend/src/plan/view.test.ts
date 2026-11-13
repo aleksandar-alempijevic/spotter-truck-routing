@@ -9,7 +9,7 @@ const departure = '2026-11-20T14:00:00Z';
 
 test('before the weather lands every checkpoint is pending, never Low', () => {
   const view = buildPlanView(buildRoutes('mixed', { departure }));
-  expect(view.weatherReady).toBe(false);
+  expect(view.weather).toBe('pending');
   const states = view.routes.flatMap((r) => r.checkpoints.map((c) => c.risk.kind));
   expect(new Set(states)).toEqual(new Set(['pending']));
   expect(view.routes.every((r) => r.summary === null && r.rank === null)).toBe(true);
@@ -30,6 +30,13 @@ test('weather joins by route id and checkpoint index', () => {
     expect(cp.mile).toBe(routes.routes[1].checkpoints[i].mile);
   });
   expect(view.routes.find((r) => r.id === 'route-2')!.rank).toBe(1);
+});
+
+test('the weather state is one value: a failure wins over data left from an earlier answer', () => {
+  const routes = buildRoutes('mixed', { departure });
+  const weather = buildWeather('mixed', { departure });
+  expect(buildPlanView(routes, weather).weather).toBe('ready');
+  expect(buildPlanView(routes, weather, true).weather).toBe('failed');
 });
 
 test('a null forecast is "none" and carries no conditions', () => {
@@ -128,7 +135,7 @@ test('the weather request is the send-back subset and nothing else', () => {
 
 test('a failed weather request reads as unavailable everywhere the view is read, not pending', () => {
   const view = buildPlanView(buildRoutes('mixed', { departure }), undefined, true);
-  expect(view.weatherFailed).toBe(true);
+  expect(view.weather).toBe('failed');
   for (const route of view.routes) {
     expect(route.risk).toEqual({ kind: 'unavailable' });
     expect(route.checkpoints.every((cp) => cp.risk.kind === 'unavailable')).toBe(true);

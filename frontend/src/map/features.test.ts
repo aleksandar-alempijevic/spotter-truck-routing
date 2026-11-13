@@ -84,7 +84,7 @@ test('the heatmap colours follow level_codes, not severity order', () => {
   const expr = gridFillColor(permuted) as unknown[];
   expect(expr[0]).toBe('match');
   // index 0 is severe's colour, index 1 is low's
-  expect(String(expr[3])).toMatch(/211,47,47/);
+  expect(String(expr[3])).toMatch(/134,0,5/);
   expect(String(expr[5])).toMatch(/157,184,166/);
 });
 

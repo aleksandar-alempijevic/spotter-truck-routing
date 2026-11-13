@@ -4,7 +4,7 @@ import { HORIZON_HOURS, SEARCH_MAX_CHARS, SEARCH_MIN_CHARS } from './trip';
 /** Which request failed; the same code can need different advice per request. */
 export type ErrorContext = 'routes' | 'weather' | 'address';
 
-export type ErrorAction = 'retry' | 'edit' | 'none';
+type ErrorAction = 'retry' | 'edit' | 'none';
 
 export interface ErrorMessage {
   title: string;
@@ -12,7 +12,7 @@ export interface ErrorMessage {
   action: ErrorAction;
 }
 
-/** The weather service area (d15), as the backend states it in its refusal. */
+/** The weather service area, as the backend states it in its refusal. */
 const SERVICE_AREA = { south: 15, north: 72, west: -170, east: -50 } as const;
 
 const TRY_LATER = 'Please try again in a moment.';

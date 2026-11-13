@@ -14,17 +14,32 @@ interface Props {
  */
 export function Legend({ open, onToggle }: Props) {
   return (
-    <Paper elevation={3} sx={{ maxWidth: 220 }}>
+    <Paper
+      elevation={3}
+      sx={{ maxWidth: 220, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+    >
       <Button
         aria-expanded={open}
         aria-controls="map-legend"
         onClick={onToggle}
-        sx={{ minHeight: 44, minWidth: 44, px: 1.5, color: 'text.primary', fontWeight: 700 }}
+        sx={{
+          minHeight: 44,
+          minWidth: 44,
+          px: 1.5,
+          flexShrink: 0,
+          color: 'text.primary',
+          fontWeight: 700,
+        }}
       >
         {open ? 'Hide key' : 'Map key'}
       </Button>
       {open && (
-        <Box id="map-legend" component="ul" sx={{ listStyle: 'none', m: 0, px: 1.5, pb: 1.5 }}>
+        // The room the corner leaves it: a short map scrolls the rows instead of hiding them.
+        <Box
+          id="map-legend"
+          component="ul"
+          sx={{ listStyle: 'none', m: 0, px: 1.5, pb: 1.5, minHeight: 0, overflowY: 'auto' }}
+        >
           <Typography
             variant="caption"
             color="text.secondary"

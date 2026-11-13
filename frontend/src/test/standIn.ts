@@ -11,7 +11,7 @@ import {
   type ScenarioKey,
 } from './fixtures.ts';
 
-export interface StandInReply {
+interface StandInReply {
   status: number;
   body: unknown;
 }

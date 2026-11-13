@@ -21,7 +21,7 @@ const ONCE = {
   staleTime: Infinity,
 } as const;
 
-export type PlanPhase =
+type PlanPhase =
   'idle' | 'routes_pending' | 'routes_error' | 'weather_pending' | 'weather_error' | 'ready';
 
 export interface PlanState {

@@ -1,16 +1,20 @@
 import { Box } from '@mui/material';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import type { MapViewProps } from '../map/MapView';
+import { ErrorBoundary } from './ErrorBoundary';
 
 // The one dynamic import of the map. MapLibre, its worker and its CSS stay in this chunk.
 const MapView = lazy(() =>
   import('../map/MapView').catch(() => ({
-    default: function MapChunkFailed({ onFailed }: MapViewProps) {
-      useEffect(() => onFailed(), [onFailed]);
-      return <></>;
-    },
+    default: ({ onFailed }: MapViewProps) => <ReportFailed onFailed={onFailed} />,
   })),
 );
+
+/** Tells the page the map has failed, once, and draws nothing. */
+function ReportFailed({ onFailed }: { onFailed(): void }) {
+  useEffect(() => onFailed(), [onFailed]);
+  return null;
+}
 
 export type MapStatus = 'loading' | 'ready' | 'failed' | 'no-basemap';
 
@@ -24,6 +28,7 @@ export function MapHost({
 }) {
   const [wanted, setWanted] = useState(false);
   const [status, setStatus] = useState<MapStatus>('loading');
+  const failed = useCallback(() => setStatus('failed'), []);
   useEffect(() => onStatus(status), [status, onStatus]);
 
   useEffect(() => {
@@ -35,14 +40,17 @@ export function MapHost({
     <>
       <Box aria-hidden sx={{ position: 'fixed', inset: 0, bgcolor: '#e9eef2' }} />
       {wanted && (
-        <Suspense fallback={null}>
-          <MapView
-            {...props}
-            onReady={() => setStatus((s) => (s === 'loading' ? 'ready' : s))}
-            onFailed={() => setStatus('failed')}
-            onBasemapUnavailable={() => setStatus((s) => (s === 'failed' ? s : 'no-basemap'))}
-          />
-        </Suspense>
+        // A map that throws while rendering is a failed map: the panels stay, and the corner says so.
+        <ErrorBoundary fallback={<ReportFailed onFailed={failed} />}>
+          <Suspense fallback={null}>
+            <MapView
+              {...props}
+              onReady={() => setStatus((s) => (s === 'loading' ? 'ready' : s))}
+              onFailed={failed}
+              onBasemapUnavailable={() => setStatus((s) => (s === 'failed' ? s : 'no-basemap'))}
+            />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </>
   );

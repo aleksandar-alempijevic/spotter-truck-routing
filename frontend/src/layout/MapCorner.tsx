@@ -4,8 +4,10 @@ import type { MapStatus } from './MapHost';
 
 interface Props {
   ref?: Ref<HTMLDivElement>;
-  /** Where the corner is, in px from the top and left of the screen: just inside the panels. */
+  /** How far the panels cover each edge of the screen, in px: the corner sits just inside them. */
   top: number;
+  right: number;
+  bottom: number;
   left: number;
   status: MapStatus;
   /** What stacks under the notice, such as the key. */
@@ -14,9 +16,11 @@ interface Props {
 
 /**
  * The one owner of the map's top-left corner. A notice about the map comes first, and whatever
- * else sits there stacks under it, so two things never share the same spot.
+ * else sits there stacks under it, so two things never share the same spot. It stays in the free
+ * part of the map: narrower than the room left of the zoom column, and no taller than the room
+ * between the panels, so what stacks in it scrolls instead of running under them.
  */
-export function MapCorner({ ref, top, left, status, children }: Props) {
+export function MapCorner({ ref, top, right, bottom, left, status, children }: Props) {
   const notice =
     status === 'failed'
       ? 'The map is not available on this device. Your routes and weather risk are still listed.'
@@ -31,7 +35,9 @@ export function MapCorner({ ref, top, left, status, children }: Props) {
         zIndex: 2,
         top: `calc(${top}px + 8px)`,
         left: `calc(${left}px + 8px)`,
-        maxWidth: 420,
+        // 68 px: the corner's own 8 px, then the zoom column (8 px gap, 44 px wide, 8 px gap).
+        maxWidth: `min(420px, calc(100vw - ${left}px - ${right}px - 68px))`,
+        maxHeight: `calc(100dvh - ${top}px - ${bottom}px - 16px)`,
         width: 'fit-content',
         display: 'flex',
         flexDirection: 'column',
@@ -42,7 +48,7 @@ export function MapCorner({ ref, top, left, status, children }: Props) {
       }}
     >
       {notice && (
-        <Alert severity="warning" role="status">
+        <Alert severity="warning" role="status" sx={{ flexShrink: 0 }}>
           {notice}
         </Alert>
       )}

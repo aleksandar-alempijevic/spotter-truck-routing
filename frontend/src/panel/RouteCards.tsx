@@ -7,6 +7,7 @@ import { RiskGlyph } from '../risk/RiskGlyph';
 import { formatDuration } from '../time/zone';
 import { formatMiles } from '../plan/format';
 import { selectableSx } from './selectable';
+import { SelectedMark } from './SelectedMark';
 import { arrivalInDestinationZone, arrivalMs, originClock } from './times';
 
 interface Props {
@@ -114,7 +115,9 @@ export function RouteCards({ routes, trip, selectedId, recommendedId, onSelect }
                 spacing={1}
                 sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}
               >
-                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                {selected && <SelectedMark />}
+                {/* A span: a heading cannot sit inside a button. */}
+                <Typography variant="subtitle1" component="span" sx={{ fontWeight: 700 }}>
                   {route.name}
                   {route.via ? ` via ${route.via}` : ''}
                 </Typography>
@@ -125,11 +128,16 @@ export function RouteCards({ routes, trip, selectedId, recommendedId, onSelect }
                 <Box sx={{ flex: 1 }} />
                 <RiskBadge state={route.risk} />
               </Stack>
-              <Typography variant="body2" sx={{ mt: 0.5 }}>
+              <Typography variant="body2" component="span" sx={{ display: 'block', mt: 0.5 }}>
                 {formatDuration(route.travelSeconds)} · {formatMiles(route.miles)}
                 {route.rank !== null ? ` · ranked ${route.rank}` : ''}
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              <Typography
+                variant="body2"
+                component="span"
+                color="text.secondary"
+                sx={{ display: 'block', mb: 1 }}
+              >
                 Arrives {originClock(trip, arrival)}
                 {inDestination ? ` (${inDestination} there)` : ''}
               </Typography>
@@ -143,7 +151,7 @@ export function RouteCards({ routes, trip, selectedId, recommendedId, onSelect }
                     py: 0.5,
                     borderRadius: 1,
                     bgcolor: RISK_STYLE.no_travel.color,
-                    color: RISK_STYLE.no_travel.onColor,
+                    color: 'common.white',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1,

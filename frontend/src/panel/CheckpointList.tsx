@@ -24,7 +24,10 @@ function Conditions({ description }: { description: CheckpointDescription }) {
       {readings.map((part, i) => (
         <span key={part.condition}>
           {i > 0 ? ' · ' : ''}
-          {part.condition === decidedBy ? <strong>{part.text}</strong> : part.text}
+          {/* A reading's value and unit stay on one line: "0 in/h" never splits. */}
+          <span style={{ whiteSpace: 'nowrap' }}>
+            {part.condition === decidedBy ? <strong>{part.text}</strong> : part.text}
+          </span>
         </span>
       ))}
     </>

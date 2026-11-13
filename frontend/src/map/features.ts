@@ -11,7 +11,7 @@ interface Feature<G, P> {
   geometry: G;
   properties: P;
 }
-export interface FeatureCollection<G, P> {
+interface FeatureCollection<G, P> {
   type: 'FeatureCollection';
   features: Feature<G, P>[];
 }
@@ -38,7 +38,7 @@ export function routeLines(
   };
 }
 
-export interface CheckpointProps {
+interface CheckpointProps {
   routeId: string;
   index: number;
   /** Which glyph to draw: the level, "pending" or "none". */

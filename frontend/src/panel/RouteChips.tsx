@@ -3,6 +3,7 @@ import type { RouteView } from '../plan/view';
 import { RiskBadge } from '../risk/RiskBadge';
 import { formatDuration } from '../time/zone';
 import { selectableSx } from './selectable';
+import { SelectedMark } from './SelectedMark';
 
 interface Props {
   routes: readonly RouteView[];
@@ -42,11 +43,18 @@ export function RouteChips({ routes, selectedId, recommendedId, onSelect }: Prop
               gap: 0.25,
             }}
           >
-            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            <Typography
+              variant="body2"
+              component="span"
+              sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.5 }}
+            >
+              {selected && <SelectedMark />}
               {route.name}
               {route.id === recommendedId ? ' ★' : ''}
             </Typography>
-            <Typography variant="body2">{formatDuration(route.travelSeconds)}</Typography>
+            <Typography variant="body2" component="span">
+              {formatDuration(route.travelSeconds)}
+            </Typography>
             <Typography variant="caption" component="span" sx={{ lineHeight: 1.2 }}>
               <RiskBadge state={route.risk} />
             </Typography>

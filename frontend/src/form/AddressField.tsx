@@ -9,12 +9,12 @@ import { SEARCH_MAX_CHARS, SEARCH_MIN_CHARS } from '../plan/trip';
 import { canSearch, tooShortToSearch } from './validation';
 import { useDebouncedValue } from './useDebouncedValue';
 
-export const SEARCH_DEBOUNCE_MS = 350;
+const SEARCH_DEBOUNCE_MS = 350;
 const TOO_SHORT_HINT = `Type at least ${SEARCH_MIN_CHARS} characters`;
 
 /** A search that starts with a number and names no place is slow on the server. */
-export const NUMBER_HINT = 'Add the city for faster results';
-export const startsWithNumber = (text: string) => /^\s*\d/.test(text);
+const NUMBER_HINT = 'Add the city for faster results';
+const startsWithNumber = (text: string) => /^\s*\d/.test(text);
 
 interface Props {
   label: string;
@@ -24,13 +24,14 @@ interface Props {
   onChange(text: string, choice: SuggestionOut | null): void;
   onCredit(credit: AttributionOut): void;
   error?: string;
+  autoFocus?: boolean;
 }
 
 /**
  * Address search: debounced, never sent below the minimum or above the maximum length, with superseded searches
  * cancelled. What the driver picks is a whole suggestion (label, position, time zone).
  */
-export function AddressField({ label, text, choice, onChange, onCredit, error }: Props) {
+export function AddressField({ label, text, choice, onChange, onCredit, error, autoFocus }: Props) {
   const debounced = useDebouncedValue(text.trim(), SEARCH_DEBOUNCE_MS);
   const searching = choice === null && canSearch(debounced);
 
@@ -74,6 +75,7 @@ export function AddressField({ label, text, choice, onChange, onCredit, error }:
         <TextField
           {...params}
           label={label}
+          autoFocus={autoFocus}
           error={Boolean(error) || failure !== null}
           helperText={
             error ??

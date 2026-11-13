@@ -1,7 +1,9 @@
 import { Box, Divider, Stack, Typography } from '@mui/material';
+import type { Ref } from 'react';
 import type { CheckpointRef } from '../plan/view';
 import type { PlanState } from '../plan/queries';
-import type { Submission } from '../plan/trip';
+import { placeName, type Submission } from '../plan/trip';
+import { visuallyHidden } from '../visuallyHidden';
 import { Credits } from './Credits';
 import { CheckpointList, CheckpointRow } from './CheckpointList';
 import { PlanHeadline } from './PlanHeadline';
@@ -36,6 +38,8 @@ interface Props {
   onSelectRoute(routeId: string): void;
   onSelectCheckpoint(ref: CheckpointRef): void;
   onEditTrip(): void;
+  /** The heading focus moves to when the results appear, so a screen reader starts there. */
+  headingRef?: Ref<HTMLHeadingElement>;
 }
 
 /** What the sheet or pane shows. It is indifferent to which of the two holds it. */
@@ -48,6 +52,7 @@ export function PlanPanel({
   onSelectRoute,
   onSelectCheckpoint,
   onEditTrip,
+  headingRef,
 }: Props) {
   const parts = PARTS[tier];
   const routes = state.view?.routes ?? [];
@@ -59,6 +64,13 @@ export function PlanPanel({
       : undefined;
   const criteria =
     state.explanation && 'criteria' in state.explanation ? state.explanation.criteria : undefined;
+
+  // Said once when the answer lands. The wait and the errors speak for themselves, and the
+  // recommendation is the headline's own text, so it is not said twice.
+  const announcement =
+    state.phase === 'ready'
+      ? `Results ready. ${routes.length} ${routes.length === 1 ? 'route' : 'routes'} found.`
+      : '';
 
   const list = parts.list && selected && (
     <CheckpointList
@@ -121,8 +133,22 @@ export function PlanPanel({
     </Stack>
   );
 
+  // Out of the stack, so its spacing does not count these two unseen elements as content.
+  const unseen = (
+    <>
+      <Typography ref={headingRef} variant="h6" component="h2" tabIndex={-1} sx={visuallyHidden}>
+        Routes from {placeName(submission.trip.origin.label)} to{' '}
+        {placeName(submission.trip.destination.label)}
+      </Typography>
+      <Box role="status" sx={visuallyHidden}>
+        {announcement}
+      </Box>
+    </>
+  );
+
   return (
     <>
+      {unseen}
       {tier === 'wide' ? (
         <Box
           sx={{

@@ -3,7 +3,7 @@ import type { Spacing } from '../api/types';
 import { SPACINGS } from '../plan/trip';
 
 /** Shown when the shortest spacing is chosen: the weather check asks for the most points then. */
-export const LONG_TRIP_NOTICE =
+const LONG_TRIP_NOTICE =
   'Checking every 10 miles gives the most detail, but on a long trip the weather can take about a minute.';
 
 export function SpacingControl({

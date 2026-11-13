@@ -2,10 +2,15 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { Sheet, type SheetState } from './Sheet';
 
-// jsdom lays nothing out: every element is 200 px tall and the screen 800 px, so the stops are
-// peek 200, half 400 and full 800.
+// jsdom lays nothing out: an element is 200 px tall unless a height was written to its style, as
+// the sheet does while dragged, and the screen is 800 px, so the stops are half 400 and full 800
+// with the peek stop at the 200 px the sheet measures.
 beforeEach(() => {
-  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(200);
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return parseFloat(this.style.height) || 200;
+  });
   vi.stubGlobal('innerHeight', 800);
   HTMLElement.prototype.setPointerCapture = () => {};
 });
@@ -62,11 +67,44 @@ test('the content follows the height the finger has reached, and the height is r
   expect(sheet.style.height).toBe('');
 });
 
-test('a drag down from full ends below full', () => {
+// The drags above are instant, which reads as a flick; these move over two seconds, so only where
+// the finger stops counts. The events' clock is the page's, so a fake one sets how long a drag
+// takes. A sheet at full height is 800 px tall.
+function slowDragFromFull(distance: number) {
   const { onState, handle } = setup('full');
-  drag(handle, 100, 500);
-  expect(onState).toHaveBeenCalledTimes(1);
-  expect(onState.mock.calls[0][0]).not.toBe('full');
+  screen.getByRole('region', { name: 'Routes and weather' }).style.height = '800px';
+  vi.useFakeTimers({ toFake: ['Date'] });
+  fireEvent.pointerDown(handle, { pointerId: 1, clientY: 100, button: 0 });
+  vi.advanceTimersByTime(1000);
+  fireEvent.pointerMove(handle, { pointerId: 1, clientY: 100 + distance });
+  vi.advanceTimersByTime(1000);
+  fireEvent.pointerUp(handle, { pointerId: 1, clientY: 100 + distance });
+  vi.useRealTimers();
+  return onState.mock.calls;
+}
+
+test('a slow drag down from full that stops near half ends at half', () => {
+  expect(slowDragFromFull(400)).toEqual([['half']]);
+});
+
+test('a slow drag down from full that goes nearly to the bottom ends at peek', () => {
+  expect(slowDragFromFull(600)).toEqual([['peek']]);
+});
+
+test('a slow drag down from full that stops short of the middle stays full', () => {
+  expect(slowDragFromFull(100)).toEqual([]);
+});
+
+test('a quick flick down from full moves one step, to half, wherever it stops', () => {
+  const { onState, handle } = setup('full');
+  screen.getByRole('region', { name: 'Routes and weather' }).style.height = '800px';
+  vi.useFakeTimers({ toFake: ['Date'] });
+  fireEvent.pointerDown(handle, { pointerId: 1, clientY: 100, button: 0 });
+  vi.advanceTimersByTime(20);
+  fireEvent.pointerMove(handle, { pointerId: 1, clientY: 650 });
+  fireEvent.pointerUp(handle, { pointerId: 1, clientY: 650 });
+  vi.useRealTimers();
+  expect(onState.mock.calls).toEqual([['half']]);
 });
 
 test('a tap that barely moves is a tap: it cycles the state and starts no drag', () => {

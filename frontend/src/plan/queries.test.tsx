@@ -129,7 +129,7 @@ test('a failed weather request leaves the routes in place and retries only on re
 
   await waitFor(() => expect(latest.phase).toBe('weather_error'));
   expect(latest.view?.routes).toHaveLength(3);
-  expect(latest.view?.weatherReady).toBe(false);
+  expect(latest.view?.weather).toBe('failed');
   disturb();
   await new Promise((r) => setTimeout(r, 30));
   expect(calls(fetchMock, '/api/weather')).toBe(1);

@@ -47,10 +47,14 @@ export interface PlanView {
   /** The server's note on why there are fewer than three routes, verbatim. */
   shortfall: string | null;
   ranking: RankingOut | null;
-  weatherReady: boolean;
-  /** The weather request failed: checkpoints without weather read as unavailable, not pending. */
-  weatherFailed: boolean;
+  /**
+   * Where the weather stands: not yet in, in, or failed. A failure wins over data left from an
+   * earlier answer, and checkpoints without weather then read as unavailable, not pending.
+   */
+  weather: WeatherState;
 }
+
+type WeatherState = 'pending' | 'ready' | 'failed';
 
 /** The weather answer does not line up with the routes it was requested for. */
 export function checkAligned(routes: RoutesOut, weather: WeatherOut): void {
@@ -78,6 +82,7 @@ export function buildPlanView(
   weather?: WeatherOut,
   weatherFailed = false,
 ): PlanView {
+  const weatherState: WeatherState = weatherFailed ? 'failed' : weather ? 'ready' : 'pending';
   const weatherById = new Map(weather?.routes.map((r) => [r.id, r]));
   const rankById = new Map(weather?.ranking.routes.map((r) => [r.id, r.rank]));
 
@@ -127,7 +132,6 @@ export function buildPlanView(
     }),
     shortfall: routes.shortfall?.message ?? null,
     ranking: weather?.ranking ?? null,
-    weatherReady: weather !== undefined,
-    weatherFailed,
+    weather: weatherState,
   };
 }

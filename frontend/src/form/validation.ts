@@ -26,7 +26,7 @@ export interface FormValues {
   addressCredit: AttributionOut | null;
 }
 
-/** The cargo weight starts empty (d18); spacing starts at 25. */
+/** The cargo weight starts empty; spacing starts at 25. */
 export const INITIAL_VALUES: FormValues = {
   origin: null,
   originText: '',
@@ -38,7 +38,7 @@ export const INITIAL_VALUES: FormValues = {
   addressCredit: null,
 };
 
-export interface FormErrors {
+interface FormErrors {
   origin?: string;
   destination?: string;
   departure?: string;

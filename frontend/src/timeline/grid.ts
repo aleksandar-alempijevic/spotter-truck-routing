@@ -22,7 +22,7 @@ export interface GridModel {
   departureHour: number;
 }
 
-export interface CellChange {
+interface CellChange {
   cell: number;
   level: number;
 }

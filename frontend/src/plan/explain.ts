@@ -3,13 +3,13 @@ import type { RankedRouteOut, RankingOut, RankingStep } from '../api/types';
 import { formatDuration } from '../time/zone';
 import type { RouteView } from './view';
 
-export interface RankedEntry {
+interface RankedEntry {
   routeId: string;
   rank: number;
 }
 
 /** The ranking's steps in the order it applies them. */
-export const STEP_ORDER: readonly RankingStep[] = [
+const STEP_ORDER: readonly RankingStep[] = [
   'no_travel',
   'severe',
   'high',
@@ -220,7 +220,7 @@ export function formatDifference(step: RankingStep, value: number): string {
   return `${sign}${formatMeasure(step, Math.abs(value))}`;
 }
 
-export interface Described {
+interface Described {
   headline: string;
   reason: string | null;
   cost: string | null;

@@ -9,9 +9,11 @@ import type { MapViewProps } from './map/MapView';
 
 // The fake map: jsdom has no WebGL, so the real map is covered by the built-app browser run.
 let mapProps: MapViewProps | null = null;
+let mapThrows = false;
 vi.mock('./map/MapView', () => ({
   default: function FakeMap(props: MapViewProps) {
     mapProps = props;
+    if (mapThrows) throw new Error('the map broke while rendering');
     return <div data-testid="map" />;
   },
 }));
@@ -32,6 +34,7 @@ let addressTimeouts: number;
 
 beforeEach(() => {
   mapProps = null;
+  mapThrows = false;
   weatherFails = false;
   weatherFailure = null;
   addressTimeouts = 0;
@@ -58,6 +61,9 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+// The trip bar is a button named by its own words: the places, the details, then "Edit".
+const TRIP_BAR = /^Dallas → Denver .* Edit$/;
 
 const calls = (path: string) =>
   fetchMock.mock.calls.filter(([url]) => String(url).startsWith(path)).length;
@@ -163,7 +169,7 @@ test('planning again drops the selection and the plan, and requests once more', 
   act(() => mapProps!.onSelectRoute('route-3'));
   expect(mapProps?.selectedRouteId).toBe('route-3');
 
-  fireEvent.click(screen.getByRole('button', { name: 'Edit trip' }));
+  fireEvent.click(screen.getByRole('button', { name: TRIP_BAR }));
   fireEvent.click(screen.getByRole('button', { name: '50 mi' }));
   fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
 
@@ -329,7 +335,7 @@ test('widest screens: the cards and the checkpoints are both there, side by side
   expect(await screen.findByText('Route 2 is recommended')).toBeInTheDocument();
   expect(screen.getAllByText(/Arrives /)).toHaveLength(3);
   expect(screen.getByText('Route 2 checkpoints')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Edit trip' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: TRIP_BAR })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'More' })).not.toBeInTheDocument();
 });
 
@@ -382,4 +388,83 @@ test('the map notice and the key share the map corner: a failed map hides the ke
   act(() => mapProps!.onFailed());
   expect(screen.getByText(/map is not available on this device/)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /key/ })).not.toBeInTheDocument();
+});
+
+test('a map that throws while rendering leaves the panels up and says so in the map corner', async () => {
+  mapThrows = true;
+  // React reports a caught render error to the console; that is the boundary working.
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  useViewport('pane');
+  renderApp();
+  await planTrip();
+  expect(await screen.findByText('Route 2 is recommended')).toBeInTheDocument();
+  expect(await screen.findByText(/map is not available on this device/)).toBeInTheDocument();
+  expect(screen.getAllByText(/Arrives /)).toHaveLength(3);
+  expect(screen.queryByRole('button', { name: /key/ })).not.toBeInTheDocument();
+  vi.restoreAllMocks();
+});
+
+test('phone: while the form covers the map the map is inert, and it is reachable again after', async () => {
+  useViewport('sheet');
+  renderApp();
+  await screen.findByRole('button', { name: 'Plan routes' });
+  const map = () => screen.getByTestId('map');
+  await waitFor(() => expect(map()).toBeInTheDocument());
+  expect(map().closest('[inert]')).not.toBeNull();
+
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  expect(map().closest('[inert]')).toBeNull();
+
+  fireEvent.click(screen.getByRole('button', { name: TRIP_BAR }));
+  expect(map().closest('[inert]')).not.toBeNull();
+});
+
+test('focus follows the screen: results after a submit, the first field when the form opens, Edit trip when it closes', async () => {
+  useViewport('sheet');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  expect(document.activeElement).toBe(
+    screen.getByRole('heading', { name: 'Routes from Dallas to Denver' }),
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: TRIP_BAR }));
+  expect(document.activeElement).toBe(screen.getByLabelText('Starting place'));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Back to results' }));
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: TRIP_BAR }));
+});
+
+test('the answer is announced once it lands, in a live region of its own', async () => {
+  useViewport('sheet');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  const announced = screen
+    .getAllByRole('status')
+    .map((el) => el.textContent)
+    .filter((text) => text?.startsWith('Results ready'));
+  expect(announced).toEqual(['Results ready. 3 routes found.']);
+});
+
+test('a failed submit puts focus on the first field that is wrong', async () => {
+  useViewport('sheet');
+  renderApp();
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('Starting place')));
+  expect(screen.getByLabelText('Starting place')).toHaveAttribute('aria-invalid', 'true');
+  expect(calls('/api/routes')).toBe(0);
+
+  // With both places chosen, the cargo weight is the first thing wrong.
+  await pick('Starting place', 'Dallas', 'Dallas, TX, United States');
+  await pick('Destination', 'Denver', 'Denver, CO, United States');
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('Cargo weight (lb)')),
+  );
+  const described = screen.getByLabelText('Cargo weight (lb)').getAttribute('aria-describedby');
+  expect(document.getElementById(described!)).toHaveTextContent(
+    'Enter the cargo weight in pounds.',
+  );
 });

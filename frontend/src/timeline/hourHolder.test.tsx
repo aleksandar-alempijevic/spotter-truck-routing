@@ -59,8 +59,8 @@ test('a slider change goes to the holder and nowhere else', () => {
 test('the one-hour buttons step the holder and stop at the ends', () => {
   const holder = createHourHolder();
   render(<HourSlider holder={holder} model={model} zone="America/Chicago" />);
-  const back = screen.getByRole('button', { name: 'Back one hour' });
-  const forward = screen.getByRole('button', { name: 'Forward one hour' });
+  const back = screen.getByRole('button', { name: /^−1 h/ });
+  const forward = screen.getByRole('button', { name: /^\+1 h/ });
   expect(back).toBeDisabled();
   fireEvent.click(forward);
   fireEvent.click(forward);
@@ -74,8 +74,8 @@ test('the one-hour buttons step the holder and stop at the ends', () => {
 
 test('the buttons are disabled with no forecast', () => {
   render(<HourSlider holder={createHourHolder()} model={null} zone="America/Chicago" />);
-  expect(screen.getByRole('button', { name: 'Forward one hour' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Back one hour' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /^\+1 h/ })).toBeDisabled();
+  expect(screen.getByRole('button', { name: /^−1 h/ })).toBeDisabled();
 });
 
 test('the marks are labelled now, and the day boundaries', () => {

@@ -13,13 +13,26 @@ export type RiskState =
 /** What can be drawn: a level, or one of the three non-levels. */
 export type RiskKey = Level | 'pending' | 'unavailable' | 'none';
 
-/** How opaque a heatmap cell is: Low stays quiet so the map is calm where nothing matters. */
-const CELL_ALPHA = { low: 0.22, other: 0.62 } as const;
+/**
+ * The heatmap's own ramp, in its own table because a cell is a large area over the basemap: it
+ * has to stand out from the land colour (`#f2f3f0` on Positron), where a small glyph does not.
+ * Moderate through No Travel measure at least 3:1 against that land, and each step is darker than
+ * the one before, so the levels also separate in greyscale. Low is a deliberately quiet tint, the
+ * one level exempt from the 3:1 rule, so the map stays calm where nothing matters.
+ * `risk/levels.test.ts` measures the ramp.
+ */
+const CELL: Record<Level, { rgb: string; alpha: number }> = {
+  low: { rgb: '#9db8a6', alpha: 0.22 },
+  moderate: { rgb: '#977200', alpha: 0.85 },
+  high: { rgb: '#a42c00', alpha: 0.85 },
+  severe: { rgb: '#860005', alpha: 0.85 },
+  no_travel: { rgb: '#310050', alpha: 0.85 },
+};
 
-/** A heatmap cell's fill for a level: the level's colour at the map's opacity, as `rgba(...)`. */
+/** A heatmap cell's fill for a level, as `rgba(...)`. The map and the key both read it. */
 export function cellFill(level: Level): string {
-  const n = parseInt(RISK_STYLE[level].color.slice(1), 16);
-  const alpha = level === 'low' ? CELL_ALPHA.low : CELL_ALPHA.other;
+  const { rgb, alpha } = CELL[level];
+  const n = parseInt(rgb.slice(1), 16);
   return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
 
@@ -38,12 +51,10 @@ export const GLYPH_STROKE = {
   pendingDash: [3, 3],
 } as const;
 
-export interface RiskStyle {
+interface RiskStyle {
   label: string;
-  /** Fill colour for marks and the heatmap. */
+  /** Fill colour of the level's marks and of its bars in the route cards. */
   color: string;
-  /** Text colour that reads on `color`. */
-  onColor: string;
   /** SVG path in a 24 by 24 box. The same shape is drawn on the map and in the lists. */
   path: string;
   /** Drawn as an outline instead of a solid shape. */
@@ -57,42 +68,36 @@ export const RISK_STYLE: Record<RiskKey, RiskStyle> = {
   low: {
     label: 'Low',
     color: '#9db8a6',
-    onColor: '#102418',
     path: CIRCLE_PATH,
     outline: false,
   },
   moderate: {
     label: 'Moderate',
     color: '#f4d03f',
-    onColor: '#2b2400',
     path: 'M5 5h14v14H5z',
     outline: false,
   },
   high: {
     label: 'High',
     color: '#f28c28',
-    onColor: '#2b1500',
     path: 'M12 3L22 20H2z',
     outline: false,
   },
   severe: {
     label: 'Severe',
     color: '#d32f2f',
-    onColor: '#ffffff',
     path: 'M12 1.5L22.5 12L12 22.5L1.5 12z',
     outline: false,
   },
   no_travel: {
     label: 'No Travel',
     color: '#7b1fa2',
-    onColor: '#ffffff',
     path: 'M8 2h8l6 6v8l-6 6H8l-6-6V8z',
     outline: false,
   },
   pending: {
     label: 'Checking weather',
     color: '#78909c',
-    onColor: '#102027',
     path: CIRCLE_PATH,
     outline: true,
     dashed: true,
@@ -100,7 +105,6 @@ export const RISK_STYLE: Record<RiskKey, RiskStyle> = {
   unavailable: {
     label: 'Weather unavailable',
     color: '#607d8b',
-    onColor: '#ffffff',
     path: `${CIRCLE_PATH}M7.5 12h9`,
     outline: true,
     dashed: true,
@@ -108,7 +112,6 @@ export const RISK_STYLE: Record<RiskKey, RiskStyle> = {
   none: {
     label: 'No forecast',
     color: '#546e7a',
-    onColor: '#102027',
     path: `${CIRCLE_PATH}M6.3 6.3L17.7 17.7`,
     outline: true,
   },

@@ -42,6 +42,7 @@ const CONTROL_SX = {
 /** The map for the life of the page. Loaded through one dynamic import from `layout/`. */
 export default function MapView(props: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<MapController | null>(null);
   const fittedFor = useRef<number | null>(null);
   const latest = useRef(props);
@@ -58,9 +59,20 @@ export default function MapView(props: MapViewProps) {
         onSelectRoute: (id) => latest.current.onSelectRoute(id),
         onSelectCheckpoint: (ref) => latest.current.onSelectCheckpoint(ref),
         onBasemapUnavailable: () => latest.current.onBasemapUnavailable(),
+        onFailed: () => latest.current.onFailed(),
         describeCheckpoint: (ref) => latest.current.describeCheckpoint(ref),
         describeCell: (level, hour) => latest.current.describeCell(level, hour),
-        coveredRects: () => latest.current.coveredRects(),
+        // The page's panels over the map, and the map's own controls and credit.
+        coveredRects: () => {
+          const own = [
+            controlsRef.current,
+            containerRef.current?.querySelector('.maplibregl-ctrl-attrib'),
+          ];
+          return [
+            ...latest.current.coveredRects(),
+            ...own.flatMap((el) => (el ? [el.getBoundingClientRect()] : [])),
+          ];
+        },
       });
     } catch {
       latest.current.onFailed();
@@ -118,15 +130,17 @@ export default function MapView(props: MapViewProps) {
           lineHeight: 1.4,
           color: 'text.primary',
         },
-        // The cell readout takes taps (it has a close button); the hover popup never does.
+        // The cell readout takes taps (it has a close button); the hover popup never does. The
+        // button is a 44 px target in the corner, and the words keep clear of it.
         '& .cell-readout .maplibregl-popup-content': {
-          padding: '10px 28px 10px 12px',
+          padding: '10px 44px 10px 12px',
+          minHeight: 44,
           fontSize: 14,
         },
         '& .cell-readout .maplibregl-popup-close-button': {
-          minWidth: 28,
-          minHeight: 28,
-          fontSize: 18,
+          width: 44,
+          height: 44,
+          fontSize: 22,
         },
         // The map's own credit stays inside the part of the map the panels leave visible.
         '& .maplibregl-ctrl-bottom-right': {
@@ -139,6 +153,7 @@ export default function MapView(props: MapViewProps) {
           by its parent, not by `inset`. */}
       <Box ref={containerRef} sx={{ width: '100%', height: '100%' }} />
       <Paper
+        ref={controlsRef}
         elevation={3}
         sx={{
           position: 'absolute',

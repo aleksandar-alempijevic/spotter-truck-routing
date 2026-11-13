@@ -40,6 +40,9 @@ export function newSubmission(trip: Trip, now = Date.now()): Submission {
   return { id: lastId, trip, startedAt: now };
 }
 
+/** The first part of a place's label: "Dallas" from "Dallas, TX, United States". */
+export const placeName = (label: string): string => label.split(',')[0];
+
 /** Every time on screen is read in the origin's zone. */
 export const displayZone = (trip: Trip): string => trip.origin.timezone;
 

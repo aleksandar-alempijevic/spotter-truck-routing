@@ -24,7 +24,7 @@ interface Props {
 }
 
 /** One line about one route at one step, or null when the route was already out. */
-export function standingText(
+function standingText(
   row: CriteriaRow,
   standing: Standing,
   winnerName: string,

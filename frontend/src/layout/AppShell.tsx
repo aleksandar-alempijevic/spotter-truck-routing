@@ -1,9 +1,9 @@
 import { Box, Button, Paper, Stack, Typography } from '@mui/material';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TripForm } from '../form/TripForm';
 import { TripSummary } from '../form/TripSummary';
 import type { FormValues } from '../form/validation';
-import type { CheckpointRef } from '../plan/view';
+import type { CheckpointRef, RouteView } from '../plan/view';
 import { PlanPanel, type PanelTier } from '../panel/PlanPanel';
 import { originClock } from '../panel/times';
 import { describeCheckpoint } from '../plan/describe';
@@ -22,6 +22,7 @@ import { useBackCollapse } from './useBackCollapse';
 import type { LayoutMode } from './useLayoutMode';
 import type { Session } from './useSession';
 import { useSize } from './useSize';
+import { useViewportHeight } from './useViewportHeight';
 
 interface Props {
   mode: LayoutMode;
@@ -44,6 +45,12 @@ const WIDE_PANE_WIDTH = 'clamp(740px, 38vw, 860px)';
 
 const SAFE_TOP = 'env(safe-area-inset-top)';
 
+// One empty list for every render before the routes arrive: a new `[]` each time would tell the
+// map the routes had changed on every keystroke in the form.
+const NO_ROUTES: readonly RouteView[] = [];
+
+/** A map with less open height than this starts with its key closed. */
+const KEY_OPEN_MIN_MAP_HEIGHT = 420;
 /** The page: the map behind, and either a bottom sheet or a side pane over it. */
 export function AppShell({
   mode,
@@ -60,8 +67,13 @@ export function AppShell({
   const [dragging, setDragging] = useState(false);
   const [mapStatus, setMapStatus] = useState<MapStatus>('loading');
   const cornerRef = useRef<HTMLDivElement>(null);
+  // Where focus goes when the form closes: the results after a submit, "Edit trip" after "Back".
+  const focusAfterForm = useRef<'results' | 'edit' | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const editRef = useRef<HTMLButtonElement>(null);
   // Open on a screen with room, closed over a phone's map, until the driver chooses.
   const [legendChoice, setLegendChoice] = useState<boolean | null>(null);
+  const viewportHeight = useViewportHeight();
   const hasPlan = submission !== null;
   const showForm = formOpen || !hasPlan;
   const isSheet = mode === 'sheet';
@@ -89,10 +101,25 @@ export function AppShell({
     [isSheet, tripBar.height, bottom.height, slider.height, pane.width],
   );
 
+  // Focus follows the screen: the form opens on its first field (the form asks for it), and when
+  // it closes focus goes to what the driver will read or press next.
+  useEffect(() => {
+    if (showForm) return;
+    const target = focusAfterForm.current;
+    focusAfterForm.current = null;
+    (target === 'results' ? headingRef : target === 'edit' ? editRef : null)?.current?.focus();
+  }, [showForm]);
+
   const submit = (trip: Trip) => {
     onSubmit(trip);
+    focusAfterForm.current = 'results';
     setFormOpen(false);
     setSheet('peek');
+  };
+
+  const closeForm = () => {
+    focusAfterForm.current = 'edit';
+    setFormOpen(false);
   };
 
   const selectCheckpoint = (ref: CheckpointRef) => {
@@ -140,9 +167,9 @@ export function AppShell({
       <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
         Truck Route Safety
       </Typography>
-      <TripForm values={values} onChange={onValues} onSubmit={submit} />
+      <TripForm values={values} onChange={onValues} onSubmit={submit} autoFocus={hasPlan} />
       {hasPlan && (
-        <Button sx={{ minHeight: 48 }} onClick={() => setFormOpen(false)}>
+        <Button sx={{ minHeight: 48 }} onClick={closeForm}>
           Back to results
         </Button>
       )}
@@ -160,6 +187,7 @@ export function AppShell({
         onSelectRoute={session.selectRoute}
         onSelectCheckpoint={selectCheckpoint}
         onEditTrip={() => setFormOpen(true)}
+        headingRef={headingRef}
       />
     );
 
@@ -171,37 +199,50 @@ export function AppShell({
         zone={submission ? displayZone(submission.trip) : 'UTC'}
         routes={plan.view?.routes}
         nowMs={submission?.startedAt}
-        weatherFailed={plan.view?.weatherFailed}
+        weatherFailed={plan.view?.weather === 'failed'}
       />
     </Paper>
   );
 
+  // The map is out of reach of the keyboard and of assistive technology while the phone's form
+  // covers it, so Tab cannot reach the zoom buttons and credit links beneath.
+  const mapBehindForm = isSheet && showForm;
+  // The key starts open on a map with room for it, and closed on a short one.
+  const mapHeight = viewportHeight - insets.top - insets.bottom;
+  const keyOpen = legendChoice ?? (!isSheet && mapHeight >= KEY_OPEN_MIN_MAP_HEIGHT);
+
   return (
     <>
-      <MapHost
-        routes={plan.view?.routes ?? []}
-        selectedRouteId={session.routeId}
-        selectedCheckpoint={session.checkpoint}
-        grid={grid}
-        hour={session.holder}
-        insets={insets}
-        fitKey={submission?.id ?? 0}
-        onSelectRoute={session.selectRoute}
-        onSelectCheckpoint={selectCheckpoint}
-        describeCheckpoint={popupFor}
-        describeCell={cellFor}
-        coveredRects={coveredRects}
-        onStatus={setMapStatus}
-      />
+      <Box inert={mapBehindForm}>
+        <MapHost
+          routes={plan.view?.routes ?? NO_ROUTES}
+          selectedRouteId={session.routeId}
+          selectedCheckpoint={session.checkpoint}
+          grid={grid}
+          hour={session.holder}
+          insets={insets}
+          fitKey={submission?.id ?? 0}
+          onSelectRoute={session.selectRoute}
+          onSelectCheckpoint={selectCheckpoint}
+          describeCheckpoint={popupFor}
+          describeCell={cellFor}
+          coveredRects={coveredRects}
+          onStatus={setMapStatus}
+        />
 
-      <MapCorner ref={cornerRef} top={insets.top} left={insets.left} status={mapStatus}>
-        {grid && hasPlan && !showForm && mapStatus !== 'failed' && (
-          <Legend
-            open={legendChoice ?? !isSheet}
-            onToggle={() => setLegendChoice(!(legendChoice ?? !isSheet))}
-          />
-        )}
-      </MapCorner>
+        <MapCorner
+          ref={cornerRef}
+          top={insets.top}
+          right={insets.right}
+          bottom={insets.bottom}
+          left={insets.left}
+          status={mapStatus}
+        >
+          {grid && hasPlan && !showForm && mapStatus !== 'failed' && (
+            <Legend open={keyOpen} onToggle={() => setLegendChoice(!keyOpen)} />
+          )}
+        </MapCorner>
+      </Box>
 
       {isSheet ? (
         <>
@@ -213,7 +254,11 @@ export function AppShell({
                 elevation={4}
                 sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 3, pt: SAFE_TOP }}
               >
-                <TripSummary trip={submission.trip} onClick={() => setFormOpen(true)} />
+                <TripSummary
+                  ref={editRef}
+                  trip={submission.trip}
+                  onClick={() => setFormOpen(true)}
+                />
               </Paper>
               <Box
                 ref={bottomRef}
@@ -278,7 +323,11 @@ export function AppShell({
                   borderColor: 'divider',
                 }}
               >
-                <TripSummary trip={submission.trip} onClick={() => setFormOpen(true)} />
+                <TripSummary
+                  ref={editRef}
+                  trip={submission.trip}
+                  onClick={() => setFormOpen(true)}
+                />
               </Box>
             )}
             <Box sx={{ p: 2 }}>{showForm ? form : panel(mode === 'wide' ? 'wide' : 'all')}</Box>

@@ -12,7 +12,7 @@ export interface TruckRoute {
   checkpoints: readonly { mile: number; etaMs: number }[];
 }
 
-export type TruckStatus = 'before' | 'driving' | 'arrived';
+type TruckStatus = 'before' | 'driving' | 'arrived';
 
 export interface Truck {
   routeId: string;

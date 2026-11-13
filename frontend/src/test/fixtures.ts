@@ -18,7 +18,7 @@ import type {
   WeatherRouteOut,
 } from '../api/types';
 
-export type LatLon = readonly [number, number];
+type LatLon = readonly [number, number];
 
 export const LEVEL_CODES: Level[] = ['low', 'moderate', 'high', 'severe', 'no_travel'];
 const SCORE: Record<Level, number> = { low: 0, moderate: 1, high: 2, severe: 3, no_travel: 4 };

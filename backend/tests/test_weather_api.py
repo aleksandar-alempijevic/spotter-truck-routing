@@ -819,11 +819,21 @@ async def test_a_body_with_a_checkpoint_outside_the_area_and_another_fault_names
 ):
     calls = forecast(provider_mock)
     body = request(route(lat=40.0, marks=(0, 10, 20)), spacing=10)
-    body["routes"][0]["checkpoints"][1]["lat"] = 72.1
+    checkpoints = body["routes"][0]["checkpoints"]
+    checkpoints[1]["lat"] = 72.1
+    # The other fault: a mile out of order at another checkpoint.
+    checkpoints[2]["mile"] = 5
 
     response = await post(body)
 
     assert response.json()["code"] == "outside_service_area"
+    assert calls == []
+
+    # The other fault is real: with the checkpoint back inside the area it is what is reported.
+    checkpoints[1]["lat"] = 40.0
+    again = await post(body)
+
+    assert again.json()["code"] == "validation_error"
     assert calls == []
 
 

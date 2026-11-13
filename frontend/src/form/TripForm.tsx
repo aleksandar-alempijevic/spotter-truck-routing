@@ -1,5 +1,5 @@
 import { Box, Button, Link, Stack, Typography } from '@mui/material';
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Trip } from '../plan/trip';
 import { AddressField } from './AddressField';
 import { DepartureField } from './DepartureField';
@@ -12,9 +12,14 @@ interface Props {
   onChange(values: FormValues): void;
   /** Called with a validated trip, or not at all. */
   onSubmit(trip: Trip): void;
+  /** Put the cursor in the first field when the form appears, for a form opened on request. */
+  autoFocus?: boolean;
 }
 
-export function TripForm({ values, onChange, onSubmit }: Props) {
+export function TripForm({ values, onChange, onSubmit, autoFocus = false }: Props) {
+  const formRef = useRef<HTMLFormElement>(null);
+  // Counts presses of "Plan routes" that found something wrong, so each one moves focus.
+  const [failures, setFailures] = useState(0);
   // The time of the first press of "Plan routes": from then on the form shows what is wrong.
   const [attemptedAt, setAttemptedAt] = useState<number | null>(null);
   const errors = attemptedAt === null ? {} : (validateTrip(values, attemptedAt).errors ?? {});
@@ -25,6 +30,12 @@ export function TripForm({ values, onChange, onSubmit }: Props) {
   useLayoutEffect(() => {
     latest.current = { values, onChange };
   });
+  // A failed submit puts focus on the first field that is wrong: its error is then read out with
+  // the field, through the helper text the field is described by.
+  useEffect(() => {
+    if (failures > 0) formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [failures]);
+
   const setCredit = useCallback((credit: FormValues['addressCredit']) => {
     const { values: current, onChange: change } = latest.current;
     if (credit && credit.text !== current.addressCredit?.text)
@@ -33,6 +44,7 @@ export function TripForm({ values, onChange, onSubmit }: Props) {
 
   return (
     <Box
+      ref={formRef}
       component="form"
       noValidate
       onSubmit={(event) => {
@@ -41,10 +53,12 @@ export function TripForm({ values, onChange, onSubmit }: Props) {
         setAttemptedAt(now);
         const result = validateTrip(values, now);
         if (result.trip) onSubmit(result.trip);
+        else setFailures((n) => n + 1);
       }}
     >
-      <Stack spacing={2.5}>
+      <Stack spacing={2}>
         <AddressField
+          autoFocus={autoFocus}
           label="Starting place"
           text={values.originText}
           choice={values.origin}
@@ -62,7 +76,8 @@ export function TripForm({ values, onChange, onSubmit }: Props) {
             onChange({ ...values, destinationText, destination })
           }
         />
-        <Box>
+        {/* The button is a 44 px target; the negative margin keeps the gaps around it even. */}
+        <Box sx={{ my: -0.5 }}>
           <Button
             size="small"
             sx={{ minHeight: 44 }}
@@ -97,7 +112,12 @@ export function TripForm({ values, onChange, onSubmit }: Props) {
         {values.addressCredit && (
           <Typography variant="caption" color="text.secondary">
             Address search:{' '}
-            <Link href={values.addressCredit.url} target="_blank" rel="noopener noreferrer">
+            <Link
+              href={values.addressCredit.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}
+            >
               {values.addressCredit.text}
             </Link>
           </Typography>

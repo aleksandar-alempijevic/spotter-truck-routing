@@ -1,7 +1,7 @@
 import { formatWeekday, HOUR_MS, isLocalMidnight } from '../time/zone';
 import { hourInstant, type GridModel } from './grid';
 
-export interface SliderMark {
+interface SliderMark {
   value: number;
   label?: string;
 }
