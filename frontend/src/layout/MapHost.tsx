@@ -1,4 +1,4 @@
-import { Alert, Box } from '@mui/material';
+import { Box } from '@mui/material';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import type { MapViewProps } from '../map/MapView';
 
@@ -12,14 +12,19 @@ const MapView = lazy(() =>
   })),
 );
 
-type MapStatus = 'loading' | 'ready' | 'failed' | 'no-basemap';
+export type MapStatus = 'loading' | 'ready' | 'failed' | 'no-basemap';
 
 /** The map, loaded after the form has rendered. The panels stay usable whatever happens here. */
-export function MapHost(
-  props: Omit<MapViewProps, 'onReady' | 'onFailed' | 'onBasemapUnavailable'>,
-) {
+export function MapHost({
+  onStatus,
+  ...props
+}: Omit<MapViewProps, 'onReady' | 'onFailed' | 'onBasemapUnavailable'> & {
+  /** Told when the map loads or cannot; the page decides what to say about it. */
+  onStatus(status: MapStatus): void;
+}) {
   const [wanted, setWanted] = useState(false);
   const [status, setStatus] = useState<MapStatus>('loading');
+  useEffect(() => onStatus(status), [status, onStatus]);
 
   useEffect(() => {
     const timer = setTimeout(() => setWanted(true), 0);
@@ -38,24 +43,6 @@ export function MapHost(
             onBasemapUnavailable={() => setStatus((s) => (s === 'failed' ? s : 'no-basemap'))}
           />
         </Suspense>
-      )}
-      {(status === 'failed' || status === 'no-basemap') && (
-        <Alert
-          severity="warning"
-          role="status"
-          sx={{
-            position: 'fixed',
-            zIndex: 2,
-            left: `calc(${props.insets.left}px + 8px)`,
-            top: `calc(${props.insets.top}px + 8px)`,
-            right: 64,
-            maxWidth: 420,
-          }}
-        >
-          {status === 'failed'
-            ? 'The map is not available on this device. Your routes and weather risk are still listed.'
-            : 'The map background could not be loaded. Routes and risk are still drawn.'}
-        </Alert>
       )}
     </>
   );

@@ -47,6 +47,8 @@ export interface MapEvents {
   describeCheckpoint(ref: CheckpointRef): CheckpointPopup | null;
   /** The readout's words for a heatmap cell's level at an hour; null when there is nothing to say. */
   describeCell(level: RiskKey, hour: number): CheckpointPopup | null;
+  /** Screen rectangles over the map that a readout must keep clear of, such as the key. */
+  coveredRects(): readonly DOMRect[];
 }
 
 type GeoJsonSource = maplibregl.GeoJSONSource;
@@ -54,6 +56,17 @@ const OUR_SOURCES: string[] = Object.values(SOURCE);
 const TAP_SLOP_PX = 14;
 // A popup on hover is for a mouse or a trackpad. A touch screen reports `hover: none`, and the
 // panel's list says all the popup does.
+/** Where the readout sits against its point, best first: above, then below, then to the sides. */
+const READOUT_ANCHORS = [
+  'bottom',
+  'top',
+  'bottom-left',
+  'bottom-right',
+  'top-left',
+  'top-right',
+  'left',
+  'right',
+] as const;
 const HOVER_QUERY = '(hover: hover) and (pointer: fine)';
 
 /** The words of a popup as DOM, built with text nodes only. */
@@ -499,26 +512,60 @@ export class MapController {
     return this.events.describeCell(index < 0 ? 'none' : grid.levelNames[index], this.shownHour);
   }
 
+  /**
+   * The readout opens beside the tapped point on the side that fits: inside the part of the map
+   * the panels leave open, and clear of anything lying over the map. Each anchor is tried in turn
+   * and measured, and if none fits the first stands.
+   */
   private showReadout(cell: number, at: maplibregl.LngLatLike): void {
     this.hideReadout();
     const words = this.readoutWords(cell);
     if (!words) return;
-    const popup = new maplibregl.Popup({
-      closeButton: true,
-      closeOnClick: false,
-      closeOnMove: false,
-      focusAfterOpen: false,
-      offset: 8,
-      maxWidth: '260px',
-      className: 'cell-readout',
-    })
-      .setLngLat(at)
-      .setDOMContent(popupContent(words))
-      .addTo(this.map);
-    popup.on('close', () => {
-      if (this.readout?.popup === popup) this.readout = null;
+    const box = this.container.getBoundingClientRect();
+    const open = {
+      left: box.left + this.insets.left,
+      top: box.top + this.insets.top,
+      right: box.right - this.insets.right,
+      bottom: box.bottom - this.insets.bottom,
+    };
+    const covered = this.events.coveredRects();
+    const inOpenPart = (r: DOMRect) =>
+      r.left >= open.left && r.right <= open.right && r.top >= open.top && r.bottom <= open.bottom;
+    const clearOfCovered = (r: DOMRect) =>
+      !covered.some(
+        (c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top,
+      );
+
+    const place = (anchor: (typeof READOUT_ANCHORS)[number]) =>
+      new maplibregl.Popup({
+        anchor,
+        closeButton: true,
+        closeOnClick: false,
+        closeOnMove: false,
+        focusAfterOpen: false,
+        offset: 10,
+        maxWidth: '260px',
+        className: 'cell-readout',
+      })
+        .setLngLat(at)
+        .setDOMContent(popupContent(words))
+        .addTo(this.map);
+    // Measure every anchor, then keep the best: in the open part and clear of what lies over the
+    // map; failing that, in the open part; failing that, the first.
+    const rects = READOUT_ANCHORS.map((anchor) => {
+      const trial = place(anchor);
+      const rect = trial.getElement().getBoundingClientRect();
+      trial.remove();
+      return rect;
     });
-    this.readout = { cell, popup };
+    const pick = rects.findIndex((r) => inOpenPart(r) && clearOfCovered(r));
+    const fallback = rects.findIndex(inOpenPart);
+    const popup = place(READOUT_ANCHORS[pick >= 0 ? pick : Math.max(fallback, 0)]);
+    const shown = popup;
+    shown.on('close', () => {
+      if (this.readout?.popup === shown) this.readout = null;
+    });
+    this.readout = { cell, popup: shown };
   }
 
   private hideReadout(): void {

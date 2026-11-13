@@ -24,6 +24,8 @@ export interface MapViewProps {
   describeCheckpoint(ref: CheckpointRef): CheckpointPopup | null;
   /** What the readout says about a heatmap cell at the slider's hour. */
   describeCell(level: RiskKey, hour: number): CheckpointPopup | null;
+  /** Screen rectangles that lie over the map and that a readout must keep clear of. */
+  coveredRects(): readonly DOMRect[];
   onReady(): void;
   onFailed(): void;
   onBasemapUnavailable(): void;
@@ -58,6 +60,7 @@ export default function MapView(props: MapViewProps) {
         onBasemapUnavailable: () => latest.current.onBasemapUnavailable(),
         describeCheckpoint: (ref) => latest.current.describeCheckpoint(ref),
         describeCell: (level, hour) => latest.current.describeCell(level, hour),
+        coveredRects: () => latest.current.coveredRects(),
       });
     } catch {
       latest.current.onFailed();

@@ -15,7 +15,8 @@ import type { GridModel } from '../timeline/grid';
 import { HourSlider } from '../timeline/HourSlider';
 import { hourInstant } from '../timeline/grid';
 import { Legend } from './Legend';
-import { MapHost } from './MapHost';
+import { MapCorner } from './MapCorner';
+import { MapHost, type MapStatus } from './MapHost';
 import { Sheet, type SheetState } from './Sheet';
 import { useBackCollapse } from './useBackCollapse';
 import type { LayoutMode } from './useLayoutMode';
@@ -57,6 +58,8 @@ export function AppShell({
   const [formOpen, setFormOpen] = useState(true);
   const [sheet, setSheet] = useState<SheetState>('peek');
   const [dragging, setDragging] = useState(false);
+  const [mapStatus, setMapStatus] = useState<MapStatus>('loading');
+  const cornerRef = useRef<HTMLDivElement>(null);
   // Open on a screen with room, closed over a phone's map, until the driver chooses.
   const [legendChoice, setLegendChoice] = useState<boolean | null>(null);
   const hasPlan = submission !== null;
@@ -126,6 +129,12 @@ export function AppShell({
     [grid, submission],
   );
 
+  // What lies over the map's corner, so a readout can keep clear of it.
+  const coveredRects = useCallback(
+    () => (cornerRef.current ? [cornerRef.current.getBoundingClientRect()] : []),
+    [],
+  );
+
   const form = (
     <Stack spacing={2}>
       <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
@@ -181,16 +190,18 @@ export function AppShell({
         onSelectCheckpoint={selectCheckpoint}
         describeCheckpoint={popupFor}
         describeCell={cellFor}
+        coveredRects={coveredRects}
+        onStatus={setMapStatus}
       />
 
-      {grid && hasPlan && !showForm && (
-        <Legend
-          open={legendChoice ?? !isSheet}
-          onToggle={() => setLegendChoice(!(legendChoice ?? !isSheet))}
-          top={insets.top}
-          left={insets.left}
-        />
-      )}
+      <MapCorner ref={cornerRef} top={insets.top} left={insets.left} status={mapStatus}>
+        {grid && hasPlan && !showForm && mapStatus !== 'failed' && (
+          <Legend
+            open={legendChoice ?? !isSheet}
+            onToggle={() => setLegendChoice(!(legendChoice ?? !isSheet))}
+          />
+        )}
+      </MapCorner>
 
       {isSheet ? (
         <>

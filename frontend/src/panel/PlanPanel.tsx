@@ -19,15 +19,12 @@ export type PanelTier = 'peek' | 'half' | 'full' | 'all' | 'wide';
  * What each tier shows, stated once. The headline, the shortfall note and the credits are in every
  * tier, so the sources are always one scroll away, even at the smallest sheet height.
  */
-const PARTS: Record<
-  PanelTier,
-  { chips: boolean; cards: boolean; list: boolean; why: boolean; credits: boolean }
-> = {
-  peek: { chips: true, cards: false, list: false, why: false, credits: true },
-  half: { chips: false, cards: true, list: false, why: true, credits: true },
-  full: { chips: true, cards: false, list: true, why: true, credits: true },
-  all: { chips: false, cards: true, list: true, why: true, credits: true },
-  wide: { chips: false, cards: true, list: true, why: true, credits: true },
+const PARTS: Record<PanelTier, { chips: boolean; cards: boolean; list: boolean; why: boolean }> = {
+  peek: { chips: true, cards: false, list: false, why: false },
+  half: { chips: false, cards: true, list: false, why: true },
+  full: { chips: true, cards: false, list: true, why: true },
+  all: { chips: false, cards: true, list: true, why: true },
+  wide: { chips: false, cards: true, list: true, why: true },
 };
 
 interface Props {
@@ -118,11 +115,9 @@ export function PlanPanel({
           {list}
         </>
       )}
-      {parts.credits && (
-        <Box>
-          <Credits weather={state.weather?.attribution} address={submission.trip.addressCredit} />
-        </Box>
-      )}
+      <Box>
+        <Credits weather={state.weather?.attribution} address={submission.trip.addressCredit} />
+      </Box>
     </Stack>
   );
 

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { LEVELS_BY_SEVERITY, RISK_STYLE, worstRisk, type RiskState } from './levels';
+import { cellFill, LEVELS_BY_SEVERITY, RISK_STYLE, worstRisk, type RiskState } from './levels';
 
 const level = (l: (typeof LEVELS_BY_SEVERITY)[number]): RiskState => ({
   kind: 'level',
@@ -25,4 +25,9 @@ test('a level beats pending and no forecast, and neither is read as Low', () => 
   expect(worstRisk([{ kind: 'none' }, { kind: 'pending' }])).toEqual({ kind: 'pending' });
   expect(worstRisk([{ kind: 'none' }])).toEqual({ kind: 'none' });
   expect(worstRisk([])).toEqual({ kind: 'none' });
+});
+
+test('a cell is its level colour at the map opacity, quiet for Low', () => {
+  expect(cellFill('low')).toBe('rgba(157,184,166,0.22)');
+  expect(cellFill('severe')).toBe('rgba(211,47,47,0.62)');
 });

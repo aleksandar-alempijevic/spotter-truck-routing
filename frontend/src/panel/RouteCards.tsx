@@ -1,7 +1,7 @@
 import { Box, ButtonBase, Chip, Stack, Typography } from '@mui/material';
 import type { Trip } from '../plan/trip';
 import type { RouteView } from '../plan/view';
-import { RISK_STYLE, LEVELS_BY_SEVERITY } from '../risk/levels';
+import { HATCH_CSS, RISK_STYLE, LEVELS_BY_SEVERITY } from '../risk/levels';
 import { RiskBadge } from '../risk/RiskBadge';
 import { RiskGlyph } from '../risk/RiskGlyph';
 import { formatDuration } from '../time/zone';
@@ -65,7 +65,7 @@ function MilesByLevel({ route }: { route: RouteView }) {
           <Box
             sx={{
               width: `${(summary.no_forecast_miles / total) * 100}%`,
-              background: `repeating-linear-gradient(45deg, ${RISK_STYLE.none.color} 0 2px, #eceff1 2px 5px)`,
+              background: HATCH_CSS,
             }}
           />
         )}

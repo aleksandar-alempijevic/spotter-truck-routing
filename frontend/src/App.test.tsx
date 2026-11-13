@@ -367,3 +367,19 @@ test('the map key lists every level and the hatch, open on a roomy screen and a 
   fireEvent.click(phoneKey);
   expect(document.getElementById('map-legend')).not.toBeNull();
 });
+
+test('the map notice and the key share the map corner: a failed map hides the key, a missing basemap keeps it', async () => {
+  useViewport('pane');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  expect(screen.getByRole('button', { name: 'Hide key' })).toBeInTheDocument();
+
+  act(() => mapProps!.onBasemapUnavailable());
+  expect(screen.getByText(/map background could not be loaded/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Hide key' })).toBeInTheDocument();
+
+  act(() => mapProps!.onFailed());
+  expect(screen.getByText(/map is not available on this device/)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /key/ })).not.toBeInTheDocument();
+});

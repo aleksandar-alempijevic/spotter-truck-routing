@@ -1,4 +1,4 @@
-import { CIRCLE_PATH, GLYPH_STROKE, RISK_STYLE, type RiskKey } from '../risk/levels';
+import { CIRCLE_PATH, GLYPH_STROKE, HATCH, RISK_STYLE, type RiskKey } from '../risk/levels';
 
 const SIZE = 24;
 const RATIO = 2;
@@ -34,7 +34,7 @@ export function hatchImage(): ImageData {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 8;
   const ctx = canvas.getContext('2d')!;
-  ctx.strokeStyle = '#37474f';
+  ctx.strokeStyle = HATCH.ink;
   ctx.lineWidth = 1.4;
   ctx.beginPath();
   ctx.moveTo(-1, 9);

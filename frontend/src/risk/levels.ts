@@ -14,7 +14,18 @@ export type RiskState =
 export type RiskKey = Level | 'pending' | 'unavailable' | 'none';
 
 /** How opaque a heatmap cell is: Low stays quiet so the map is calm where nothing matters. */
-export const CELL_ALPHA = { low: 0.22, other: 0.62 } as const;
+const CELL_ALPHA = { low: 0.22, other: 0.62 } as const;
+
+/** A heatmap cell's fill for a level: the level's colour at the map's opacity, as `rgba(...)`. */
+export function cellFill(level: Level): string {
+  const n = parseInt(RISK_STYLE[level].color.slice(1), 16);
+  const alpha = level === 'low' ? CELL_ALPHA.low : CELL_ALPHA.other;
+  return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${alpha})`;
+}
+
+/** The hatch for "no forecast": drawn on the map as lines, and as a swatch in the key and cards. */
+export const HATCH = { ink: '#37474f', paper: '#eceff1' } as const;
+export const HATCH_CSS = `repeating-linear-gradient(45deg, ${HATCH.ink} 0 2px, ${HATCH.paper} 2px 5px)`;
 
 /** A 16-unit circle in the 24-unit glyph box: the Low mark and the base of the outline marks. */
 export const CIRCLE_PATH = 'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16z';
