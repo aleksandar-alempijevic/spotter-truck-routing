@@ -83,6 +83,26 @@ export function PlanPanel({
 
   const routesColumn = (
     <Stack spacing={2}>
+      {/* The panel's title, and where focus lands after "Plan routes": visible, so is its ring. */}
+      <Typography
+        ref={headingRef}
+        variant="subtitle2"
+        component="h2"
+        tabIndex={-1}
+        color="text.secondary"
+        sx={{
+          fontWeight: 600,
+          '&:focus-visible': {
+            outline: 2,
+            outlineStyle: 'solid',
+            outlineColor: 'primary.main',
+            outlineOffset: 2,
+          },
+        }}
+      >
+        Routes from {placeName(submission.trip.origin.label)} to{' '}
+        {placeName(submission.trip.destination.label)}
+      </Typography>
       <PlanHeadline state={state} submission={submission} onEditTrip={onEditTrip} />
       {state.view?.shortfall && (
         <Typography variant="body2" color="text.secondary">
@@ -133,13 +153,9 @@ export function PlanPanel({
     </Stack>
   );
 
-  // Out of the stack, so its spacing does not count these two unseen elements as content.
+  // The unseen status sits out of the stack, so the stack's spacing does not count it as content.
   const unseen = (
     <>
-      <Typography ref={headingRef} variant="h6" component="h2" tabIndex={-1} sx={visuallyHidden}>
-        Routes from {placeName(submission.trip.origin.label)} to{' '}
-        {placeName(submission.trip.destination.label)}
-      </Typography>
       <Box role="status" sx={visuallyHidden}>
         {announcement}
       </Box>

@@ -60,6 +60,8 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  // Spies from a test (the console, for a caught render error) never outlive it.
+  vi.restoreAllMocks();
 });
 
 // The trip bar is a button named by its own words: the places, the details, then "Edit".
@@ -401,7 +403,6 @@ test('a map that throws while rendering leaves the panels up and says so in the 
   expect(await screen.findByText(/map is not available on this device/)).toBeInTheDocument();
   expect(screen.getAllByText(/Arrives /)).toHaveLength(3);
   expect(screen.queryByRole('button', { name: /key/ })).not.toBeInTheDocument();
-  vi.restoreAllMocks();
 });
 
 test('phone: while the form covers the map the map is inert, and it is reachable again after', async () => {
@@ -467,4 +468,23 @@ test('a failed submit puts focus on the first field that is wrong', async () => 
   expect(document.getElementById(described!)).toHaveTextContent(
     'Enter the cargo weight in pounds.',
   );
+});
+
+test('the routes handed to the map keep their identity across form keystrokes, before and after a plan', async () => {
+  useViewport('sheet');
+  renderApp();
+  await waitFor(() => expect(mapProps).not.toBeNull());
+  const empty = mapProps!.routes;
+  fireEvent.change(screen.getByLabelText('Cargo weight (lb)'), { target: { value: '1' } });
+  fireEvent.change(screen.getByLabelText('Cargo weight (lb)'), { target: { value: '12' } });
+  // A new empty list each time would make the map redo its routes on every keystroke.
+  expect(mapProps!.routes).toBe(empty);
+
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  const planned = mapProps!.routes;
+  expect(planned).toHaveLength(3);
+  fireEvent.click(screen.getByRole('button', { name: TRIP_BAR }));
+  fireEvent.change(screen.getByLabelText('Cargo weight (lb)'), { target: { value: '30,000' } });
+  expect(mapProps!.routes).toBe(planned);
 });

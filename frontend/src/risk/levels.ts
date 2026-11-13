@@ -15,18 +15,19 @@ export type RiskKey = Level | 'pending' | 'unavailable' | 'none';
 
 /**
  * The heatmap's own ramp, in its own table because a cell is a large area over the basemap: it
- * has to stand out from the land colour (`#f2f3f0` on Positron), where a small glyph does not.
- * Moderate through No Travel measure at least 3:1 against that land, and each step is darker than
+ * has to stand out from what it covers, where a small glyph does not: Positron's land (`#f2f3f0`),
+ * water (`#c2c8ca`) and park (`#ddeadd`) and the plain fallback background (`#e9eef2`). Moderate
+ * through No Travel measure at least 3:1 against each of them, and each step is darker than
  * the one before, so the levels also separate in greyscale. Low is a deliberately quiet tint, the
  * one level exempt from the 3:1 rule, so the map stays calm where nothing matters.
  * `risk/levels.test.ts` measures the ramp.
  */
 const CELL: Record<Level, { rgb: string; alpha: number }> = {
   low: { rgb: '#9db8a6', alpha: 0.22 },
-  moderate: { rgb: '#977200', alpha: 0.85 },
-  high: { rgb: '#a42c00', alpha: 0.85 },
-  severe: { rgb: '#860005', alpha: 0.85 },
-  no_travel: { rgb: '#310050', alpha: 0.85 },
+  moderate: { rgb: '#7a5c00', alpha: 0.9 },
+  high: { rgb: '#8a3200', alpha: 0.9 },
+  severe: { rgb: '#640a12', alpha: 0.9 },
+  no_travel: { rgb: '#260040', alpha: 0.9 },
 };
 
 /** A heatmap cell's fill for a level, as `rgba(...)`. The map and the key both read it. */

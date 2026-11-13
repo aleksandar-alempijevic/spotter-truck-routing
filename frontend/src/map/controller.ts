@@ -40,8 +40,10 @@ maplibregl.setWorkerUrl(workerUrl);
 
 interface MapEvents {
   onReady(): void;
-  /** The map cannot go on: its WebGL context was lost. The page decides what to say. */
+  /** The map cannot go on: its WebGL context was lost, or it could not be built. */
   onFailed(): void;
+  /** The WebGL context came back and the map has drawn its data again. */
+  onRecovered(): void;
   onSelectRoute(routeId: string): void;
   onSelectCheckpoint(ref: CheckpointRef): void;
   onBasemapUnavailable(): void;
@@ -56,6 +58,7 @@ interface MapEvents {
 type GeoJsonSource = maplibregl.GeoJSONSource;
 const OUR_SOURCES: string[] = Object.values(SOURCE);
 const TAP_SLOP_PX = 14;
+const LABEL_HALO = { color: '#ffffff', width: 2, blur: 0.5 } as const;
 /** Where a popup sits against its point, best first: above, then below, then to the sides. */
 const POPUP_ANCHORS = [
   'bottom',
@@ -107,7 +110,14 @@ export class MapController {
   private pendingHour: number | null = null;
   private hourFrame = 0;
   /** The heatmap cell the driver tapped, and its readout, which follows the slider's hour. */
-  private readout: { cell: number; popup: maplibregl.Popup } | null = null;
+  private readout: {
+    cell: number;
+    popup: maplibregl.Popup;
+    /** The checkpoint the readout was opened from, when it was; its words do not change with the hour. */
+    checkpoint: CheckpointPopup | null;
+  } | null = null;
+  /** While WebGL's context is lost nothing can be drawn, so nothing is pushed. */
+  private contextLost = false;
 
   private routes: readonly RouteView[] = [];
   private bounds: ReturnType<typeof routeBounds> = null;
@@ -150,7 +160,9 @@ export class MapController {
       this.hoverPoint = null;
       this.hidePopup();
     });
-    this.map.getCanvas().addEventListener('webglcontextlost', () => this.events.onFailed());
+    const canvas = this.map.getCanvas();
+    canvas.addEventListener('webglcontextlost', () => this.onContextLost());
+    canvas.addEventListener('webglcontextrestored', () => this.onContextRestored());
     const moved = (event: { originalEvent?: unknown }) => {
       if (event.originalEvent) this.userMoved = true;
     };
@@ -174,7 +186,7 @@ export class MapController {
     this.hideReadout();
     this.bounds = routeBounds(routes);
     this.hidePopup();
-    if (this.styleReady) {
+    if (this.live) {
       this.pushRouteData();
       this.pushRouteStyle();
     }
@@ -183,7 +195,7 @@ export class MapController {
   setSelection(routeId: string | null, checkpoint: CheckpointRef | null): void {
     this.selectedRouteId = routeId;
     this.selectedCheckpoint = checkpoint;
-    if (this.styleReady) {
+    if (this.live) {
       this.pushSelection();
       this.pushRouteStyle();
     }
@@ -197,7 +209,7 @@ export class MapController {
     this.grid = model;
     this.hour = hour;
     this.shownHour = hour.get();
-    if (this.styleReady) this.pushGrid();
+    if (this.live) this.pushGrid();
     if (model) this.unsubscribeHour = hour.subscribe((h) => this.queueHour(h));
   }
 
@@ -207,7 +219,7 @@ export class MapController {
     );
     this.insets = insets;
     // Until the driver moves the map, the routes stay centred in the part the panels leave open.
-    if (changed && this.styleReady) this.queueFit(true);
+    if (changed && this.live) this.queueFit(true);
   }
 
   /**
@@ -299,8 +311,17 @@ export class MapController {
       if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: emptyCollection() });
     }
 
-    // The heatmap sits under the basemap's labels; everything else sits on top.
-    const firstLabel = map.getStyle().layers.find((layer) => layer.type === 'symbol')?.id;
+    // The heatmap sits under the basemap's labels; everything else sits on top. The ramp is dark,
+    // so each label gets a wide white halo to stay readable over a cell.
+    const styleLayers = map.getStyle().layers;
+    const firstLabel = styleLayers.find((layer) => layer.type === 'symbol')?.id;
+    for (const layer of styleLayers) {
+      if (layer.type === 'symbol' && layer.layout?.['text-field']) {
+        map.setPaintProperty(layer.id, 'text-halo-color', LABEL_HALO.color);
+        map.setPaintProperty(layer.id, 'text-halo-width', LABEL_HALO.width);
+        map.setPaintProperty(layer.id, 'text-halo-blur', LABEL_HALO.blur);
+      }
+    }
     const add = (spec: maplibregl.LayerSpecification, before?: string) => {
       if (!map.getLayer(spec.id)) map.addLayer(spec, before);
     };
@@ -404,6 +425,39 @@ export class MapController {
     }
   }
 
+  /** Drawn and drawable: the style is in and the GL context is not lost. */
+  private get live(): boolean {
+    return this.styleReady && !this.contextLost;
+  }
+
+  private onContextLost(): void {
+    this.contextLost = true;
+    this.cancelHourFrame();
+    this.hideReadout();
+    this.hidePopup();
+    this.events.onFailed();
+  }
+
+  /**
+   * MapLibre rebuilds its own GL resources and reloads the style, and refuses changes until that
+   * is done. What this class pushed is pushed again once it is, and not before: until then the
+   * map still counts as lost.
+   */
+  private onContextRestored(): void {
+    const recover = () => {
+      this.contextLost = false;
+      if (this.styleReady) {
+        this.pushRouteData();
+        this.pushRouteStyle();
+        this.pushSelection();
+        this.pushGrid();
+      }
+      this.events.onRecovered();
+    };
+    if (this.map.isStyleLoaded()) recover();
+    else this.map.once('idle', recover);
+  }
+
   private source(id: string): GeoJsonSource | undefined {
     return this.map.getSource(id) as GeoJsonSource | undefined;
   }
@@ -471,7 +525,7 @@ export class MapController {
   /** Only the cells whose level differs from the hour on screen are touched. */
   private showHour(hour: number): void {
     const grid = this.grid;
-    if (!grid || !this.styleReady) return;
+    if (!grid || !this.live) return;
     for (const { cell, level } of diffHours(grid, this.shownHour, hour)) {
       this.map.setFeatureState({ source: SOURCE.grid, id: cell }, { level });
     }
@@ -479,7 +533,7 @@ export class MapController {
     this.pushTrucks();
     // An open readout keeps saying what its cell holds at the hour now on screen.
     if (this.readout) {
-      const words = this.readoutWords(this.readout.cell);
+      const words = this.readoutWords(this.readout.cell, this.readout.checkpoint);
       if (words) this.readout.popup.setDOMContent(popupContent(words));
     }
   }
@@ -496,7 +550,7 @@ export class MapController {
   // ---------- events ----------
 
   private hit(point: maplibregl.PointLike, layers: string[]) {
-    if (!this.styleReady) return [];
+    if (!this.live) return [];
     const { x, y } = maplibregl.Point.convert(point);
     return this.map.queryRenderedFeatures(
       [
@@ -558,18 +612,33 @@ export class MapController {
   }
 
   /** What the cell's readout says at the hour on screen. */
-  private readoutWords(cell: number): CheckpointPopup | null {
+  private readoutWords(cell: number, checkpoint: CheckpointPopup | null): CheckpointPopup | null {
     const grid = this.grid;
     if (!grid) return null;
     const index = levelAt(grid, cell, this.shownHour);
-    return this.events.describeCell(index < 0 ? 'none' : grid.levelNames[index], this.shownHour);
+    const heat = this.events.describeCell(
+      index < 0 ? 'none' : grid.levelNames[index],
+      this.shownHour,
+    );
+    if (!heat || !checkpoint) return heat;
+    // Opened from a checkpoint: both readings, each labelled with what it is.
+    const [level, ...rest] = checkpoint.lines;
+    return {
+      title: checkpoint.title,
+      lines: [
+        `Checkpoint at arrival: ${level}`,
+        ...rest,
+        `Heatmap at slider hour: ${heat.title}`,
+        ...heat.lines,
+      ],
+    };
   }
 
   /**
    * Opens a popup on the side of its point that fits: inside the part of the map the panels leave
    * open, and clear of anything lying over the map, such as the key and the map's own controls.
-   * Each anchor is tried in turn and measured; if none is both, one inside the open part stands,
-   * and failing that the first.
+   * Each anchor is tried in turn and measured; if none is both, the one that spills least out of
+   * the open part stands.
    */
   private openPopup(make: (anchor: PopupAnchor) => maplibregl.Popup): maplibregl.Popup {
     const box = this.container.getBoundingClientRect();
@@ -593,14 +662,29 @@ export class MapController {
       return rect;
     });
     const pick = rects.findIndex((r) => inOpenPart(r) && clearOfCovered(r));
-    const fallback = rects.findIndex(inOpenPart);
-    return make(POPUP_ANCHORS[pick >= 0 ? pick : Math.max(fallback, 0)]);
+    if (pick >= 0) return make(POPUP_ANCHORS[pick]);
+    // None is both: the side that spills least out of the open part stands (the first on a tie),
+    // so a popup taller than the open part still has its top or its start on screen.
+    const spill = (r: DOMRect) =>
+      Math.max(0, open.left - r.left) +
+      Math.max(0, r.right - open.right) +
+      Math.max(0, open.top - r.top) +
+      Math.max(0, r.bottom - open.bottom);
+    let best = 0;
+    rects.forEach((r, i) => {
+      if (spill(r) < spill(rects[best])) best = i;
+    });
+    return make(POPUP_ANCHORS[best]);
   }
 
   /** The readout for a cell, opened beside the point that was tapped. */
-  private showReadout(cell: number, at: maplibregl.LngLatLike): void {
+  private showReadout(
+    cell: number,
+    at: maplibregl.LngLatLike,
+    checkpoint: CheckpointPopup | null = null,
+  ): void {
     this.hideReadout();
-    const words = this.readoutWords(cell);
+    const words = this.readoutWords(cell, checkpoint);
     if (!words) return;
     const popup = this.openPopup((anchor) =>
       new maplibregl.Popup({
@@ -610,7 +694,7 @@ export class MapController {
         closeOnMove: false,
         focusAfterOpen: false,
         offset: 10,
-        maxWidth: '260px',
+        maxWidth: '320px',
         className: 'cell-readout',
       })
         .setLngLat(at)
@@ -620,7 +704,7 @@ export class MapController {
     popup.on('close', () => {
       if (this.readout?.popup === popup) this.readout = null;
     });
-    this.readout = { cell, popup };
+    this.readout = { cell, popup, checkpoint };
   }
 
   private hideReadout(): void {
@@ -641,6 +725,13 @@ export class MapController {
     if (checkpoint) {
       const { routeId, index } = checkpoint.properties as { routeId: string; index: number };
       this.events.onSelectCheckpoint({ routeId, index });
+      this.hidePopup();
+      // The heatmap's reading at the checkpoint, beside the checkpoint's own: the cell is too
+      // narrow to tap on a phone at the default fit, and a checkpoint is always within reach.
+      const at = (checkpoint.geometry as unknown as { coordinates: [number, number] }).coordinates;
+      const words = this.events.describeCheckpoint({ routeId, index });
+      const cell = this.cellAt(this.map.project(at));
+      if (cell !== undefined && words) this.showReadout(cell, at, words);
       return;
     }
     // A tap on a route line selects the route, and reads the heatmap cell under the finger as
@@ -648,11 +739,15 @@ export class MapController {
     // otherwise always win and the cell could not be read without zooming in.
     const line = this.hit(point, [LAYER.routeLine])[0];
     if (line) this.events.onSelectRoute((line.properties as { id: string }).id);
-    const cell =
-      this.styleReady && this.grid
-        ? this.map.queryRenderedFeatures(point, { layers: [LAYER.gridFill] })[0]
-        : undefined;
-    if (cell && typeof cell.id === 'number') this.showReadout(cell.id, this.map.unproject(point));
+    const cell = this.cellAt(point);
+    if (cell !== undefined) this.showReadout(cell, this.map.unproject(point));
+  }
+
+  /** The heatmap cell drawn under a screen point, if any. */
+  private cellAt(point: maplibregl.PointLike): number | undefined {
+    if (!this.live || !this.grid) return undefined;
+    const cell = this.map.queryRenderedFeatures(point, { layers: [LAYER.gridFill] })[0];
+    return typeof cell?.id === 'number' ? cell.id : undefined;
   }
 
   private onError(event: object): void {

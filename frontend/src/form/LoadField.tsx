@@ -17,7 +17,8 @@ export function LoadField({
       value={value}
       onChange={(event) => onChange(event.target.value)}
       error={Boolean(error)}
-      helperText={error ?? `Up to ${MAX_LOAD_LB.toLocaleString('en-US')} lb`}
+      helperText={error}
+      placeholder={`Up to ${MAX_LOAD_LB.toLocaleString('en-US')} lb`}
       slotProps={{
         htmlInput: { inputMode: 'numeric', autoComplete: 'off', enterKeyHint: 'done' },
       }}

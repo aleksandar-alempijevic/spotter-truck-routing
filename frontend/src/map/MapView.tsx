@@ -28,6 +28,7 @@ export interface MapViewProps {
   coveredRects(): readonly DOMRect[];
   onReady(): void;
   onFailed(): void;
+  onRecovered(): void;
   onBasemapUnavailable(): void;
 }
 
@@ -60,6 +61,7 @@ export default function MapView(props: MapViewProps) {
         onSelectCheckpoint: (ref) => latest.current.onSelectCheckpoint(ref),
         onBasemapUnavailable: () => latest.current.onBasemapUnavailable(),
         onFailed: () => latest.current.onFailed(),
+        onRecovered: () => latest.current.onRecovered(),
         describeCheckpoint: (ref) => latest.current.describeCheckpoint(ref),
         describeCell: (level, hour) => latest.current.describeCell(level, hour),
         // The page's panels over the map, and the map's own controls and credit.

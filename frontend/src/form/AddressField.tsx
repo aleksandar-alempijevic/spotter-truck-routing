@@ -92,12 +92,11 @@ export function AddressField({ label, text, choice, onChange, onCredit, error, a
               TOO_SHORT_HINT
             ) : searching && startsWithNumber(text) ? (
               NUMBER_HINT
-            ) : choice ? (
-              ' '
-            ) : (
-              'City, address or place, with the state'
-            ))
+            ) : undefined)
           }
+          // The standing hint is the placeholder, so no empty helper line is reserved under a
+          // field and the gaps between fields stay even. Helper text appears only to say something.
+          placeholder="City, address or place, with the state"
           slotProps={{
             ...params.slotProps,
             htmlInput: {

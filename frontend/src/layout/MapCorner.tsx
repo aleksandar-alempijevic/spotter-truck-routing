@@ -18,7 +18,7 @@ interface Props {
  * The one owner of the map's top-left corner. A notice about the map comes first, and whatever
  * else sits there stacks under it, so two things never share the same spot. It stays in the free
  * part of the map: narrower than the room left of the zoom column, and no taller than the room
- * between the panels, so what stacks in it scrolls instead of running under them.
+ * between the panels and above the map's credit, so what stacks in it scrolls instead of running under them.
  */
 export function MapCorner({ ref, top, right, bottom, left, status, children }: Props) {
   const notice =
@@ -37,7 +37,8 @@ export function MapCorner({ ref, top, right, bottom, left, status, children }: P
         left: `calc(${left}px + 8px)`,
         // 68 px: the corner's own 8 px, then the zoom column (8 px gap, 44 px wide, 8 px gap).
         maxWidth: `min(420px, calc(100vw - ${left}px - ${right}px - 68px))`,
-        maxHeight: `calc(100dvh - ${top}px - ${bottom}px - 16px)`,
+        // 48 px more than the panels leave: the map's credit runs along the bottom, 32 px tall.
+        maxHeight: `calc(100dvh - ${top}px - ${bottom}px - 48px)`,
         width: 'fit-content',
         display: 'flex',
         flexDirection: 'column',

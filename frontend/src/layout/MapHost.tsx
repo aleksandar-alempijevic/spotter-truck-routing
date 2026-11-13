@@ -22,7 +22,7 @@ export type MapStatus = 'loading' | 'ready' | 'failed' | 'no-basemap';
 export function MapHost({
   onStatus,
   ...props
-}: Omit<MapViewProps, 'onReady' | 'onFailed' | 'onBasemapUnavailable'> & {
+}: Omit<MapViewProps, 'onReady' | 'onFailed' | 'onRecovered' | 'onBasemapUnavailable'> & {
   /** Told when the map loads or cannot; the page decides what to say about it. */
   onStatus(status: MapStatus): void;
 }) {
@@ -47,6 +47,7 @@ export function MapHost({
               {...props}
               onReady={() => setStatus((s) => (s === 'loading' ? 'ready' : s))}
               onFailed={failed}
+              onRecovered={() => setStatus((s) => (s === 'failed' ? 'ready' : s))}
               onBasemapUnavailable={() => setStatus((s) => (s === 'failed' ? s : 'no-basemap'))}
             />
           </Suspense>
