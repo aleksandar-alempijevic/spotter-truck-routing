@@ -14,7 +14,7 @@ from typing import Any
 
 from ninja.errors import ValidationError
 
-from providers import MAX_LOCATIONS_PER_CALL, Outbound, ProviderTimeout, fetch_forecasts, openmeteo
+from providers import MAX_LOCATIONS_PER_CALL, Outbound, ProviderTimeout, openmeteo
 from providers.errors import ProviderRateLimited
 from risk_rules import (
     Checkpoint,
@@ -32,6 +32,7 @@ from weather import (
     ForecastCache,
     ForecastSeries,
     LocationPlan,
+    TooManyLocations,
     cell_center,
     conditions_at,
     conditions_by_hour,
@@ -47,17 +48,17 @@ logger = logging.getLogger(__name__)
 
 BUDGET_S = 150.0
 """One deadline for the whole request: two full waits on the minute window plus the calls."""
-MAX_LOCATIONS = 1800
-"""The most forecast locations one request may need: three windows of 600, which is what fits the
-deadline. It also bounds the grid."""
+MAX_WINDOWS = 3
+"""Rate-limit windows a request may need: what the deadline has room for (two waits)."""
+MAX_LOCATIONS = MAX_WINDOWS * openmeteo.LOCATIONS_PER_WINDOW
+"""The most forecast locations one request may need. It also bounds the grid's display cells."""
 MAX_CACHED_LOCATIONS = 3000
-"""Cache ceiling in forecast cells: room for one largest request, a few megabytes per thousand."""
+"""Cache ceiling in forecast cells: room for one largest request. Measured with tracemalloc, 1,000
+series of 96 hours and four fields take 12.6 MB, so the ceiling holds about 38 MB."""
 
-WINDOW_S = 60.0
-"""Open-Meteo's rate-limit window."""
-MAX_RETRY_DELAY_S = WINDOW_S + 2.0
-"""A refusal is waited out only when its stated delay is at most one window and a small pad."""
 RETRY_PAD_S = 1.0
+MAX_RETRY_DELAY_S = openmeteo.RATE_LIMIT_WINDOW_S + 2.0
+"""A refusal is waited out only when its stated delay is at most one window and a small pad."""
 MAX_REFUSALS_PER_CHUNK = 3
 
 GRID_HOURS = 49
@@ -74,6 +75,8 @@ class Runtime:
     now: Callable[[], datetime]
     sleep: Callable[[float], Awaitable[None]]
     cache: ForecastCache
+    time: Callable[[], float]
+    """The clock the deadline is measured on, in seconds; the event loop's in production."""
     budget_s: float = BUDGET_S
     max_locations: int = MAX_LOCATIONS
 
@@ -81,7 +84,12 @@ class Runtime:
 def default_runtime() -> Runtime:
     """The real clock and sleep, and a new cache. The process keeps one of these, so its cache is
     shared by every request; it is touched only on the event loop."""
-    return Runtime(lambda: datetime.now(UTC), asyncio.sleep, ForecastCache(MAX_CACHED_LOCATIONS))
+    return Runtime(
+        now=lambda: datetime.now(UTC),
+        sleep=asyncio.sleep,
+        cache=ForecastCache(MAX_CACHED_LOCATIONS),
+        time=lambda: asyncio.get_running_loop().time(),
+    )
 
 
 async def build_report(
@@ -93,11 +101,16 @@ async def build_report(
     a passed deadline fails the request, and what was fetched stays cached for the retry.
     """
     hour = utc_hour(runtime.now())
-    deadline = asyncio.get_running_loop().time() + runtime.budget_s
+    deadline = runtime.time() + runtime.budget_s
 
     positions = [[(c.lat, c.lon) for c in route.checkpoints] for route in routes]
-    plan = await asyncio.to_thread(plan_locations, positions)
-    if len(plan.cells) > runtime.max_locations:
+    try:
+        plan = await asyncio.to_thread(
+            plan_locations, positions, max_locations=runtime.max_locations
+        )
+    except TooManyLocations:
+        plan = None
+    if plan is None or len(plan.cells) > runtime.max_locations:
         raise ValidationError(
             [
                 {
@@ -131,20 +144,31 @@ async def _fetch(
     cells: list[Cell], deadline: float, runtime: Runtime
 ) -> dict[Cell, ForecastSeries]:
     """Fetch the cells in chunks, all at once under the outbound cap, caching each chunk as it
-    arrives."""
+    arrives.
+
+    When one chunk fails the others' unfinished calls are cancelled, but a chunk whose response
+    has already arrived is still parsed and cached, so a retry fetches only what is missing.
+    """
     fetched: dict[Cell, ForecastSeries] = {}
     chunks = [
         cells[i : i + MAX_LOCATIONS_PER_CALL] for i in range(0, len(cells), MAX_LOCATIONS_PER_CALL)
     ]
 
-    async def one(outbound: Outbound, chunk: list[Cell]) -> None:
-        series = await _fetch_chunk(outbound, chunk, deadline, runtime.sleep)
+    async def store(chunk: list[Cell], raw: list[Any]) -> None:
+        series = await asyncio.to_thread(openmeteo.parse_forecasts, raw)
         for cell, one_series in zip(chunk, series, strict=True):
             runtime.cache.put(cell, one_series)
             fetched[cell] = one_series
 
+    async def one(outbound: Outbound, chunk: list[Cell]) -> None:
+        raw = await _request_chunk(outbound, chunk, deadline, runtime)
+        # Its own task, so cancelling this chunk after its response arrived does not stop it.
+        storing = asyncio.ensure_future(store(chunk, raw))
+        storing.add_done_callback(_consume)
+        await asyncio.shield(storing)
+
     try:
-        async with asyncio.timeout_at(deadline):
+        async with asyncio.timeout(max(0.0, deadline - runtime.time())):
             async with Outbound() as outbound:
                 tasks = [asyncio.ensure_future(one(outbound, chunk)) for chunk in chunks]
                 try:
@@ -158,13 +182,17 @@ async def _fetch(
     return fetched
 
 
-async def _fetch_chunk(
-    outbound: Outbound,
-    chunk: list[Cell],
-    deadline: float,
-    sleep: Callable[[float], Awaitable[None]],
-) -> list[ForecastSeries]:
-    """One chunk's series, waiting out a refusal when the wait is short and fits the deadline.
+def _consume(task: asyncio.Future[None]) -> None:
+    """Mark a finished task's outcome as seen, so one whose request already failed is not
+    reported as never retrieved."""
+    if not task.cancelled():
+        task.exception()
+
+
+async def _request_chunk(
+    outbound: Outbound, chunk: list[Cell], deadline: float, runtime: Runtime
+) -> list[Any]:
+    """One chunk's raw answers, waiting out a refusal when the wait is short and fits the deadline.
 
     The wait happens here, after the call has released its outbound slot, so other chunks keep
     their turn. Every other refusal is raised at once.
@@ -173,22 +201,22 @@ async def _fetch_chunk(
     refusals = 0
     while True:
         try:
-            return await fetch_forecasts(outbound, points)
+            return await openmeteo.request_forecasts(outbound, points)
         except ProviderRateLimited as refused:
             refusals += 1
-            wait = _wait_for(refused.retry_after_s, deadline)
+            wait = _wait_for(refused.retry_after_s, deadline, runtime)
             if wait is None or refusals > MAX_REFUSALS_PER_CHUNK:
                 raise
             logger.info("weather: refused, waiting %.0f s", wait)
-            await sleep(wait)
+            await runtime.sleep(wait)
 
 
-def _wait_for(delay_s: float | None, deadline: float) -> float | None:
+def _wait_for(delay_s: float | None, deadline: float, runtime: Runtime) -> float | None:
     """Seconds to wait before retrying a refusal, or None when it must be raised instead."""
     if delay_s is None or delay_s > MAX_RETRY_DELAY_S:
         return None
     wait = delay_s + RETRY_PAD_S
-    return wait if asyncio.get_running_loop().time() + wait < deadline else None
+    return wait if runtime.time() + wait < deadline else None
 
 
 def _assemble(

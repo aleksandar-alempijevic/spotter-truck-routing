@@ -1,6 +1,7 @@
 import asyncio
 import json
 from collections.abc import Callable
+from contextlib import nullcontext
 from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs
 
@@ -12,6 +13,7 @@ from django.test import AsyncClient
 from api import api as api_module
 from api import weather_report
 from api.schemas import WeatherIn
+from providers import MAX_LOCATIONS_PER_CALL
 from risk_rules import (
     Checkpoint,
     Level,
@@ -34,8 +36,14 @@ NOW = datetime(2026, 11, 13, 14, 20, tzinfo=UTC)
 HOUR = utc_hour(NOW)
 
 
+@pytest.fixture
+def clock():
+    """The deadline's clock in seconds: it moves only when the request sleeps."""
+    return [1000.0]
+
+
 @pytest.fixture(autouse=True)
-def runtime(monkeypatch):
+def runtime(monkeypatch, clock):
     """The endpoint's clock, sleep and cache, replaced as one object: a fixed time, a fresh cache
     and a sleep that fails the test, so nothing really waits."""
 
@@ -43,19 +51,23 @@ def runtime(monkeypatch):
         raise AssertionError(f"the request slept for {seconds} s")
 
     replacement = weather_report.Runtime(
-        now=lambda: NOW, sleep=refuse, cache=ForecastCache(weather_report.MAX_CACHED_LOCATIONS)
+        now=lambda: NOW,
+        sleep=refuse,
+        cache=ForecastCache(weather_report.MAX_CACHED_LOCATIONS),
+        time=lambda: clock[0],
     )
     monkeypatch.setattr(api_module, "WEATHER_RUNTIME", replacement)
     return replacement
 
 
 @pytest.fixture
-def sleeps(runtime):
-    """Sleeps the request asks for, none of which really wait."""
+def sleeps(runtime, clock):
+    """Sleeps the request asks for. None really waits; each moves the deadline's clock."""
     asked: list[float] = []
 
     async def record(seconds):
         asked.append(seconds)
+        clock[0] += seconds
 
     runtime.sleep = record
     return asked
@@ -390,28 +402,52 @@ async def test_locations_go_out_in_chunks_of_at_most_150_with_no_repeats(provide
     assert sorted(locations(calls)) == sorted(cell_center(c) for c in planned_cells(body))
 
 
-async def test_a_chunk_that_fails_leaves_the_others_cached_for_the_retry(provider_mock, runtime):
-    calls = forecast(provider_mock)
-    body = long_trip()
-    cells = planned_cells(body)
-    failing = cell_center(cells[150])  # the first location of the second chunk
+async def until(condition):
+    """Let the event loop run (threads included) until the condition holds."""
+    for _ in range(500_000):
+        if condition():
+            return
+        await asyncio.sleep(0)
+    assert condition()
+
+
+def failing_second_chunk(calls, cells, release):
+    """An Open-Meteo answer that fails the second chunk once `release()` holds, and answers the
+    others normally. Returns the answer and the number of the others answered so far."""
+    failing = f"{cell_center(cells[MAX_LOCATIONS_PER_CALL])[0]:.2f}"
+    answered = []
 
     async def answer(request):
         first_latitude = parse_qs(request.content.decode())["latitude"][0].split(",")[0]
-        if first_latitude == f"{failing[0]:.2f}":
-            # The other chunks are parsed in a thread; give them time to be cached first.
-            await asyncio.sleep(0.05)
+        if first_latitude == failing:
+            await until(lambda: release(answered))
             return httpx.Response(500)
+        answered.append(first_latitude)
         return calls.answer(request)
 
-    calls.route.mock(side_effect=answer)
+    return answer
+
+
+async def test_a_chunk_that_fails_leaves_the_chunks_cached_before_it_for_the_retry(
+    provider_mock, runtime
+):
+    calls = forecast(provider_mock)
+    body = long_trip()
+    cells = planned_cells(body)
+    others = len(cells) - MAX_LOCATIONS_PER_CALL
+    # Released once every other chunk is cached, so exactly those are cached when it fails.
+    calls.route.mock(
+        side_effect=failing_second_chunk(
+            calls, cells, lambda answered: len(runtime.cache) == others
+        )
+    )
 
     failed = await post(body)
 
     assert failed.status_code == 502
     assert failed.json()["code"] == "provider_unavailable"
     cached = {cell for cell in cells if runtime.cache.get(cell, HOUR)}
-    assert cached and len(cached) < len(cells)
+    assert cached == set(cells[:MAX_LOCATIONS_PER_CALL]) | set(cells[2 * MAX_LOCATIONS_PER_CALL :])
     calls.route.mock(side_effect=calls.answer)
     calls.clear()
 
@@ -419,6 +455,26 @@ async def test_a_chunk_that_fails_leaves_the_others_cached_for_the_retry(provide
 
     assert retried.status_code == 200
     assert sorted(locations(calls)) == sorted(cell_center(c) for c in cells if c not in cached)
+
+
+async def test_a_chunk_whose_response_arrived_is_cached_although_a_sibling_fails_at_once(
+    provider_mock, runtime
+):
+    calls = forecast(provider_mock)
+    body = long_trip()
+    cells = planned_cells(body)
+    chunks = -(-len(cells) // MAX_LOCATIONS_PER_CALL)
+    # The failing chunk fails as soon as every other response has arrived, before they are parsed.
+    calls.route.mock(
+        side_effect=failing_second_chunk(calls, cells, lambda answered: len(answered) == chunks - 1)
+    )
+
+    failed = await post(body)
+    await until(lambda: len(runtime.cache) == len(cells) - MAX_LOCATIONS_PER_CALL)
+
+    assert failed.status_code == 502
+    cached = {cell for cell in cells if runtime.cache.get(cell, HOUR)}
+    assert cached == set(cells[:MAX_LOCATIONS_PER_CALL]) | set(cells[2 * MAX_LOCATIONS_PER_CALL :])
 
 
 async def test_a_short_refusal_is_waited_out_and_the_request_succeeds(provider_mock, sleeps):
@@ -458,6 +514,17 @@ async def test_a_wait_that_would_not_fit_the_deadline_is_a_503_without_sleeping_
 
     response = await post(request(route()))
 
+    assert response.status_code == 503
+    assert response.json()["code"] == "provider_limited"
+
+
+async def test_a_second_wait_that_no_longer_fits_the_remaining_time_is_a_503(provider_mock, sleeps):
+    provider_mock.post(host="api.open-meteo.com").respond(429, headers={"Retry-After": "60"})
+
+    response = await post(request(route()))
+
+    # 150 s of budget: waits of 61 s end at 61 and 122; a third would end at 183, so it is refused.
+    assert sleeps == [61.0, 61.0]
     assert response.status_code == 503
     assert response.json()["code"] == "provider_limited"
 
@@ -582,38 +649,82 @@ async def test_extra_fields_are_ignored(provider_mock):
     assert (await post(body)).status_code == 200
 
 
+# name: (marks, total miles, summarize_route rejects it, WeatherIn rejects it)
 MARK_CASES = {
-    "valid": ([0, 5, 10], 10),
-    "last mark at the end": ([0, 10], 10),
-    "last mark just past the end": ([0, 10.000001], 10),
-    "last mark far past the end": ([0, 20], 10),
-    "first mark not 0": ([1, 10], 10),
-    "first mark just above 0": ([1e-9, 10], 10),
-    "equal marks": ([0, 5, 5], 10),
-    "descending marks": ([0, 8, 5], 10),
-    "a single mark": ([0], 10),
-    "a single mark at 0 on a zero-mile route": ([0], 0),
+    "valid": ([0, 5, 10], 10, False, False),
+    "last mark at the end": ([0, 10], 10, False, False),
+    "last mark just past the end": ([0, 10.000001], 10, True, True),
+    "last mark far past the end": ([0, 20], 10, True, True),
+    "first mark not 0": ([1, 10], 10, True, True),
+    "first mark just above 0": ([1e-9, 10], 10, True, True),
+    "equal marks": ([0, 5, 5], 10, True, True),
+    "descending marks": ([0, 8, 5], 10, True, True),
+    "a single mark": ([0], 10, False, False),
+    "a single mark at 0 on a zero-mile route": ([0], 0, False, False),
 }
+CASES = list(MARK_CASES.values())
+IDS = list(MARK_CASES)
 
 
-@pytest.mark.parametrize(("marks", "total"), MARK_CASES.values(), ids=MARK_CASES.keys())
-def test_the_schema_rejects_everything_summarize_route_rejects(marks, total):
-    checkpoints = [Checkpoint(mark, Level.LOW) for mark in marks]
-    try:
-        summarize_route(total, checkpoints)
-    except ValueError:
-        rules_reject = True
-    else:
-        rules_reject = False
-    body = request(route(marks=tuple(marks), total=total), spacing=50)
-    try:
-        WeatherIn.model_validate(body)
-    except ValueError:
-        schema_rejects = True
-    else:
-        schema_rejects = False
+def rejection(rejected: bool):
+    return pytest.raises(ValueError) if rejected else nullcontext()
 
-    assert schema_rejects or not rules_reject
+
+@pytest.mark.parametrize(("marks", "total", "rules", "_"), CASES, ids=IDS)
+def test_summarize_route_answers_the_table(marks, total, rules, _):
+    with rejection(rules):
+        summarize_route(total, [Checkpoint(mark, Level.LOW) for mark in marks])
+
+
+@pytest.mark.parametrize(("marks", "total", "_", "schema"), CASES, ids=IDS)
+def test_the_weather_request_answers_the_table(marks, total, _, schema):
+    with rejection(schema):
+        WeatherIn.model_validate(request(route(marks=tuple(marks), total=total), spacing=50))
+
+
+@pytest.mark.parametrize(("marks", "total", "rules", "schema"), CASES, ids=IDS)
+def test_the_weather_request_is_never_looser_than_the_rules(marks, total, rules, schema):
+    assert schema >= rules
+
+
+def alternating_across_the_antimeridian(count=600, same_point=False):
+    """Checkpoints 10 miles apart by their marks that flip between lon -179.99 and 179.99, a mile
+    and a half apart on the ground, as the planar corridor sweep sees the whole map between."""
+    marks = tuple(range(0, 10 * count, 10))
+    lat = (lambda i: 40.0) if same_point else (lambda i: 40.0 + 0.04 * i)
+    result = route(marks=marks, etas=[NOW] * count)
+    for i, checkpoint in enumerate(result["checkpoints"]):
+        checkpoint.update(lat=lat(i), lon=-179.99 if i % 2 == 0 else 179.99)
+    return result
+
+
+@pytest.mark.parametrize("same_point", [False, True], ids=["stepping north", "the same two points"])
+async def test_checkpoints_that_jump_across_the_antimeridian_are_a_422_before_any_planning(
+    provider_mock, same_point
+):
+    calls = forecast(provider_mock)
+    body = request(
+        *(
+            {**alternating_across_the_antimeridian(same_point=same_point), "id": f"route-{i}"}
+            for i in (1, 2, 3)
+        ),
+        spacing=10,
+    )
+
+    response = await post(body)
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+    assert calls == []
+
+
+def test_a_northern_route_with_wide_longitude_steps_is_accepted():
+    # 50 miles at 64 degrees north is about 1.65 degrees of longitude.
+    northern = route(lat=64.0, lon=-150.0, marks=(0, 50, 100), etas=[NOW] * 3)
+    for i, checkpoint in enumerate(northern["checkpoints"]):
+        checkpoint.update(lat=64.0, lon=-150.0 + 1.6 * i)
+
+    WeatherIn.model_validate(request(northern, spacing=50))
 
 
 @pytest.mark.parametrize("spacing", [10, 25, 50])

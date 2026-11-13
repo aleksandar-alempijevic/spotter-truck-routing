@@ -25,6 +25,8 @@ class ForecastSeries:
     def __post_init__(self) -> None:
         if self.start.tzinfo is None or self.start.utcoffset() != timedelta(0):
             raise ValueError("a series starts at a UTC instant")
+        if self.start.minute or self.start.second or self.start.microsecond:
+            raise ValueError("a series starts on the hour")
         hours = len(self.wind_mph)
         if hours == 0 or not (
             len(self.gust_mph) == len(self.rain_in_per_hr) == len(self.snow_in_per_hr) == hours

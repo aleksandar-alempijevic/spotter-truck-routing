@@ -1,7 +1,7 @@
 import pytest
 
 from routing.geo import METERS_PER_MILE, haversine_m
-from weather import cell_center, forecast_cell, plan_locations
+from weather import TooManyLocations, cell_center, forecast_cell, plan_locations
 from weather.grid import BLOCK, CORRIDOR_MILES
 
 
@@ -104,3 +104,36 @@ def test_the_plan_does_not_depend_on_the_order_of_the_routes():
     b = eastward(36.05, -100.0, -95.0, 20)
 
     assert plan_locations([a, b]).grid == plan_locations([b, a]).grid
+
+
+def test_planning_stops_once_the_checkpoint_cells_pass_the_bound():
+    route = [(30.0 + 0.1 * i, -100.0) for i in range(50)]
+
+    assert len(plan_locations([route], max_locations=50).checkpoint_cells) == 50
+    with pytest.raises(TooManyLocations):
+        plan_locations([route], max_locations=49)
+
+
+def test_planning_stops_once_the_corridor_passes_the_bound_however_the_routes_are_shaped(
+    monkeypatch,
+):
+    # Checkpoints a mile and a half apart on the ground that flip across the antimeridian: the
+    # planar sweep sees the whole map between them. Without a bound this planned over 100,000
+    # cells; with one, the work stays near the bound.
+    route = [(40.0 + 0.04 * i, -179.99 if i % 2 == 0 else 179.99) for i in range(600)]
+    from weather import grid
+
+    calls = 0
+    real = grid.distance_to_segment_miles
+
+    def counting(*args):
+        nonlocal calls
+        calls += 1
+        return real(*args)
+
+    monkeypatch.setattr(grid, "distance_to_segment_miles", counting)
+
+    with pytest.raises(TooManyLocations):
+        plan_locations([route, route, route], max_locations=1800)
+
+    assert calls < 20_000

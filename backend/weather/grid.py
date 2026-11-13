@@ -25,6 +25,10 @@ CORRIDOR_MILES = 25.0
 DISPLAY_DEGREES = BLOCK * FORECAST_DEGREES
 
 
+class TooManyLocations(Exception):
+    """A plan would pass the bound it was asked to stay within."""
+
+
 @dataclass(frozen=True, slots=True)
 class GridCell:
     row: int
@@ -52,17 +56,27 @@ class LocationPlan:
         return self.checkpoint_cells + self.grid_only_cells
 
 
-def plan_locations(routes: Sequence[Sequence[Point]]) -> LocationPlan:
-    """The forecast locations for routes given as their checkpoint positions."""
+def plan_locations(
+    routes: Sequence[Sequence[Point]], *, max_locations: int | None = None
+) -> LocationPlan:
+    """The forecast locations for routes given as their checkpoint positions.
+
+    With `max_locations`, planning stops with `TooManyLocations` as soon as the checkpoint cells
+    or the corridor's display cells pass it, so the work done is bounded by the bound and not by
+    the shape of the routes. The display cells are held to the same number because every grid
+    cell reads a forecast cell: the plan can never need more locations than cells.
+    """
     checkpoint_cells = tuple(
         dict.fromkeys(forecast_cell(point) for points in routes for point in points)
     )
+    if max_locations is not None and len(checkpoint_cells) > max_locations:
+        raise TooManyLocations
     blocks: dict[tuple[int, int], list[Cell]] = {}
     for cell in checkpoint_cells:
         blocks.setdefault((cell[0] // BLOCK, cell[1] // BLOCK), []).append(cell)
 
     grid = []
-    for block in sorted(_corridor_blocks(routes)):
+    for block in sorted(_corridor_blocks(routes, max_locations)):
         center = _block_center_cell(block)
         held = blocks.get(block)
         source = min(held, key=lambda cell: (_distance2(cell, center), cell)) if held else center
@@ -82,7 +96,7 @@ def _distance2(a: Cell, b: Cell) -> int:
     return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2
 
 
-def _corridor_blocks(routes: Sequence[Sequence[Point]]) -> set[tuple[int, int]]:
+def _corridor_blocks(routes: Sequence[Sequence[Point]], limit: int | None) -> set[tuple[int, int]]:
     found: set[tuple[int, int]] = set()
     lat_pad = CORRIDOR_MILES / MILES_PER_DEGREE
     for points in routes:
@@ -102,4 +116,6 @@ def _corridor_blocks(routes: Sequence[Sequence[Point]]) -> set[tuple[int, int]]:
                     center = cell_center(_block_center_cell((row, column)))
                     if distance_to_segment_miles(center, a, b) <= CORRIDOR_MILES:
                         found.add((row, column))
+                        if limit is not None and len(found) > limit:
+                            raise TooManyLocations
     return found

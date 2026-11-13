@@ -21,6 +21,11 @@ FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 CALL_TIMEOUT_S = 12.0
 """A call of 150 locations takes about half a second (measured in `live_weather_check.py`), so a
 call still running after this is stuck; the weather request's own deadline bounds the rest."""
+RATE_LIMIT_WINDOW_S = 60.0
+LOCATIONS_PER_WINDOW = 600
+"""The free tier's limit, per IP: this many locations in one window (a call of N locations costs
+N), as well as 5,000 an hour and 10,000 a day. A refusal says how long is left in the window. A
+paid key lifts these, so they are this module's to state."""
 MAX_LOCATIONS_PER_CALL = 150
 """Chunk size: calls of 100 to 300 locations were reliable, and one of 1,000 took 61 s."""
 FORECAST_HOURS = 96
@@ -47,11 +52,20 @@ _FIELDS = tuple(_UNITS)
 
 async def fetch_forecasts(outbound: Outbound, points: Sequence[Point]) -> list[ForecastSeries]:
     """One series per point, in the order of `points`, from one call of at most
-    `MAX_LOCATIONS_PER_CALL` points.
+    `MAX_LOCATIONS_PER_CALL` points: `request_forecasts`, then `parse_forecasts` off the event
+    loop. A caller that must not lose a response that has arrived calls the two itself.
 
     The provider snaps each coordinate to its own grid, so series are matched to points by
     position, never by the coordinates it echoes. Rain is precipitation less the water in the
     snow, never below 0. A null from the provider stays absent.
+    """
+    return await asyncio.to_thread(parse_forecasts, await request_forecasts(outbound, points))
+
+
+async def request_forecasts(outbound: Outbound, points: Sequence[Point]) -> list[Any]:
+    """The call itself: one raw location answer per point, in order, not yet checked or parsed.
+
+    Raises the neutral errors, and `MalformedResponse` when the number of answers is wrong.
     """
     if not 1 <= len(points) <= MAX_LOCATIONS_PER_CALL:
         raise ValueError(f"a call takes 1 to {MAX_LOCATIONS_PER_CALL} points")
@@ -74,11 +88,12 @@ async def fetch_forecasts(outbound: Outbound, points: Sequence[Point]) -> list[F
     locations = body if isinstance(body, list) else [body]
     if len(locations) != len(points):
         raise MalformedResponse
-    return await asyncio.to_thread(_parse_all, locations)
+    return locations
 
 
-def _parse_all(locations: list[Any]) -> list[ForecastSeries]:
-    """Parsing 150 locations of 96 hours is real work, so it runs off the event loop."""
+def parse_forecasts(locations: list[Any]) -> list[ForecastSeries]:
+    """Check and convert the answers of `request_forecasts`. Real work for 150 locations of 96
+    hours, so callers on the event loop run it in a thread."""
     return [_parse(location) for location in locations]
 
 

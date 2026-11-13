@@ -1,5 +1,6 @@
 """Wire schemas. Distances are in miles, load in pounds, and times are absolute instants."""
 
+import math
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal, Self
 
@@ -8,7 +9,7 @@ from pydantic import AwareDatetime, Field, model_validator
 
 from risk_rules import Condition, Level, RankingStep
 from routing.checkpoints import MARK_EPSILON_MILES
-from routing.geo import METERS_PER_MILE, haversine_m
+from routing.geo import METERS_PER_MILE, MILES_PER_DEGREE, haversine_m
 from routing.route import RouteSource
 
 from .planner import ShortfallReason
@@ -203,9 +204,23 @@ def _check_marks(route: RouteCore, interval_miles: float) -> None:
             raise ValueError(f"{where}: checkpoint miles must be strictly ascending")
         if gap > interval_miles + MARK_EPSILON_MILES:
             raise ValueError(f"{where}: checkpoints are farther apart than the interval")
+        allowed_miles = gap * GAP_DISTANCE_SLACK + GAP_DISTANCE_SLACK_MILES
         straight = haversine_m((earlier.lat, earlier.lon), (later.lat, later.lon))
-        if straight / METERS_PER_MILE > gap * GAP_DISTANCE_SLACK + GAP_DISTANCE_SLACK_MILES:
+        if straight / METERS_PER_MILE > allowed_miles or _longitude_jump_too_wide(
+            earlier, later, allowed_miles
+        ):
             raise ValueError(f"{where}: two checkpoints are farther apart than their miles allow")
+
+
+def _longitude_jump_too_wide(earlier: CheckpointOut, later: CheckpointOut, miles: float) -> bool:
+    """Whether the longitudes differ by more than `miles` can cover at the higher latitude.
+
+    The straight-line check cannot see this across the antimeridian (-179.99 and 179.99 are a mile
+    and a half apart), where the corridor's planar sweep would cross the whole map. Routes here
+    stay in the US, so a crossing is never real.
+    """
+    cos_latitude = max(math.cos(math.radians(max(abs(earlier.lat), abs(later.lat)))), 0.0175)
+    return abs(later.lon - earlier.lon) > miles / (MILES_PER_DEGREE * cos_latitude)
 
 
 class ConditionsOut(Schema):

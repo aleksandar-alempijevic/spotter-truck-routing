@@ -91,6 +91,8 @@ def test_a_naive_instant_is_refused():
             {"start": datetime(2026, 11, 13, 15, 0, tzinfo=timezone(timedelta(hours=1)))},
             id="not UTC",
         ),
+        pytest.param({"start": START + timedelta(minutes=30)}, id="off the hour"),
+        pytest.param({"start": START + timedelta(microseconds=1)}, id="a microsecond off"),
         pytest.param({"gust_mph": (1.0,)}, id="unequal lengths"),
         pytest.param(
             {

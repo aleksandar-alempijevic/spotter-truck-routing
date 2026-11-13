@@ -7,7 +7,7 @@ reached through its modules.
 """
 
 from .cache import ForecastCache
-from .grid import GridCell, LocationPlan, plan_locations
+from .grid import GridCell, LocationPlan, TooManyLocations, plan_locations
 from .lattice import Cell, cell_center, forecast_cell
 from .series import Conditions, ForecastSeries, conditions_at, conditions_by_hour, utc_hour
 
@@ -18,6 +18,7 @@ __all__ = [
     "ForecastSeries",
     "GridCell",
     "LocationPlan",
+    "TooManyLocations",
     "cell_center",
     "conditions_at",
     "conditions_by_hour",
