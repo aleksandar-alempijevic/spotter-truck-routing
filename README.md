@@ -2,7 +2,7 @@
 
 A web app that recommends the safest of three truck routes between two places, using the weather along each route at the time the truck will be there, the load weight and the travel time. Full-stack take-home: React frontend, Django backend.
 
-**Status:** in progress. The React page calls a Django health endpoint and shows the answer. `POST /api/routes` returns up to three truck routes with checkpoints and ETAs from TomTom ([docs/architecture.md](docs/architecture.md)). `POST /api/weather` takes those routes back and returns, for each checkpoint, the Open-Meteo forecast at its ETA and a risk level ([docs/logic.md](docs/logic.md)), a summary per route, the ranking with its reasons, and a 49-hour risk grid of the corridor for a map slider. `GET /api/address-search` returns US place suggestions from Geoapify. The UI uses none of these yet; the map and the trip form come in later steps, and the architecture doc says where each will go.
+**Status:** the app works end to end; hosting is not set up yet. The driver plans a trip in the React app: origin and destination from address search, a departure, the load in pounds and the checkpoint spacing. The routes appear first and the weather risk fills in after them, on a map with a 0 to 48 hour forecast slider and a route card for each route that says why the first one is recommended. The layout is built up from a phone, with a bottom sheet, and uses the room on wider screens ([docs/architecture.md](docs/architecture.md)). The backend serves it: `POST /api/routes` returns up to three truck routes with checkpoints and ETAs from TomTom ([docs/architecture.md](docs/architecture.md)). `POST /api/weather` takes those routes back and returns, for each checkpoint, the Open-Meteo forecast at its ETA and a risk level ([docs/logic.md](docs/logic.md)), a summary per route, the ranking with its reasons, and a 49-hour risk grid of the corridor for a map slider. `GET /api/address-search` returns US place suggestions from Geoapify.
 
 ## Prerequisites
 
@@ -23,7 +23,7 @@ make backend     # terminal 1: Django API on http://127.0.0.1:8000
 make frontend    # terminal 2: React app on http://localhost:5173
 ```
 
-Open <http://localhost:5173>. A green "API status: ok" box means the browser reached Django. With the backend stopped, the page says so and offers a Retry button. While the backend runs, the interactive API docs are at <http://127.0.0.1:8000/api/docs>.
+Open <http://localhost:5173>. The trip form is the first thing on the page, and the map loads after it. Planning a trip needs the routing and address keys in `.env` ([Configuration](#configuration)); without one the page says which part is unavailable. While the backend runs, the interactive API docs are at <http://127.0.0.1:8000/api/docs>.
 
 The browser only talks to the Vite dev server, which forwards `/api` requests to Django, so there is one origin and no CORS configuration.
 
@@ -31,7 +31,7 @@ The browser only talks to the Vite dev server, which forwards `/api` requests to
 
 ```sh
 make test    # backend (pytest, including the risk rules) and frontend (vitest) tests
-make check   # the tests, a check that the generated API types are current, then ruff lint and format checks (backend), and tsc, ESLint and Prettier checks (frontend)
+make check   # the tests, a check that the generated API types are current, then ruff lint and format checks (backend), tsc, ESLint and Prettier checks (frontend), and a production build of the frontend
 make types   # regenerate frontend/src/api/schema.d.ts from the backend's OpenAPI schema
 ```
 
@@ -41,7 +41,7 @@ Tests never make live calls: the providers are mocked, and the settings used by 
 uv --directory backend run python live_check.py /tmp/live-check.json
 ```
 
-The [Makefile](Makefile) is the one place that defines these commands, including the underlying `uv` and `pnpm` calls.
+The build is part of `make check` because it is the only check that sees the map's worker file and its separately loaded chunk. The [Makefile](Makefile) is the one place that defines these commands, including the underlying `uv` and `pnpm` calls.
 
 ## Configuration
 
