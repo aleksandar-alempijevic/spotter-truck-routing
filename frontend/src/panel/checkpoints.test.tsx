@@ -4,7 +4,8 @@ import { buildPlanView } from '../plan/view';
 import type { Trip } from '../plan/trip';
 import { buildRoutes, buildWeather, DALLAS, scenarioDestination } from '../test/fixtures';
 import { LIVE_ROUTES, LIVE_WEATHER } from '../test/live';
-import { CheckpointRow, conditionParts, decisionText } from './CheckpointList';
+import { describeCheckpoint } from '../plan/describe';
+import { CheckpointRow } from './CheckpointList';
 import { RouteCards } from './RouteCards';
 
 afterEach(cleanup);
@@ -21,7 +22,7 @@ const trip = (): Trip => ({
 
 test('readings from a real answer are rounded for reading, not printed to many decimals', () => {
   const view = buildPlanView(LIVE_ROUTES, LIVE_WEATHER);
-  const parts = conditionParts(view.routes[0].checkpoints[0]).map((p) => p.text);
+  const parts = describeCheckpoint(view.routes[0].checkpoints[0]).readings.map((p) => p.text);
   expect(parts).toEqual(['Wind 11 mph (gusts 25)', 'Rain 0 in/h', 'Snow 0 in/h']);
 });
 
@@ -32,13 +33,13 @@ test('a checkpoint says which condition set its level, and when the load raised 
   );
   const route = view.routes[0];
   const raised = route.checkpoints.find((c) => c.risk.kind === 'level' && c.risk.loadRaised)!;
-  expect(decisionText(raised)).toBe('Set by wind, raised a level by the load');
+  expect(describeCheckpoint(raised).decision).toBe('Set by wind, raised a level by the load');
   const snow = view.routes[2].checkpoints.find(
     (c) => c.risk.kind === 'level' && c.risk.condition === 'snow',
   )!;
-  expect(decisionText(snow)).toBe('Set by snow');
+  expect(describeCheckpoint(snow).decision).toBe('Set by snow');
   const low = route.checkpoints[0];
-  expect(decisionText(low)).toBeNull();
+  expect(describeCheckpoint(low).decision).toBeNull();
 
   render(
     <CheckpointRow
@@ -58,10 +59,12 @@ test('a checkpoint with no forecast or no weather yet says so and has no decisio
     buildWeather('mixed', { departure }),
   );
   const none = view.routes[2].checkpoints.find((c) => c.risk.kind === 'none')!;
-  expect(decisionText(none)).toBeNull();
+  expect(describeCheckpoint(none).decision).toBeNull();
   const pending = buildPlanView(buildRoutes('mixed', { departure })).routes[0].checkpoints[0];
-  expect(decisionText(pending)).toBeNull();
-  expect(conditionParts(none)).toEqual([]);
+  expect(describeCheckpoint(pending).decision).toBeNull();
+  expect(describeCheckpoint(none).readings).toEqual([]);
+  expect(describeCheckpoint(none).note).toBe('No forecast for this time');
+  expect(describeCheckpoint(pending).note).toBe('Weather not checked yet');
 });
 
 test('a card with No Travel miles carries a text banner, and one without does not', () => {

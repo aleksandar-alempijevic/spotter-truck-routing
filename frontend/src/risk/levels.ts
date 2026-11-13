@@ -6,11 +6,15 @@ import type { Condition, Level } from '../api/types';
  */
 export type RiskState =
   | { kind: 'pending' }
+  | { kind: 'unavailable' }
   | { kind: 'none' }
   | { kind: 'level'; level: Level; condition: Condition | null; loadRaised: boolean };
 
-/** What can be drawn: a level, or one of the two non-levels. */
-export type RiskKey = Level | 'pending' | 'none';
+/** What can be drawn: a level, or one of the three non-levels. */
+export type RiskKey = Level | 'pending' | 'unavailable' | 'none';
+
+/** How opaque a heatmap cell is: Low stays quiet so the map is calm where nothing matters. */
+export const CELL_ALPHA = { low: 0.22, other: 0.62 } as const;
 
 /** A 16-unit circle in the 24-unit glyph box: the Low mark and the base of the outline marks. */
 export const CIRCLE_PATH = 'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16z';
@@ -33,6 +37,8 @@ export interface RiskStyle {
   path: string;
   /** Drawn as an outline instead of a solid shape. */
   outline: boolean;
+  /** The outline is dashed: something that has not arrived. */
+  dashed?: boolean;
 }
 
 // One file owns the palette and the glyph set, so a review can change both in one place.
@@ -78,6 +84,15 @@ export const RISK_STYLE: Record<RiskKey, RiskStyle> = {
     onColor: '#102027',
     path: CIRCLE_PATH,
     outline: true,
+    dashed: true,
+  },
+  unavailable: {
+    label: 'Weather unavailable',
+    color: '#607d8b',
+    onColor: '#ffffff',
+    path: `${CIRCLE_PATH}M7.5 12h9`,
+    outline: true,
+    dashed: true,
   },
   none: {
     label: 'No forecast',
@@ -105,7 +120,7 @@ export function riskLabel(state: RiskState): string {
   return RISK_STYLE[riskKey(state)].label;
 }
 
-/** The most severe of a set of states; `none` and `pending` only when no level is present. */
+/** The most severe of a set of states; `none`, `pending` and `unavailable` only when no level is present. */
 export function worstRisk(states: readonly RiskState[]): RiskState {
   let worst: RiskState | null = null;
   for (const state of states) {
@@ -119,6 +134,7 @@ export function worstRisk(states: readonly RiskState[]): RiskState {
     }
   }
   if (worst) return worst;
+  if (states.some((s) => s.kind === 'unavailable')) return { kind: 'unavailable' };
   if (states.some((s) => s.kind === 'pending')) return { kind: 'pending' };
   return { kind: 'none' };
 }

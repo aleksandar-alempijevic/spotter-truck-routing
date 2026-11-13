@@ -1,14 +1,15 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { App } from '../App';
-import { createQueryClient } from '../plan/queryClient';
-import { createStandIn } from '../test/standIn';
-import type { MapViewProps } from '../map/MapView';
+import { App } from './App';
+import { createQueryClient } from './plan/queryClient';
+import { createStandIn } from './test/standIn';
+import { buildRoutes } from './test/fixtures';
+import type { MapViewProps } from './map/MapView';
 
 // The fake map: jsdom has no WebGL, so the real map is covered by the built-app browser run.
 let mapProps: MapViewProps | null = null;
-vi.mock('../map/MapView', () => ({
+vi.mock('./map/MapView', () => ({
   default: function FakeMap(props: MapViewProps) {
     mapProps = props;
     return <div data-testid="map" />;
@@ -330,4 +331,39 @@ test('widest screens: the cards and the checkpoints are both there, side by side
   expect(screen.getByText('Route 2 checkpoints')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Edit trip' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'More' })).not.toBeInTheDocument();
+});
+
+test('phone: the shortfall note and the credits are on the smallest sheet, no tap needed', async () => {
+  useViewport('sheet');
+  renderApp();
+  await planTrip(['Amarillo', 'Amarillo, TX, United States']);
+  const note = buildRoutes('shortfall', { departure: '2026-11-20T14:00:00Z' }).shortfall!.message;
+  expect(await screen.findByText(note)).toBeInTheDocument();
+  expect(screen.queryByText(/Arrives /)).not.toBeInTheDocument();
+  expect(await screen.findByRole('link', { name: /Open-Meteo/ })).toBeInTheDocument();
+});
+
+test('the map key lists every level and the hatch, open on a roomy screen and a toggle on a phone', async () => {
+  useViewport('pane');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  const key = screen.getByRole('button', { name: 'Hide key' });
+  expect(key).toHaveAttribute('aria-expanded', 'true');
+  const list = within(document.getElementById('map-legend')!);
+  for (const label of ['Low', 'Moderate', 'High', 'Severe', 'No Travel', 'No forecast']) {
+    expect(list.getByText(label)).toBeInTheDocument();
+  }
+  fireEvent.click(key);
+  expect(document.getElementById('map-legend')).toBeNull();
+  cleanup();
+
+  useViewport('sheet');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  const phoneKey = screen.getByRole('button', { name: 'Map key' });
+  expect(phoneKey).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(phoneKey);
+  expect(document.getElementById('map-legend')).not.toBeNull();
 });

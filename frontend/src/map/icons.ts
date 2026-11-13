@@ -17,7 +17,7 @@ export function glyphImage(key: RiskKey): ImageData {
     ctx.fill(new Path2D(CIRCLE_PATH));
     ctx.strokeStyle = style.color;
     ctx.lineWidth = GLYPH_STROKE.outlineWidth;
-    if (key === 'pending') ctx.setLineDash([...GLYPH_STROKE.pendingDash]);
+    if (style.dashed) ctx.setLineDash([...GLYPH_STROKE.pendingDash]);
     ctx.stroke(path);
   } else {
     ctx.fillStyle = style.color;

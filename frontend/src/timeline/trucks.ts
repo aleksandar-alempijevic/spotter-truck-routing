@@ -26,8 +26,8 @@ export interface Truck {
 
 /**
  * The mile a truck has reached at an instant. Between two checkpoints it is interpolated in
- * time, which assumes nothing about speed beyond the two ETAs: a stretch the ETAs make slow,
- * such as one with a break in it, comes out slow.
+ * time, which assumes nothing about speed beyond the two ETAs: a stretch the ETAs make slow
+ * comes out slow.
  */
 export function mileAt(
   checkpoints: TruckRoute['checkpoints'],

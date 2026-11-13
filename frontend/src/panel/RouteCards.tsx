@@ -6,7 +6,6 @@ import { RiskBadge } from '../risk/RiskBadge';
 import { RiskGlyph } from '../risk/RiskGlyph';
 import { formatDuration } from '../time/zone';
 import { formatMiles } from '../plan/format';
-import { useWeatherFailed } from '../risk/weatherFailed';
 import { selectableSx } from './selectable';
 import { arrivalInDestinationZone, arrivalMs, originClock } from './times';
 
@@ -20,7 +19,7 @@ interface Props {
 
 /** Miles at each level as a bar and as text, so the bar never carries the meaning alone. */
 function MilesByLevel({ route }: { route: RouteView }) {
-  const weatherFailed = useWeatherFailed();
+  const weatherFailed = route.risk.kind === 'unavailable';
   const summary = route.summary;
   if (!summary) {
     // Holds the space the summary will take, so late weather shifts nothing.

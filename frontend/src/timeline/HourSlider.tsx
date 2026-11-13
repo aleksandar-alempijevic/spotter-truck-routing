@@ -1,5 +1,6 @@
 import { Box, Button, Slider, Typography } from '@mui/material';
 import { useMemo } from 'react';
+import { RISK_STYLE } from '../risk/levels';
 import { formatClockWithZone } from '../time/zone';
 import { hourInstant, type GridModel } from './grid';
 import { useHour, type HourHolder } from './hourHolder';
@@ -14,6 +15,8 @@ interface Props {
   /** For the truck readout and the "Now" mark. */
   routes?: readonly TruckRoute[];
   nowMs?: number;
+  /** The weather request failed, so the bar says so instead of waiting for the forecast. */
+  weatherFailed?: boolean;
 }
 
 const STEP_SX = { minWidth: 44, minHeight: 44, px: 0, fontWeight: 700, flexShrink: 0 } as const;
@@ -22,7 +25,14 @@ const STEP_SX = { minWidth: 44, minHeight: 44, px: 0, fontWeight: 700, flexShrin
  * The hourly slider: marks, one-hour buttons, tap-on-track and a clock-time label. It writes to
  * the hour holder and never touches the map; the map and this bar both listen to the holder.
  */
-export function HourSlider({ holder, model, zone, routes = [], nowMs = 0 }: Props) {
+export function HourSlider({
+  holder,
+  model,
+  zone,
+  routes = [],
+  nowMs = 0,
+  weatherFailed = false,
+}: Props) {
   const hour = useHour(holder);
   const last = model ? model.hourCount - 1 : 0;
   const marks = useMemo(() => (model ? sliderMarks(model, zone, nowMs) : []), [model, zone, nowMs]);
@@ -48,7 +58,9 @@ export function HourSlider({ holder, model, zone, routes = [], nowMs = 0 }: Prop
         <Typography variant="body2" component="span" aria-live="polite">
           {model
             ? `${label} · +${hour} h${atDeparture ? ' · departure' : ''}`
-            : 'Waiting for the forecast'}
+            : weatherFailed
+              ? RISK_STYLE.unavailable.label
+              : 'Waiting for the forecast'}
         </Typography>
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

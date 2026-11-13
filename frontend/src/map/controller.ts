@@ -2,7 +2,7 @@ import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { RouteView } from '../plan/view';
 import { RISK_STYLE, type RiskKey } from '../risk/levels';
-import { diffHours, hourInstant, type GridModel } from '../timeline/grid';
+import { diffHours, hourInstant, levelAt, type GridModel } from '../timeline/grid';
 import { trucksAt } from '../timeline/trucks';
 import type { HourHolder } from '../timeline/hourHolder';
 import { BASEMAP_STYLE_URL, PLAIN_STYLE } from './basemap';
@@ -45,6 +45,8 @@ export interface MapEvents {
   onBasemapUnavailable(): void;
   /** The popup's words for a checkpoint; null when there is nothing to say. */
   describeCheckpoint(ref: CheckpointRef): CheckpointPopup | null;
+  /** The readout's words for a heatmap cell's level at an hour; null when there is nothing to say. */
+  describeCell(level: RiskKey, hour: number): CheckpointPopup | null;
 }
 
 type GeoJsonSource = maplibregl.GeoJSONSource;
@@ -53,6 +55,20 @@ const TAP_SLOP_PX = 14;
 // A popup on hover is for a mouse or a trackpad. A touch screen reports `hover: none`, and the
 // panel's list says all the popup does.
 const HOVER_QUERY = '(hover: hover) and (pointer: fine)';
+
+/** The words of a popup as DOM, built with text nodes only. */
+function popupContent(words: CheckpointPopup): HTMLElement {
+  const content = document.createElement('div');
+  const title = document.createElement('strong');
+  title.textContent = words.title;
+  content.append(title);
+  for (const line of words.lines) {
+    const row = document.createElement('div');
+    row.textContent = line;
+    content.append(row);
+  }
+  return content;
+}
 
 /**
  * The one map instance. It owns every call into MapLibre; React only hands it data. The slider
@@ -68,6 +84,8 @@ export class MapController {
   private userMoved = false;
   private popup: maplibregl.Popup | null = null;
   private popupKey: string | null = null;
+  /** The heatmap cell the driver tapped, and its readout, which follows the slider's hour. */
+  private readout: { cell: number; popup: maplibregl.Popup } | null = null;
 
   private routes: readonly RouteView[] = [];
   private bounds: ReturnType<typeof routeBounds> = null;
@@ -125,6 +143,7 @@ export class MapController {
 
   setRoutes(routes: readonly RouteView[]): void {
     this.routes = routes;
+    this.hideReadout();
     this.bounds = routeBounds(routes);
     this.hidePopup();
     if (this.styleReady) {
@@ -145,6 +164,7 @@ export class MapController {
   setGrid(model: GridModel | null, hour: HourHolder): void {
     this.unsubscribeHour?.();
     this.unsubscribeHour = null;
+    this.hideReadout();
     this.grid = model;
     this.hour = hour;
     this.shownHour = hour.get();
@@ -225,6 +245,7 @@ export class MapController {
 
   destroy(): void {
     this.cancelQueuedFit();
+    this.hideReadout();
     this.hidePopup();
     this.unsubscribeHour?.();
     this.resizeObserver.disconnect();
@@ -406,6 +427,11 @@ export class MapController {
     }
     this.shownHour = hour;
     this.pushTrucks();
+    // An open readout keeps saying what its cell holds at the hour now on screen.
+    if (this.readout) {
+      const words = this.readoutWords(this.readout.cell);
+      if (words) this.readout.popup.setDOMContent(popupContent(words));
+    }
   }
 
   /** The truck on each route at the hour on screen: a few points, set directly, no React. */
@@ -448,15 +474,7 @@ export class MapController {
       this.hidePopup();
       return;
     }
-    const content = document.createElement('div');
-    const title = document.createElement('strong');
-    title.textContent = words.title;
-    content.append(title);
-    for (const line of words.lines) {
-      const row = document.createElement('div');
-      row.textContent = line;
-      content.append(row);
-    }
+    const content = popupContent(words);
     this.hidePopup();
     this.popupKey = key;
     this.popup = new maplibregl.Popup({
@@ -473,6 +491,42 @@ export class MapController {
       .addTo(this.map);
   }
 
+  /** What the cell's readout says at the hour on screen. */
+  private readoutWords(cell: number): CheckpointPopup | null {
+    const grid = this.grid;
+    if (!grid) return null;
+    const index = levelAt(grid, cell, this.shownHour);
+    return this.events.describeCell(index < 0 ? 'none' : grid.levelNames[index], this.shownHour);
+  }
+
+  private showReadout(cell: number, at: maplibregl.LngLatLike): void {
+    this.hideReadout();
+    const words = this.readoutWords(cell);
+    if (!words) return;
+    const popup = new maplibregl.Popup({
+      closeButton: true,
+      closeOnClick: false,
+      closeOnMove: false,
+      focusAfterOpen: false,
+      offset: 8,
+      maxWidth: '260px',
+      className: 'cell-readout',
+    })
+      .setLngLat(at)
+      .setDOMContent(popupContent(words))
+      .addTo(this.map);
+    popup.on('close', () => {
+      if (this.readout?.popup === popup) this.readout = null;
+    });
+    this.readout = { cell, popup };
+  }
+
+  private hideReadout(): void {
+    const readout = this.readout;
+    this.readout = null;
+    readout?.popup.remove();
+  }
+
   private hidePopup(): void {
     this.popup?.remove();
     this.popup = null;
@@ -480,6 +534,7 @@ export class MapController {
   }
 
   private onClick(point: maplibregl.Point): void {
+    this.hideReadout();
     const checkpoint = this.hit(point, [LAYER.checkpoints])[0];
     if (checkpoint) {
       const { routeId, index } = checkpoint.properties as { routeId: string; index: number };
@@ -487,7 +542,16 @@ export class MapController {
       return;
     }
     const line = this.hit(point, [LAYER.routeLine])[0];
-    if (line) this.events.onSelectRoute((line.properties as { id: string }).id);
+    if (line) {
+      this.events.onSelectRoute((line.properties as { id: string }).id);
+      return;
+    }
+    // Nothing else under the finger: the heatmap cell there, read at the slider's hour.
+    const cell =
+      this.styleReady && this.grid
+        ? this.map.queryRenderedFeatures(point, { layers: [LAYER.gridFill] })[0]
+        : undefined;
+    if (cell && typeof cell.id === 'number') this.showReadout(cell.id, this.map.unproject(point));
   }
 
   private onError(event: object): void {

@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { ApiError } from '../api/client';
 import { buildRoutes, buildWeather } from '../test/fixtures';
+import { describeCheckpoint } from './describe';
 import { buildPlanView, checkAligned } from './view';
 import { buildWeatherBody } from './weatherRequest';
 
@@ -123,4 +124,18 @@ test('the weather request is the send-back subset and nothing else', () => {
   ]);
   expect(body.routes[1].checkpoints).toEqual(routes.routes[1].checkpoints);
   expect(body).not.toHaveProperty('shortfall');
+});
+
+test('a failed weather request reads as unavailable everywhere the view is read, not pending', () => {
+  const view = buildPlanView(buildRoutes('mixed', { departure }), undefined, true);
+  expect(view.weatherFailed).toBe(true);
+  for (const route of view.routes) {
+    expect(route.risk).toEqual({ kind: 'unavailable' });
+    expect(route.checkpoints.every((cp) => cp.risk.kind === 'unavailable')).toBe(true);
+  }
+  const cp = view.routes[0].checkpoints[0];
+  expect(describeCheckpoint(cp)).toMatchObject({
+    level: 'Weather unavailable',
+    note: 'Weather could not be loaded',
+  });
 });

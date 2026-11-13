@@ -5,13 +5,16 @@ import { TripSummary } from '../form/TripSummary';
 import type { FormValues } from '../form/validation';
 import type { CheckpointRef } from '../plan/view';
 import { PlanPanel, type PanelTier } from '../panel/PlanPanel';
-import { conditionParts, decisionText } from '../panel/CheckpointList';
 import { originClock } from '../panel/times';
+import { describeCheckpoint } from '../plan/describe';
 import type { PlanState } from '../plan/queries';
-import { riskLabel } from '../risk/levels';
+import { RISK_STYLE, type RiskKey } from '../risk/levels';
+import { formatClockWithZone } from '../time/zone';
 import { displayZone, type Submission, type Trip } from '../plan/trip';
 import type { GridModel } from '../timeline/grid';
 import { HourSlider } from '../timeline/HourSlider';
+import { hourInstant } from '../timeline/grid';
+import { Legend } from './Legend';
 import { MapHost } from './MapHost';
 import { Sheet, type SheetState } from './Sheet';
 import { useBackCollapse } from './useBackCollapse';
@@ -54,6 +57,8 @@ export function AppShell({
   const [formOpen, setFormOpen] = useState(true);
   const [sheet, setSheet] = useState<SheetState>('peek');
   const [dragging, setDragging] = useState(false);
+  // Open on a screen with room, closed over a phone's map, until the driver chooses.
+  const [legendChoice, setLegendChoice] = useState<boolean | null>(null);
   const hasPlan = submission !== null;
   const showForm = formOpen || !hasPlan;
   const isSheet = mode === 'sheet';
@@ -93,20 +98,32 @@ export function AppShell({
     setSheet((state) => (state === 'peek' ? 'half' : state));
   };
 
-  const describeCheckpoint = useCallback(
+  const popupFor = useCallback(
     (ref: CheckpointRef) => {
       const route = plan.view?.routes.find((r) => r.id === ref.routeId);
       const cp = route?.checkpoints[ref.index];
       if (!route || !cp || !submission) return null;
-      const lines = [riskLabel(cp.risk), ...conditionParts(cp).map((part) => part.text)];
-      const decided = decisionText(cp);
-      if (decided) lines.push(decided);
+      const { level, readings, note, decision } = describeCheckpoint(cp);
+      const lines = [level, ...(note ? [note] : readings.map((r) => r.text))];
+      if (decision) lines.push(decision);
       return {
         title: `${route.name} · mile ${Math.round(cp.mile)} · ${originClock(submission.trip, cp.etaMs)}`,
         lines,
       };
     },
     [plan.view, submission],
+  );
+
+  const cellFor = useCallback(
+    (level: RiskKey, hour: number) => {
+      if (!grid || !submission) return null;
+      const when = formatClockWithZone(hourInstant(grid, hour), displayZone(submission.trip));
+      return {
+        title: level === 'none' ? 'No forecast here' : `${RISK_STYLE[level].label} here`,
+        lines: [level === 'none' ? `No forecast for ${when}` : `Forecast for ${when}`],
+      };
+    },
+    [grid, submission],
   );
 
   const form = (
@@ -145,6 +162,7 @@ export function AppShell({
         zone={submission ? displayZone(submission.trip) : 'UTC'}
         routes={plan.view?.routes}
         nowMs={submission?.startedAt}
+        weatherFailed={plan.view?.weatherFailed}
       />
     </Paper>
   );
@@ -161,8 +179,18 @@ export function AppShell({
         fitKey={submission?.id ?? 0}
         onSelectRoute={session.selectRoute}
         onSelectCheckpoint={selectCheckpoint}
-        describeCheckpoint={describeCheckpoint}
+        describeCheckpoint={popupFor}
+        describeCell={cellFor}
       />
+
+      {grid && hasPlan && !showForm && (
+        <Legend
+          open={legendChoice ?? !isSheet}
+          onToggle={() => setLegendChoice(!(legendChoice ?? !isSheet))}
+          top={insets.top}
+          left={insets.left}
+        />
+      )}
 
       {isSheet ? (
         <>

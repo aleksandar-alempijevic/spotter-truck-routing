@@ -100,3 +100,10 @@ test('only trucks on the road are marked', () => {
   expect(marks.features.map((f) => f.properties.routeId)).toEqual(['b']);
   expect(marks.features[0].geometry.coordinates).toEqual([-100, 40]);
 });
+
+test('checkpoints of a failed weather request draw the unavailable glyph, not the pending one', () => {
+  const failed = buildPlanView(routes, undefined, true);
+  expect(
+    checkpointPoints(failed.routes).features.every((f) => f.properties.icon === 'unavailable'),
+  ).toBe(true);
+});

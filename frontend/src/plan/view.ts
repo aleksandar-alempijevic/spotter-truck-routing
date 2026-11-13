@@ -48,6 +48,8 @@ export interface PlanView {
   shortfall: string | null;
   ranking: RankingOut | null;
   weatherReady: boolean;
+  /** The weather request failed: checkpoints without weather read as unavailable, not pending. */
+  weatherFailed: boolean;
 }
 
 /** The weather answer does not line up with the routes it was requested for. */
@@ -71,7 +73,11 @@ export function checkAligned(routes: RoutesOut, weather: WeatherOut): void {
 }
 
 /** Joins the routes answer with the weather answer, by route id and checkpoint index. */
-export function buildPlanView(routes: RoutesOut, weather?: WeatherOut): PlanView {
+export function buildPlanView(
+  routes: RoutesOut,
+  weather?: WeatherOut,
+  weatherFailed = false,
+): PlanView {
   const weatherById = new Map(weather?.routes.map((r) => [r.id, r]));
   const rankById = new Map(weather?.ranking.routes.map((r) => [r.id, r.rank]));
 
@@ -86,7 +92,7 @@ export function buildPlanView(routes: RoutesOut, weather?: WeatherOut): PlanView
       const checkpoints: CheckpointView[] = route.checkpoints.map((cp, index) => {
         const wc = w?.checkpoints[index];
         const risk: RiskState = !wc
-          ? { kind: 'pending' }
+          ? { kind: weatherFailed ? 'unavailable' : 'pending' }
           : wc.risk
             ? {
                 kind: 'level',
@@ -122,5 +128,6 @@ export function buildPlanView(routes: RoutesOut, weather?: WeatherOut): PlanView
     shortfall: routes.shortfall?.message ?? null,
     ranking: weather?.ranking ?? null,
     weatherReady: weather !== undefined,
+    weatherFailed,
   };
 }

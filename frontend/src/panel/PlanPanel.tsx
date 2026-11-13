@@ -2,7 +2,6 @@ import { Box, Divider, Stack, Typography } from '@mui/material';
 import type { CheckpointRef } from '../plan/view';
 import type { PlanState } from '../plan/queries';
 import type { Submission } from '../plan/trip';
-import { WeatherFailedProvider } from '../risk/weatherFailed';
 import { Credits } from './Credits';
 import { CheckpointList, CheckpointRow } from './CheckpointList';
 import { PlanHeadline } from './PlanHeadline';
@@ -16,12 +15,15 @@ import { WhyThisRoute } from './WhyThisRoute';
  */
 export type PanelTier = 'peek' | 'half' | 'full' | 'all' | 'wide';
 
-/** What each tier shows, stated once. The headline is in every tier. */
+/**
+ * What each tier shows, stated once. The headline, the shortfall note and the credits are in every
+ * tier, so the sources are always one scroll away, even at the smallest sheet height.
+ */
 const PARTS: Record<
   PanelTier,
   { chips: boolean; cards: boolean; list: boolean; why: boolean; credits: boolean }
 > = {
-  peek: { chips: true, cards: false, list: false, why: false, credits: false },
+  peek: { chips: true, cards: false, list: false, why: false, credits: true },
   half: { chips: false, cards: true, list: false, why: true, credits: true },
   full: { chips: true, cards: false, list: true, why: true, credits: true },
   all: { chips: false, cards: true, list: true, why: true, credits: true },
@@ -73,7 +75,7 @@ export function PlanPanel({
   const routesColumn = (
     <Stack spacing={2}>
       <PlanHeadline state={state} submission={submission} onEditTrip={onEditTrip} />
-      {state.view?.shortfall && parts.cards && (
+      {state.view?.shortfall && (
         <Typography variant="body2" color="text.secondary">
           {state.view.shortfall}
         </Typography>
@@ -125,7 +127,7 @@ export function PlanPanel({
   );
 
   return (
-    <WeatherFailedProvider value={state.phase === 'weather_error'}>
+    <>
       {tier === 'wide' ? (
         <Box
           sx={{
@@ -140,6 +142,6 @@ export function PlanPanel({
       ) : (
         routesColumn
       )}
-    </WeatherFailedProvider>
+    </>
   );
 }

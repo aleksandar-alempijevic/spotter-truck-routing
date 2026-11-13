@@ -35,7 +35,7 @@ test('between two checkpoints the mile is interpolated from their ETAs', () => {
 });
 
 test('uneven ETAs are followed, not a constant speed: a slow stretch stays slow', () => {
-  // 25 miles take 30 minutes, then 25 miles take 3 hours, as when a break is in the ETAs.
+  // 25 miles take 30 minutes, then 25 miles take 3 hours.
   const uneven = [
     { mile: 0, etaMs: T0 },
     { mile: 25, etaMs: T0 + 0.5 * H },

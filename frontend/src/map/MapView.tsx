@@ -6,6 +6,7 @@ import type { GridModel } from '../timeline/grid';
 import type { HourHolder } from '../timeline/hourHolder';
 import { MapController } from './controller';
 import type { CheckpointRef } from '../plan/view';
+import type { RiskKey } from '../risk/levels';
 import type { CheckpointPopup, MapInsets } from './types';
 
 export interface MapViewProps {
@@ -21,6 +22,8 @@ export interface MapViewProps {
   onSelectCheckpoint(ref: CheckpointRef): void;
   /** What the hover popup says about a checkpoint. */
   describeCheckpoint(ref: CheckpointRef): CheckpointPopup | null;
+  /** What the readout says about a heatmap cell at the slider's hour. */
+  describeCell(level: RiskKey, hour: number): CheckpointPopup | null;
   onReady(): void;
   onFailed(): void;
   onBasemapUnavailable(): void;
@@ -54,6 +57,7 @@ export default function MapView(props: MapViewProps) {
         onSelectCheckpoint: (ref) => latest.current.onSelectCheckpoint(ref),
         onBasemapUnavailable: () => latest.current.onBasemapUnavailable(),
         describeCheckpoint: (ref) => latest.current.describeCheckpoint(ref),
+        describeCell: (level, hour) => latest.current.describeCell(level, hour),
       });
     } catch {
       latest.current.onFailed();
@@ -110,6 +114,16 @@ export default function MapView(props: MapViewProps) {
           fontSize: 14,
           lineHeight: 1.4,
           color: 'text.primary',
+        },
+        // The cell readout takes taps (it has a close button); the hover popup never does.
+        '& .cell-readout .maplibregl-popup-content': {
+          padding: '10px 28px 10px 12px',
+          fontSize: 14,
+        },
+        '& .cell-readout .maplibregl-popup-close-button': {
+          minWidth: 28,
+          minHeight: 28,
+          fontSize: 18,
         },
         // The map's own credit stays inside the part of the map the panels leave visible.
         '& .maplibregl-ctrl-bottom-right': {

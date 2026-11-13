@@ -65,7 +65,11 @@ export function usePlan(submission: Submission | null): PlanState {
   });
   const weather = weatherQuery.data;
 
-  const view = useMemo(() => (routes ? buildPlanView(routes, weather) : null), [routes, weather]);
+  const weatherFailed = weatherQuery.isError;
+  const view = useMemo(
+    () => (routes ? buildPlanView(routes, weather, weatherFailed) : null),
+    [routes, weather, weatherFailed],
+  );
   const explanation = useMemo(
     () => (view && weather ? explain(weather.ranking, view.routes) : null),
     [view, weather],
@@ -78,7 +82,7 @@ export function usePlan(submission: Submission | null): PlanState {
         ? 'routes_error'
         : routes === undefined
           ? 'routes_pending'
-          : weatherQuery.isError
+          : weatherFailed
             ? 'weather_error'
             : weather === undefined
               ? 'weather_pending'

@@ -1,6 +1,6 @@
 import type { ExpressionSpecification } from 'maplibre-gl';
 import type { Level } from '../api/types';
-import { RISK_STYLE } from '../risk/levels';
+import { CELL_ALPHA, RISK_STYLE } from '../risk/levels';
 import { NO_FORECAST } from '../timeline/grid';
 
 export const SOURCE = {
@@ -38,7 +38,7 @@ function withAlpha(hex: string, alpha: number): string {
 export function gridFillColor(levelNames: readonly Level[]): ExpressionSpecification {
   const branches = levelNames.flatMap((name, index) => [
     index,
-    withAlpha(RISK_STYLE[name].color, name === 'low' ? 0.22 : 0.62),
+    withAlpha(RISK_STYLE[name].color, name === 'low' ? CELL_ALPHA.low : CELL_ALPHA.other),
   ]);
   return ['match', cellLevel, ...branches, 'rgba(0,0,0,0)'] as ExpressionSpecification;
 }

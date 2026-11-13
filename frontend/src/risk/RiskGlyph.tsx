@@ -10,7 +10,7 @@ export function RiskGlyph({ risk, size = 18 }: { risk: RiskKey; size?: number })
         fill={style.outline ? 'none' : style.color}
         stroke={style.outline ? style.color : GLYPH_STROKE.solidColor}
         strokeWidth={style.outline ? GLYPH_STROKE.outlineWidth : GLYPH_STROKE.solidWidth}
-        strokeDasharray={risk === 'pending' ? GLYPH_STROKE.pendingDash.join(' ') : undefined}
+        strokeDasharray={style.dashed ? GLYPH_STROKE.pendingDash.join(' ') : undefined}
         strokeLinejoin="round"
       />
     </svg>
