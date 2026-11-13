@@ -5,8 +5,9 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
-from providers import MAX_LOCATIONS_PER_CALL, Outbound, fetch_forecasts
+from providers import Outbound
 from providers.errors import MalformedResponse, ProviderRateLimited, ProviderUnavailable
+from providers.openmeteo import MAX_LOCATIONS_PER_CALL, fetch_forecasts
 from tests.open_meteo_fixtures import STAMPS, location
 from weather import ForecastSeries
 

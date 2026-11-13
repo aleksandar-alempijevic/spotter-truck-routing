@@ -11,7 +11,7 @@ import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from routing.geo import MILES_PER_DEGREE, Point, distance_to_segment_miles
+from routing.geo import MILES_PER_DEGREE, Point, distance_to_segment_miles, longitude_degrees
 
 from .lattice import FORECAST_DEGREES, Cell, cell_center, forecast_cell
 
@@ -61,10 +61,15 @@ def plan_locations(
 ) -> LocationPlan:
     """The forecast locations for routes given as their checkpoint positions.
 
-    With `max_locations`, planning stops with `TooManyLocations` as soon as the checkpoint cells
-    or the corridor's display cells pass it, so the work done is bounded by the bound and not by
-    the shape of the routes. The display cells are held to the same number because every grid
-    cell reads a forecast cell: the plan can never need more locations than cells.
+    With `max_locations`, `TooManyLocations` is raised when the plan's total (checkpoint cells
+    plus grid-only cells) passes it. Two cheaper checks raise it earlier, as soon as the checkpoint
+    cells or the corridor's display cells alone pass it. Both are lower bounds on the total: every
+    display cell reads a forecast cell, and distinct display cells read distinct ones, so a
+    corridor of more display cells than the bound already needs more locations than the bound.
+
+    Planning stops at the bound, but the work before it stops is a sweep of each segment's
+    bounding box. That is small for segments of road length (`longitude_span_coverable` is the
+    check that keeps a segment's longitude span to what its miles cover), and not otherwise.
     """
     checkpoint_cells = tuple(
         dict.fromkeys(forecast_cell(point) for points in routes for point in points)
@@ -85,6 +90,8 @@ def plan_locations(
 
     known = set(checkpoint_cells)
     grid_only = sorted({cell.forecast for cell in grid} - known)
+    if max_locations is not None and len(checkpoint_cells) + len(grid_only) > max_locations:
+        raise TooManyLocations
     return LocationPlan(checkpoint_cells, tuple(grid), tuple(grid_only))
 
 
@@ -102,8 +109,7 @@ def _corridor_blocks(routes: Sequence[Sequence[Point]], limit: int | None) -> se
     for points in routes:
         for a, b in zip(points, points[1:] or points, strict=False):
             lat_lo, lat_hi = min(a[0], b[0]) - lat_pad, max(a[0], b[0]) + lat_pad
-            widest = min(89.0, max(abs(a[0]), abs(b[0])) + lat_pad)
-            lon_pad = lat_pad / math.cos(math.radians(widest))
+            lon_pad = longitude_degrees(CORRIDOR_MILES, max(abs(a[0]), abs(b[0])) + lat_pad)
             lon_lo, lon_hi = min(a[1], b[1]) - lon_pad, max(a[1], b[1]) + lon_pad
             for row in range(
                 math.floor(lat_lo / DISPLAY_DEGREES), math.floor(lat_hi / DISPLAY_DEGREES) + 1
@@ -114,8 +120,17 @@ def _corridor_blocks(routes: Sequence[Sequence[Point]], limit: int | None) -> se
                     if (row, column) in found:
                         continue
                     center = cell_center(_block_center_cell((row, column)))
+                    if not (-90 <= center[0] <= 90 and -180 <= center[1] <= 180):
+                        continue  # a corridor reaching past a pole or the antimeridian
                     if distance_to_segment_miles(center, a, b) <= CORRIDOR_MILES:
                         found.add((row, column))
                         if limit is not None and len(found) > limit:
                             raise TooManyLocations
     return found
+
+
+def longitude_span_coverable(a: Point, b: Point, miles: float) -> bool:
+    """Whether the longitudes of a and b differ by no more than `miles` of road can cover at their
+    higher latitude. The corridor sweeps the planar box between the two longitudes, so a segment
+    that is short on the ground but spans many degrees (across the antimeridian) fails this."""
+    return abs(b[1] - a[1]) <= longitude_degrees(miles, max(abs(a[0]), abs(b[0])))

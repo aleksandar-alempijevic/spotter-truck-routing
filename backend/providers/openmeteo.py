@@ -9,7 +9,7 @@ import asyncio
 import math
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, NewType
 
 from routing import Point
 from weather import ForecastSeries
@@ -49,6 +49,10 @@ _UNITS = {
 string means the units are unknown."""
 _FIELDS = tuple(_UNITS)
 
+RawForecasts = NewType("RawForecasts", list[Any])
+"""A call's answers as received, before they are checked: what `request_forecasts` hands to
+`parse_forecasts`. Nothing else should look inside."""
+
 
 async def fetch_forecasts(outbound: Outbound, points: Sequence[Point]) -> list[ForecastSeries]:
     """One series per point, in the order of `points`, from one call of at most
@@ -62,8 +66,9 @@ async def fetch_forecasts(outbound: Outbound, points: Sequence[Point]) -> list[F
     return await asyncio.to_thread(parse_forecasts, await request_forecasts(outbound, points))
 
 
-async def request_forecasts(outbound: Outbound, points: Sequence[Point]) -> list[Any]:
+async def request_forecasts(outbound: Outbound, points: Sequence[Point]) -> RawForecasts:
     """The call itself: one raw location answer per point, in order, not yet checked or parsed.
+    The answers are opaque to the caller: they are only for `parse_forecasts`.
 
     Raises the neutral errors, and `MalformedResponse` when the number of answers is wrong.
     """
@@ -88,10 +93,10 @@ async def request_forecasts(outbound: Outbound, points: Sequence[Point]) -> list
     locations = body if isinstance(body, list) else [body]
     if len(locations) != len(points):
         raise MalformedResponse
-    return locations
+    return RawForecasts(locations)
 
 
-def parse_forecasts(locations: list[Any]) -> list[ForecastSeries]:
+def parse_forecasts(locations: RawForecasts) -> list[ForecastSeries]:
     """Check and convert the answers of `request_forecasts`. Real work for 150 locations of 96
     hours, so callers on the event loop run it in a thread."""
     return [_parse(location) for location in locations]

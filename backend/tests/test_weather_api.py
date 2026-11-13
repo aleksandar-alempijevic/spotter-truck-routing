@@ -13,7 +13,7 @@ from django.test import AsyncClient
 from api import api as api_module
 from api import weather_report
 from api.schemas import WeatherIn
-from providers import MAX_LOCATIONS_PER_CALL
+from providers.openmeteo import MAX_LOCATIONS_PER_CALL
 from risk_rules import (
     Checkpoint,
     Level,
@@ -428,7 +428,7 @@ def failing_second_chunk(calls, cells, release):
     return answer
 
 
-async def test_a_chunk_that_fails_leaves_the_chunks_cached_before_it_for_the_retry(
+async def test_a_chunk_that_fails_leaves_every_other_chunk_cached_for_the_retry(
     provider_mock, runtime
 ):
     calls = forecast(provider_mock)
@@ -470,7 +470,6 @@ async def test_a_chunk_whose_response_arrived_is_cached_although_a_sibling_fails
     )
 
     failed = await post(body)
-    await until(lambda: len(runtime.cache) == len(cells) - MAX_LOCATIONS_PER_CALL)
 
     assert failed.status_code == 502
     cached = {cell for cell in cells if runtime.cache.get(cell, HOUR)}
@@ -715,7 +714,45 @@ async def test_checkpoints_that_jump_across_the_antimeridian_are_a_422_before_an
 
     assert response.status_code == 422
     assert response.json()["code"] == "validation_error"
+    # The service box rejects it first; the planning bound's message would read differently.
+    assert "North America" in response.json()["message"]
     assert calls == []
+
+
+def box_corner(lat=None, lon=None):
+    """A body whose second checkpoint is moved to the given latitude or longitude."""
+
+    def mutate(body):
+        checkpoint = body["routes"][0]["checkpoints"][1]
+        checkpoint.update(**({"lat": lat} if lat is not None else {"lon": lon}))
+
+    return mutate
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [box_corner(lat=80.0), box_corner(lat=23.9), box_corner(lon=-170.1), box_corner(lon=-49.9)],
+    ids=["too far north", "too far south", "too far west", "too far east"],
+)
+async def test_checkpoints_outside_north_america_are_a_422_before_any_call(provider_mock, mutate):
+    calls = forecast(provider_mock)
+    body = request(route(lat=40.0, marks=(0, 10, 20)), spacing=10)
+    mutate(body)
+
+    response = await post(body)
+
+    assert response.status_code == 422
+    assert "North America" in response.json()["message"]
+    assert calls == []
+
+
+@pytest.mark.parametrize(
+    ("lat", "lon"), [(24.0, -100.0), (72.0, -100.0), (40.0, -170.0), (40.0, -50.0)]
+)
+def test_the_edges_of_the_service_box_are_inside_it(lat, lon):
+    body = request(route(lat=lat, lon=lon, marks=(0,), etas=[NOW]), spacing=10)
+
+    WeatherIn.model_validate(body)
 
 
 def test_a_northern_route_with_wide_longitude_steps_is_accepted():

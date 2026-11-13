@@ -13,7 +13,7 @@ import time
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
-from providers import MAX_LOCATIONS_PER_CALL
+from providers.openmeteo import MAX_LOCATIONS_PER_CALL
 from providers.outbound import Outbound, UpstreamBadRequest
 from weather import Cell, LocationPlan
 

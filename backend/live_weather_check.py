@@ -25,9 +25,9 @@ from datetime import UTC, datetime
 from typing import Any
 
 from live_common import LocationMeter, chunked, plan_stats, write_summary
-from providers import MAX_LOCATIONS_PER_CALL, Outbound, fetch_forecasts
+from providers import Outbound
 from providers.errors import ProviderError
-from providers.openmeteo import FORECAST_HOURS
+from providers.openmeteo import FORECAST_HOURS, MAX_LOCATIONS_PER_CALL, fetch_forecasts
 from routing import build_checkpoints
 from routing.via_cities import CITIES, via_candidates
 from tests.route_fixtures import route_from

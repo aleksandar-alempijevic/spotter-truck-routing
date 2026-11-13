@@ -1,6 +1,5 @@
 """Wire schemas. Distances are in miles, load in pounds, and times are absolute instants."""
 
-import math
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal, Self
 
@@ -9,8 +8,9 @@ from pydantic import AwareDatetime, Field, model_validator
 
 from risk_rules import Condition, Level, RankingStep
 from routing.checkpoints import MARK_EPSILON_MILES
-from routing.geo import METERS_PER_MILE, MILES_PER_DEGREE, haversine_m
+from routing.geo import METERS_PER_MILE, haversine_m
 from routing.route import RouteSource
+from weather import longitude_span_coverable
 
 from .planner import ShortfallReason
 
@@ -40,6 +40,12 @@ MAX_CHECKPOINTS_PER_ROUTE = 600
 room for a route of about 6,000 miles."""
 MAX_ID_LENGTH = 64
 MAX_WEATHER_ROUTES = 3
+SERVICE_LATITUDES = (24.0, 72.0)
+SERVICE_LONGITUDES = (-170.0, -50.0)
+SERVICE_BOX_TEXT = "latitude 24 to 72, longitude -170 to -50"
+"""The box the weather request's checkpoints must lie in: the contiguous US with its margin, Alaska
+and the Canadian corridors a US-to-US truck route can cross. Outside it the corridor sweep's
+planar and pole-and-antimeridian assumptions stop holding."""
 GAP_DISTANCE_SLACK = 1.05
 GAP_DISTANCE_SLACK_MILES = 0.25
 """Two consecutive checkpoints are never farther apart in a straight line than their mark gap;
@@ -194,6 +200,12 @@ class WeatherIn(PlanParams):
 def _check_marks(route: RouteCore, interval_miles: float) -> None:
     marks = [checkpoint.mile for checkpoint in route.checkpoints]
     where = f"route {route.id!r}"
+    if not all(
+        SERVICE_LATITUDES[0] <= c.lat <= SERVICE_LATITUDES[1]
+        and SERVICE_LONGITUDES[0] <= c.lon <= SERVICE_LONGITUDES[1]
+        for c in route.checkpoints
+    ):
+        raise ValueError(f"{where}: checkpoints must lie in North America ({SERVICE_BOX_TEXT})")
     if marks[0] != 0:
         raise ValueError(f"{where}: the first checkpoint must be at mile 0")
     if marks[-1] > route.total_miles:
@@ -206,21 +218,10 @@ def _check_marks(route: RouteCore, interval_miles: float) -> None:
             raise ValueError(f"{where}: checkpoints are farther apart than the interval")
         allowed_miles = gap * GAP_DISTANCE_SLACK + GAP_DISTANCE_SLACK_MILES
         straight = haversine_m((earlier.lat, earlier.lon), (later.lat, later.lon))
-        if straight / METERS_PER_MILE > allowed_miles or _longitude_jump_too_wide(
-            earlier, later, allowed_miles
+        if straight / METERS_PER_MILE > allowed_miles or not longitude_span_coverable(
+            (earlier.lat, earlier.lon), (later.lat, later.lon), allowed_miles
         ):
             raise ValueError(f"{where}: two checkpoints are farther apart than their miles allow")
-
-
-def _longitude_jump_too_wide(earlier: CheckpointOut, later: CheckpointOut, miles: float) -> bool:
-    """Whether the longitudes differ by more than `miles` can cover at the higher latitude.
-
-    The straight-line check cannot see this across the antimeridian (-179.99 and 179.99 are a mile
-    and a half apart), where the corridor's planar sweep would cross the whole map. Routes here
-    stay in the US, so a crossing is never real.
-    """
-    cos_latitude = max(math.cos(math.radians(max(abs(earlier.lat), abs(later.lat)))), 0.0175)
-    return abs(later.lon - earlier.lon) > miles / (MILES_PER_DEGREE * cos_latitude)
 
 
 class ConditionsOut(Schema):

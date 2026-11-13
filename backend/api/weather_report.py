@@ -14,7 +14,7 @@ from typing import Any
 
 from ninja.errors import ValidationError
 
-from providers import MAX_LOCATIONS_PER_CALL, Outbound, ProviderTimeout, openmeteo
+from providers import Outbound, ProviderTimeout, openmeteo
 from providers.errors import ProviderRateLimited
 from risk_rules import (
     Checkpoint,
@@ -76,7 +76,8 @@ class Runtime:
     sleep: Callable[[float], Awaitable[None]]
     cache: ForecastCache
     time: Callable[[], float]
-    """The clock the deadline is measured on, in seconds; the event loop's in production."""
+    """The clock the deadline is measured on, in seconds; the event loop's in production. Every
+    `deadline` in this module is an instant on this clock, in these seconds."""
     budget_s: float = BUDGET_S
     max_locations: int = MAX_LOCATIONS
 
@@ -109,8 +110,6 @@ async def build_report(
             plan_locations, positions, max_locations=runtime.max_locations
         )
     except TooManyLocations:
-        plan = None
-    if plan is None or len(plan.cells) > runtime.max_locations:
         raise ValidationError(
             [
                 {
@@ -119,7 +118,7 @@ async def build_report(
                     "forecast locations; use a larger checkpoint interval or shorter routes",
                 }
             ]
-        )
+        ) from None
 
     series_by_cell: dict[Cell, ForecastSeries] = {}
     missing = []
@@ -144,17 +143,20 @@ async def _fetch(
     cells: list[Cell], deadline: float, runtime: Runtime
 ) -> dict[Cell, ForecastSeries]:
     """Fetch the cells in chunks, all at once under the outbound cap, caching each chunk as it
-    arrives.
+    arrives. `deadline` is an instant on `runtime.time`.
 
     When one chunk fails the others' unfinished calls are cancelled, but a chunk whose response
-    has already arrived is still parsed and cached, so a retry fetches only what is missing.
+    has already arrived is still parsed and cached, and this waits for that (parse time only, no
+    network) before the error goes out, so a retry fetches only what is missing.
     """
     fetched: dict[Cell, ForecastSeries] = {}
     chunks = [
-        cells[i : i + MAX_LOCATIONS_PER_CALL] for i in range(0, len(cells), MAX_LOCATIONS_PER_CALL)
+        cells[i : i + openmeteo.MAX_LOCATIONS_PER_CALL]
+        for i in range(0, len(cells), openmeteo.MAX_LOCATIONS_PER_CALL)
     ]
+    storing: list[asyncio.Future[None]] = []
 
-    async def store(chunk: list[Cell], raw: list[Any]) -> None:
+    async def store(chunk: list[Cell], raw: openmeteo.RawForecasts) -> None:
         series = await asyncio.to_thread(openmeteo.parse_forecasts, raw)
         for cell, one_series in zip(chunk, series, strict=True):
             runtime.cache.put(cell, one_series)
@@ -163,9 +165,8 @@ async def _fetch(
     async def one(outbound: Outbound, chunk: list[Cell]) -> None:
         raw = await _request_chunk(outbound, chunk, deadline, runtime)
         # Its own task, so cancelling this chunk after its response arrived does not stop it.
-        storing = asyncio.ensure_future(store(chunk, raw))
-        storing.add_done_callback(_consume)
-        await asyncio.shield(storing)
+        storing.append(asyncio.ensure_future(store(chunk, raw)))
+        await asyncio.shield(storing[-1])
 
     try:
         async with asyncio.timeout(max(0.0, deadline - runtime.time())):
@@ -179,19 +180,23 @@ async def _fetch(
                     await asyncio.gather(*tasks, return_exceptions=True)
     except TimeoutError:
         raise ProviderTimeout from None
+    finally:
+        await _settle(storing)
     return fetched
 
 
-def _consume(task: asyncio.Future[None]) -> None:
-    """Mark a finished task's outcome as seen, so one whose request already failed is not
-    reported as never retrieved."""
-    if not task.cancelled():
-        task.exception()
+async def _settle(storing: list[asyncio.Future[None]]) -> None:
+    """Wait for the parse-and-cache tasks still running, and log one that failed: a failure of
+    the request itself is raised, but one that happens after the request has already failed would
+    otherwise go unseen."""
+    for outcome in await asyncio.gather(*storing, return_exceptions=True):
+        if isinstance(outcome, Exception):
+            logger.warning("weather: parsing a chunk failed: %s", type(outcome).__name__)
 
 
 async def _request_chunk(
     outbound: Outbound, chunk: list[Cell], deadline: float, runtime: Runtime
-) -> list[Any]:
+) -> openmeteo.RawForecasts:
     """One chunk's raw answers, waiting out a refusal when the wait is short and fits the deadline.
 
     The wait happens here, after the call has released its outbound slot, so other chunks keep

@@ -8,6 +8,10 @@ METERS_PER_MILE = 1609.344
 MILES_PER_DEGREE = math.radians(1) * EARTH_RADIUS_M / METERS_PER_MILE
 """Miles in one degree of latitude."""
 
+MAX_PLANAR_LATITUDE = 89.0
+"""Latitude above which a degree of longitude is treated as `cos(89 deg)` of a degree of latitude,
+so degrees of longitude per mile stay finite near the poles."""
+
 type Point = tuple[float, float]
 """A position as (latitude, longitude) in degrees."""
 
@@ -33,3 +37,9 @@ def distance_to_segment_miles(p: Point, a: Point, b: Point) -> float:
     length2 = dx * dx + dy * dy
     t = 0.0 if length2 == 0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / length2))
     return math.hypot(ax + t * dx, ay + t * dy) * MILES_PER_DEGREE
+
+
+def longitude_degrees(miles: float, latitude: float) -> float:
+    """Degrees of longitude that span `miles` of east-west distance at the latitude."""
+    cosine = math.cos(math.radians(min(abs(latitude), MAX_PLANAR_LATITUDE)))
+    return miles / (MILES_PER_DEGREE * cosine)

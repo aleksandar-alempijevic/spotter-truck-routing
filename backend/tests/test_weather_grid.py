@@ -1,7 +1,15 @@
+import math
+
 import pytest
 
 from routing.geo import METERS_PER_MILE, haversine_m
-from weather import TooManyLocations, cell_center, forecast_cell, plan_locations
+from weather import (
+    TooManyLocations,
+    cell_center,
+    forecast_cell,
+    longitude_span_coverable,
+    plan_locations,
+)
 from weather.grid import BLOCK, CORRIDOR_MILES
 
 
@@ -109,7 +117,7 @@ def test_the_plan_does_not_depend_on_the_order_of_the_routes():
 def test_planning_stops_once_the_checkpoint_cells_pass_the_bound():
     route = [(30.0 + 0.1 * i, -100.0) for i in range(50)]
 
-    assert len(plan_locations([route], max_locations=50).checkpoint_cells) == 50
+    assert len(plan_locations([route], max_locations=10_000).checkpoint_cells) == 50
     with pytest.raises(TooManyLocations):
         plan_locations([route], max_locations=49)
 
@@ -137,3 +145,64 @@ def test_planning_stops_once_the_corridor_passes_the_bound_however_the_routes_ar
         plan_locations([route, route, route], max_locations=1800)
 
     assert calls < 20_000
+
+
+def eastward_route(lat, count=600, lon=-125.0, miles=10):
+    points = []
+    for _ in range(count):
+        points.append((lat, lon))
+        lon += miles / (69.09 * math.cos(math.radians(lat)))
+    return points
+
+
+def test_the_bound_applies_to_the_total_not_only_to_the_checkpoint_cells():
+    routes = [eastward_route(lat) for lat in (30, 40, 48)]
+    unbounded = plan_locations(routes)
+
+    # The checkpoints alone fit the bound; the grid cells beside them take the total past it.
+    assert len(unbounded.checkpoint_cells) <= 1800 < len(unbounded.cells)
+    with pytest.raises(TooManyLocations):
+        plan_locations(routes, max_locations=1800)
+    assert len(plan_locations(routes, max_locations=len(unbounded.cells)).cells) == len(
+        unbounded.cells
+    )
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "coverable"),
+    [
+        ((40.0, -100.0), (40.0, -99.2), True),  # 41 miles at 40 degrees north
+        ((40.0, -100.0), (40.0, -98.0), False),
+        ((64.0, -150.0), (64.0, -148.4), True),
+        ((40.0, -179.99), (40.0, 179.99), False),  # 1.4 miles on the ground, the whole map apart
+        ((89.99, -20.0), (89.99, 20.0), True),  # near a pole the floor keeps the span finite
+    ],
+)
+def test_a_segment_is_coverable_when_its_longitude_span_fits_its_miles(a, b, coverable):
+    assert longitude_span_coverable(a, b, 50.0) is coverable
+
+
+def test_a_cell_centre_never_leaves_the_valid_ranges():
+    assert cell_center(forecast_cell((90.0, 180.0))) == (90.0, 180.0)
+    assert cell_center(forecast_cell((-90.0, -180.0)))[0] >= -90.0
+
+
+@pytest.mark.parametrize(
+    "route",
+    [
+        [(90.0, -170.0), (90.0, -126.5)],
+        [(89.95, 179.0), (89.95, 179.95)],
+        [(40.0, 179.0), (40.0, 179.95)],
+        [(-89.95, -179.95), (-89.95, -179.0)],
+    ],
+    ids=["north pole", "pole and the antimeridian", "the antimeridian", "south pole"],
+)
+def test_the_corridor_never_has_a_cell_outside_the_valid_coordinates(route):
+    plan = plan_locations([route])
+
+    assert plan.grid
+    for cell in plan.grid:
+        assert -90 <= cell.lat <= 90 and -180 <= cell.lon <= 180
+        assert -90 <= cell_center(cell.forecast)[0] <= 90
+    for cell in plan.cells:
+        assert -90 <= cell_center(cell)[0] <= 90 and -180 <= cell_center(cell)[1] <= 180
