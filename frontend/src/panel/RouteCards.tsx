@@ -5,7 +5,9 @@ import { RISK_STYLE, LEVELS_BY_SEVERITY } from '../risk/levels';
 import { RiskBadge } from '../risk/RiskBadge';
 import { RiskGlyph } from '../risk/RiskGlyph';
 import { formatDuration } from '../time/zone';
-import { routeWorstRisk } from './riskOfRoute';
+import { formatMiles } from '../plan/format';
+import { useWeatherFailed } from '../risk/weatherFailed';
+import { selectableSx } from './selectable';
 import { arrivalInDestinationZone, arrivalMs, originClock } from './times';
 
 interface Props {
@@ -13,15 +15,12 @@ interface Props {
   trip: Trip;
   selectedId: string | null;
   recommendedId: string | null;
-  /** The weather request failed, so a route's risk is unavailable rather than still coming. */
-  weatherFailed?: boolean;
   onSelect(routeId: string): void;
 }
 
-const fmtMiles = (miles: number) => `${Math.round(miles).toLocaleString('en-US')} mi`;
-
 /** Miles at each level as a bar and as text, so the bar never carries the meaning alone. */
-function MilesByLevel({ route, weatherFailed }: { route: RouteView; weatherFailed?: boolean }) {
+function MilesByLevel({ route }: { route: RouteView }) {
+  const weatherFailed = useWeatherFailed();
   const summary = route.summary;
   if (!summary) {
     // Holds the space the summary will take, so late weather shifts nothing.
@@ -67,7 +66,7 @@ function MilesByLevel({ route, weatherFailed }: { route: RouteView; weatherFaile
           <Box
             sx={{
               width: `${(summary.no_forecast_miles / total) * 100}%`,
-              background: 'repeating-linear-gradient(45deg, #546e7a 0 2px, #eceff1 2px 5px)',
+              background: `repeating-linear-gradient(45deg, ${RISK_STYLE.none.color} 0 2px, #eceff1 2px 5px)`,
             }}
           />
         )}
@@ -76,12 +75,12 @@ function MilesByLevel({ route, weatherFailed }: { route: RouteView; weatherFaile
         {LEVELS_BY_SEVERITY.filter((level) => miles[level] > 0).map((level, i) => (
           <span key={level}>
             {i > 0 ? ' · ' : ''}
-            {RISK_STYLE[level].label} {fmtMiles(miles[level])}
+            {RISK_STYLE[level].label} {formatMiles(miles[level])}
           </span>
         ))}
         {summary.no_forecast_miles > 0 && (
           <span>
-            {' · '}No forecast {fmtMiles(summary.no_forecast_miles)}
+            {' · '}No forecast {formatMiles(summary.no_forecast_miles)}
           </span>
         )}
       </Typography>
@@ -90,14 +89,7 @@ function MilesByLevel({ route, weatherFailed }: { route: RouteView; weatherFaile
 }
 
 /** One card per route: time, distance, arrival and the miles at each level. */
-export function RouteCards({
-  routes,
-  trip,
-  selectedId,
-  recommendedId,
-  weatherFailed,
-  onSelect,
-}: Props) {
+export function RouteCards({ routes, trip, selectedId, recommendedId, onSelect }: Props) {
   return (
     <Stack spacing={1.5} component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
       {routes.map((route) => {
@@ -115,9 +107,7 @@ export function RouteCards({
                 textAlign: 'left',
                 p: 1.5,
                 borderRadius: 2,
-                border: 2,
-                borderColor: selected ? 'primary.main' : 'divider',
-                bgcolor: selected ? 'action.selected' : 'background.paper',
+                ...selectableSx(selected),
               }}
             >
               <Stack
@@ -134,20 +124,17 @@ export function RouteCards({
                 )}
                 {route.isFastest && <Chip size="small" variant="outlined" label="Fastest" />}
                 <Box sx={{ flex: 1 }} />
-                <RiskBadge
-                  state={routeWorstRisk(route)}
-                  pendingLabel={weatherFailed ? 'Weather unavailable' : undefined}
-                />
+                <RiskBadge state={route.risk} />
               </Stack>
               <Typography variant="body2" sx={{ mt: 0.5 }}>
-                {formatDuration(route.travelSeconds)} · {fmtMiles(route.miles)}
+                {formatDuration(route.travelSeconds)} · {formatMiles(route.miles)}
                 {route.rank !== null ? ` · ranked ${route.rank}` : ''}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Arrives {originClock(trip, arrival)}
                 {inDestination ? ` (${inDestination} there)` : ''}
               </Typography>
-              <MilesByLevel route={route} weatherFailed={weatherFailed} />
+              <MilesByLevel route={route} />
               {route.summary && route.summary.no_travel_miles > 0 && (
                 <Box
                   role="note"
@@ -169,7 +156,7 @@ export function RouteCards({
                   >
                     <RiskGlyph risk="no_travel" size={18} />
                   </Box>
-                  No Travel on {fmtMiles(route.summary.no_travel_miles)} of this route
+                  No Travel on {formatMiles(route.summary.no_travel_miles)} of this route
                 </Box>
               )}
             </ButtonBase>

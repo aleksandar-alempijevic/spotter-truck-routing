@@ -25,6 +25,8 @@ import {
   HATCH_IMAGE,
   ICON_PREFIX,
   LAYER,
+  MAP_COLORS,
+  ROUTE_WIDTH,
   routeColor,
   routeWidth,
   SOURCE,
@@ -68,6 +70,8 @@ export class MapController {
   private popupKey: string | null = null;
 
   private routes: readonly RouteView[] = [];
+  private bounds: ReturnType<typeof routeBounds> = null;
+  private queuedFit: { animate: boolean; frame: number } | null = null;
   private selectedRouteId: string | null = null;
   private selectedCheckpoint: CheckpointRef | null = null;
   private grid: GridModel | null = null;
@@ -112,7 +116,7 @@ export class MapController {
 
     this.resizeObserver = new ResizeObserver(() => {
       this.map.resize();
-      if (!this.userMoved) this.fit(false);
+      this.queueFit(false);
     });
     this.resizeObserver.observe(container);
   }
@@ -121,8 +125,12 @@ export class MapController {
 
   setRoutes(routes: readonly RouteView[]): void {
     this.routes = routes;
+    this.bounds = routeBounds(routes);
     this.hidePopup();
-    if (this.styleReady) this.pushRoutes();
+    if (this.styleReady) {
+      this.pushRouteData();
+      this.pushRouteStyle();
+    }
   }
 
   setSelection(routeId: string | null, checkpoint: CheckpointRef | null): void {
@@ -130,7 +138,7 @@ export class MapController {
     this.selectedCheckpoint = checkpoint;
     if (this.styleReady) {
       this.pushSelection();
-      this.pushRoutes();
+      this.pushRouteStyle();
     }
   }
 
@@ -150,12 +158,29 @@ export class MapController {
     );
     this.insets = insets;
     // Until the driver moves the map, the routes stay centred in the part the panels leave open.
-    if (changed && !this.userMoved && this.styleReady) this.fit(true);
+    if (changed && this.styleReady) this.queueFit(true);
+  }
+
+  /**
+   * A fit at the next frame, for as long as the driver has not moved the map. A resize and an
+   * inset change that arrive together make one fit, animated if either asked for it.
+   */
+  private queueFit(animate: boolean): void {
+    if (this.queuedFit) {
+      this.queuedFit.animate ||= animate;
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      const queued = this.queuedFit;
+      this.queuedFit = null;
+      if (queued && !this.userMoved) this.fit(queued.animate);
+    });
+    this.queuedFit = { animate, frame };
   }
 
   /** Fit every route into the part of the map the panels leave visible. */
   fit(animate: boolean): void {
-    const bounds = routeBounds(this.routes);
+    const bounds = this.bounds;
     if (!bounds) return;
     const { clientWidth: width, clientHeight: height } = this.container;
     if (width === 0 || height === 0) return;
@@ -185,6 +210,7 @@ export class MapController {
 
   refit(): void {
     this.userMoved = false;
+    this.cancelQueuedFit();
     this.fit(true);
   }
 
@@ -192,7 +218,13 @@ export class MapController {
     this.map.zoomTo(this.map.getZoom() + delta, { duration: 250 });
   }
 
+  private cancelQueuedFit(): void {
+    if (this.queuedFit) cancelAnimationFrame(this.queuedFit.frame);
+    this.queuedFit = null;
+  }
+
   destroy(): void {
+    this.cancelQueuedFit();
     this.hidePopup();
     this.unsubscribeHour?.();
     this.resizeObserver.disconnect();
@@ -211,8 +243,7 @@ export class MapController {
     if (!map.hasImage(HATCH_IMAGE)) map.addImage(HATCH_IMAGE, hatchImage());
 
     for (const id of OUR_SOURCES) {
-      if (!map.getSource(id))
-        map.addSource(id, { type: 'geojson', data: emptyCollection() as never });
+      if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: emptyCollection() });
     }
 
     // The heatmap sits under the basemap's labels; everything else sits on top.
@@ -243,14 +274,20 @@ export class MapController {
       type: 'line',
       source: SOURCE.routes,
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#ffffff', 'line-width': 7 },
+      paint: {
+        'line-color': MAP_COLORS.routeCasing,
+        'line-width': routeWidth(null, ...ROUTE_WIDTH.casing),
+      },
     });
     add({
       id: LAYER.routeLine,
       type: 'line',
       source: SOURCE.routes,
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#5f7a91', 'line-width': 4 },
+      paint: {
+        'line-color': routeColor(null),
+        'line-width': routeWidth(null, ...ROUTE_WIDTH.line),
+      },
     });
     add({
       id: LAYER.checkpoints,
@@ -258,7 +295,7 @@ export class MapController {
       source: SOURCE.checkpoints,
       layout: {
         'icon-image': ['concat', ICON_PREFIX, ['get', 'icon']],
-        'icon-size': 0.5,
+        'icon-size': checkpointIconSize(null),
         'icon-allow-overlap': true,
         'icon-ignore-placement': true,
       },
@@ -270,7 +307,7 @@ export class MapController {
       paint: {
         'circle-radius': 17,
         'circle-color': 'rgba(0,0,0,0)',
-        'circle-stroke-color': '#0d47a1',
+        'circle-stroke-color': MAP_COLORS.ring,
         'circle-stroke-width': 3.5,
       },
     });
@@ -279,8 +316,8 @@ export class MapController {
       type: 'circle',
       source: SOURCE.trucks,
       paint: {
-        'circle-radius': 9,
-        'circle-color': '#212121',
+        'circle-radius': truckRadius(null),
+        'circle-color': MAP_COLORS.truck,
         'circle-stroke-color': '#ffffff',
         'circle-stroke-width': 3,
       },
@@ -291,14 +328,21 @@ export class MapController {
       source: SOURCE.endpoints,
       paint: {
         'circle-radius': 8,
-        'circle-color': ['match', ['get', 'kind'], 'origin', '#1b5e20', '#0d47a1'],
+        'circle-color': [
+          'match',
+          ['get', 'kind'],
+          'origin',
+          MAP_COLORS.origin,
+          MAP_COLORS.destination,
+        ],
         'circle-stroke-color': '#ffffff',
         'circle-stroke-width': 3,
       },
     });
 
     this.styleReady = true;
-    this.pushRoutes();
+    this.pushRouteData();
+    this.pushRouteStyle();
     this.pushSelection();
     this.pushGrid();
     if (!this.announcedReady) {
@@ -311,25 +355,30 @@ export class MapController {
     return this.map.getSource(id) as GeoJsonSource | undefined;
   }
 
-  private pushRoutes(): void {
+  /** The routes, checkpoints and endpoints as map data. Only a new plan changes it. */
+  private pushRouteData(): void {
+    this.source(SOURCE.routes)?.setData(routeLines(this.routes));
+    this.source(SOURCE.checkpoints)?.setData(checkpointPoints(this.routes));
+    this.source(SOURCE.endpoints)?.setData(endpointPoints(this.routes));
+    this.pushTrucks();
+  }
+
+  /** How the selected route looks against the others. A selection changes this and no data. */
+  private pushRouteStyle(): void {
     const map = this.map;
-    this.source(SOURCE.routes)?.setData(routeLines(this.routes) as never);
-    this.source(SOURCE.checkpoints)?.setData(checkpointPoints(this.routes) as never);
-    this.source(SOURCE.endpoints)?.setData(endpointPoints(this.routes) as never);
     const id = this.selectedRouteId;
     map.setPaintProperty(LAYER.routeLine, 'line-color', routeColor(id));
-    map.setPaintProperty(LAYER.routeLine, 'line-width', routeWidth(id, 6, 4));
-    map.setPaintProperty(LAYER.routeCasing, 'line-width', routeWidth(id, 10, 7));
+    map.setPaintProperty(LAYER.routeLine, 'line-width', routeWidth(id, ...ROUTE_WIDTH.line));
+    map.setPaintProperty(LAYER.routeCasing, 'line-width', routeWidth(id, ...ROUTE_WIDTH.casing));
     map.setLayoutProperty(LAYER.checkpoints, 'icon-size', checkpointIconSize(id));
     map.setLayoutProperty(LAYER.checkpoints, 'symbol-sort-key', checkpointSortKey(id));
     map.setPaintProperty(LAYER.trucks, 'circle-radius', truckRadius(id));
-    this.pushTrucks();
   }
 
   private pushSelection(): void {
     const sel = this.selectedCheckpoint;
     this.source(SOURCE.selected)?.setData(
-      selectedPoint(this.routes, sel?.routeId ?? null, sel?.index ?? null) as never,
+      selectedPoint(this.routes, sel?.routeId ?? null, sel?.index ?? null),
     );
   }
 
@@ -339,13 +388,13 @@ export class MapController {
     // New cells start clean: state left from an earlier grid must not colour them.
     this.map.removeFeatureState({ source: SOURCE.grid });
     if (!this.grid) {
-      source.setData(emptyCollection() as never);
+      source.setData(emptyCollection());
       return;
     }
     this.shownHour = this.hour?.get() ?? 0;
     this.pushTrucks();
     this.map.setPaintProperty(LAYER.gridFill, 'fill-color', gridFillColor(this.grid.levelNames));
-    source.setData(gridCells(this.grid, this.shownHour) as never);
+    source.setData(gridCells(this.grid, this.shownHour));
   }
 
   /** The slider's path: only the cells whose level differs from the hour on screen are touched. */
@@ -365,7 +414,7 @@ export class MapController {
     if (!source) return;
     const grid = this.grid;
     const trucks = grid ? trucksAt(this.routes, hourInstant(grid, this.shownHour)) : [];
-    source.setData(truckPoints(trucks) as never);
+    source.setData(truckPoints(trucks));
   }
 
   // ---------- events ----------

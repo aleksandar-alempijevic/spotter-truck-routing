@@ -38,8 +38,8 @@ ErrorCode = Literal[
 ]
 """Every `code` an error body can carry. A test ties each error class to this set."""
 
-OUTSIDE_SERVICE_AREA = "outside_service_area"
-TOO_MANY_LOCATIONS = "too_many_locations"
+OUTSIDE_SERVICE_AREA: ErrorCode = "outside_service_area"
+TOO_MANY_LOCATIONS: ErrorCode = "too_many_locations"
 """Validation error types that the API answers with a code of their own, because each needs
 different advice from the person who sent the request (see `api/errors.py`)."""
 

@@ -1,13 +1,12 @@
 import { Button, Typography } from '@mui/material';
 import { displayZone, type Trip } from '../plan/trip';
-import { formatClock, zoneAbbreviation } from '../time/zone';
+import { formatClockWithZone } from '../time/zone';
 
 const place = (label: string) => label.split(',')[0];
 
 /** The one-line trip bar: "Dallas → Denver · Fri 08:00 CST · 36,000 lb · every 25 mi". */
 export function TripSummary({ trip, onClick }: { trip: Trip; onClick(): void }) {
-  const zone = displayZone(trip);
-  const leaves = `${formatClock(trip.departureMs, zone)} ${zoneAbbreviation(trip.departureMs, zone)}`;
+  const leaves = formatClockWithZone(trip.departureMs, displayZone(trip));
   return (
     <Button
       fullWidth

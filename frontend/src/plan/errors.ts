@@ -1,4 +1,5 @@
 import type { ApiError, ApiErrorCode } from '../api/client';
+import { HORIZON_HOURS, SEARCH_MAX_CHARS, SEARCH_MIN_CHARS } from './trip';
 
 /** Which request failed; the same code can need different advice per request. */
 export type ErrorContext = 'routes' | 'weather' | 'address';
@@ -82,7 +83,7 @@ const OVERRIDES: Record<ErrorContext, Partial<Record<ApiErrorCode, ErrorMessage>
   routes: {
     validation_error: {
       title: 'The trip was refused',
-      body: 'Check the places, the departure time (from now to 48 hours ahead) and the cargo weight, then plan again.',
+      body: `Check the places, the departure time (from now to ${HORIZON_HOURS} hours ahead) and the cargo weight, then plan again.`,
       action: 'edit',
     },
   },
@@ -116,7 +117,7 @@ const OVERRIDES: Record<ErrorContext, Partial<Record<ApiErrorCode, ErrorMessage>
     },
     validation_error: {
       title: 'Address search refused that text',
-      body: 'Type between 3 and 100 characters.',
+      body: `Type between ${SEARCH_MIN_CHARS} and ${SEARCH_MAX_CHARS} characters.`,
       action: 'none',
     },
     no_route: {

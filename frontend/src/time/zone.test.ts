@@ -1,6 +1,9 @@
 import { expect, test } from 'vitest';
 import {
   formatClock,
+  formatClockWithZone,
+  formatWeekday,
+  isLocalMidnight,
   formatDuration,
   toLocalInput,
   wallClockToInstant,
@@ -55,6 +58,14 @@ test('clock formatting reads the stated zone', () => {
   const ms = Date.UTC(2026, 6, 7, 19, 0); // a Tuesday
   expect(formatClock(ms, 'America/Chicago')).toBe('Tue 14:00');
   expect(zoneAbbreviation(ms, 'America/Chicago')).toBe('CDT');
+});
+
+test('the clock with its zone, the weekday and local midnight come from the same reading', () => {
+  const midnight = Date.UTC(2026, 6, 8, 5, 0);
+  expect(formatClockWithZone(midnight, 'America/Chicago')).toBe('Wed 00:00 CDT');
+  expect(formatWeekday(midnight, 'America/Chicago')).toBe('Wed');
+  expect(isLocalMidnight(midnight, 'America/Chicago')).toBe(true);
+  expect(isLocalMidnight(midnight + 3_600_000, 'America/Chicago')).toBe(false);
 });
 
 test('midnight reads 00, never 24', () => {

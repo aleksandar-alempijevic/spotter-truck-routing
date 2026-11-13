@@ -32,6 +32,12 @@ export class ApiError extends Error {
   }
 }
 
+/** Whatever a query failed with, as an `ApiError`; null when it did not fail. */
+export function asApiError(error: unknown): ApiError | null {
+  if (error === null || error === undefined) return null;
+  return error instanceof ApiError ? error : new ApiError('unknown', 'The request failed.', 0);
+}
+
 function isKnownCode(value: unknown): value is ErrorOut['code'] {
   return typeof value === 'string' && Object.hasOwn(KNOWN_CODES, value);
 }

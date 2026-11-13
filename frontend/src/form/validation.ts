@@ -1,11 +1,17 @@
 import type { AttributionOut, Spacing, SuggestionOut } from '../api/types';
-import { DEFAULT_SPACING, MAX_LOAD_LB, type Trip } from '../plan/trip';
-import { wallClockToInstant } from '../time/zone';
+import {
+  DEFAULT_SPACING,
+  GRACE_MS,
+  HORIZON_HOURS,
+  MAX_LOAD_LB,
+  SEARCH_MAX_CHARS,
+  SEARCH_MIN_CHARS,
+  type Trip,
+} from '../plan/trip';
+import { HOUR_MS, wallClockToInstant } from '../time/zone';
 
-export const SEARCH_MIN_CHARS = 3;
-export const SEARCH_MAX_CHARS = 100;
-const GRACE_MS = 10 * 60_000; // the backend forgives 15 minutes; keep clear of the edge
-const HORIZON_MS = 48 * 3_600_000 - 60_000;
+// Keep one minute clear of the backend's horizon.
+const HORIZON_MS = HORIZON_HOURS * HOUR_MS - 60_000;
 
 export type DepartureValue = { mode: 'now' } | { mode: 'at'; local: string };
 
@@ -39,6 +45,12 @@ export interface FormErrors {
   load?: string;
 }
 
+/** Whether the driver has typed something, but not yet enough to search. */
+export function tooShortToSearch(text: string): boolean {
+  const length = text.trim().length;
+  return length > 0 && length < SEARCH_MIN_CHARS;
+}
+
 /** Whether the text is long enough, and not too long, to send to address search. */
 export function canSearch(text: string): boolean {
   const length = text.trim().length;
@@ -51,7 +63,8 @@ export function parseLoad(text: string): { value: number } | { error: string } {
   if (!/^\d+(\.\d+)?$/.test(cleaned)) return { error: 'Use numbers only.' };
   const value = Number(cleaned);
   if (!(value > 0)) return { error: 'The weight must be more than 0 lb.' };
-  if (value > MAX_LOAD_LB) return { error: 'The weight can be at most 80,000 lb.' };
+  if (value > MAX_LOAD_LB)
+    return { error: `The weight can be at most ${MAX_LOAD_LB.toLocaleString('en-US')} lb.` };
   return { value };
 }
 
@@ -91,7 +104,7 @@ export function validateTrip(
     if (departureMs === null) errors.departure = 'Enter a departure date and time.';
     else if (departureMs < nowMs - GRACE_MS) errors.departure = 'That time has already passed.';
     else if (departureMs > nowMs + HORIZON_MS)
-      errors.departure = 'Departure can be at most 48 hours ahead.';
+      errors.departure = `Departure can be at most ${HORIZON_HOURS} hours ahead.`;
   }
 
   if (

@@ -19,7 +19,7 @@ from providers import (
 )
 from providers.errors import error_classes
 
-from .errors import API_ERRORS, VALIDATION_ERROR_CODES
+from .errors import API_ERRORS, SPECIFIC_VALIDATION_CODES
 from .planner import plan_routes
 from .schemas import (
     AddressSearchOut,
@@ -55,11 +55,7 @@ def validation_error(request: HttpRequest, exc: ValidationError) -> HttpResponse
 
     details = "; ".join(f"{field(error)}: {error['msg']}" for error in exc.errors)
     code = next(
-        (
-            VALIDATION_ERROR_CODES[error["type"]]
-            for error in exc.errors
-            if error.get("type") in VALIDATION_ERROR_CODES
-        ),
+        (error["type"] for error in exc.errors if error.get("type") in SPECIFIC_VALIDATION_CODES),
         "validation_error",
     )
     return error_response(request, code, details, 422)

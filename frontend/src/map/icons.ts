@@ -1,4 +1,4 @@
-import { RISK_STYLE, type RiskKey } from '../risk/levels';
+import { CIRCLE_PATH, GLYPH_STROKE, RISK_STYLE, type RiskKey } from '../risk/levels';
 
 const SIZE = 24;
 const RATIO = 2;
@@ -14,16 +14,16 @@ export function glyphImage(key: RiskKey): ImageData {
   ctx.lineJoin = 'round';
   if (style.outline) {
     ctx.fillStyle = '#ffffff';
-    ctx.fill(new Path2D('M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16z'));
+    ctx.fill(new Path2D(CIRCLE_PATH));
     ctx.strokeStyle = style.color;
-    ctx.lineWidth = 2.5;
-    if (key === 'pending') ctx.setLineDash([3, 3]);
+    ctx.lineWidth = GLYPH_STROKE.outlineWidth;
+    if (key === 'pending') ctx.setLineDash([...GLYPH_STROKE.pendingDash]);
     ctx.stroke(path);
   } else {
     ctx.fillStyle = style.color;
     ctx.fill(path);
-    ctx.strokeStyle = '#1b1b1b';
-    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = GLYPH_STROKE.solidColor;
+    ctx.lineWidth = GLYPH_STROKE.solidWidth;
     ctx.stroke(path);
   }
   return ctx.getImageData(0, 0, canvas.width, canvas.height);

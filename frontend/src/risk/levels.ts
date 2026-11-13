@@ -12,6 +12,17 @@ export type RiskState =
 /** What can be drawn: a level, or one of the two non-levels. */
 export type RiskKey = Level | 'pending' | 'none';
 
+/** A 16-unit circle in the 24-unit glyph box: the Low mark and the base of the outline marks. */
+export const CIRCLE_PATH = 'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16z';
+
+/** How both renderers (the SVG in lists, the canvas on the map) stroke a glyph. */
+export const GLYPH_STROKE = {
+  solidColor: '#1b1b1b',
+  solidWidth: 1.6,
+  outlineWidth: 2.5,
+  pendingDash: [3, 3],
+} as const;
+
 export interface RiskStyle {
   label: string;
   /** Fill colour for marks and the heatmap. */
@@ -30,7 +41,7 @@ export const RISK_STYLE: Record<RiskKey, RiskStyle> = {
     label: 'Low',
     color: '#9db8a6',
     onColor: '#102418',
-    path: 'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16z',
+    path: CIRCLE_PATH,
     outline: false,
   },
   moderate: {
@@ -65,14 +76,14 @@ export const RISK_STYLE: Record<RiskKey, RiskStyle> = {
     label: 'Checking weather',
     color: '#78909c',
     onColor: '#102027',
-    path: 'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16z',
+    path: CIRCLE_PATH,
     outline: true,
   },
   none: {
     label: 'No forecast',
     color: '#546e7a',
     onColor: '#102027',
-    path: 'M12 4a8 8 0 1 0 0 16a8 8 0 1 0 0-16zM6.3 6.3L17.7 17.7',
+    path: `${CIRCLE_PATH}M6.3 6.3L17.7 17.7`,
     outline: true,
   },
 };

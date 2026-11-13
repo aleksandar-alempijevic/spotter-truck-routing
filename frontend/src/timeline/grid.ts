@@ -1,4 +1,5 @@
 import type { GridOut, Level } from '../api/types';
+import { HOUR_MS } from '../time/zone';
 
 /** The level value of a cell with no forecast at that hour. */
 export const NO_FORECAST = -1;
@@ -52,7 +53,7 @@ export function buildGridModel(grid: GridOut, departureIso: string): GridModel {
     cellLon,
     cellDegrees: grid.cell_degrees,
     startMs,
-    departureHour: (Date.parse(departureIso) - startMs) / 3_600_000,
+    departureHour: (Date.parse(departureIso) - startMs) / HOUR_MS,
   };
 }
 
@@ -62,7 +63,7 @@ export function levelAt(model: GridModel, cell: number, hour: number): number {
 }
 
 export const hourInstant = (model: GridModel, hour: number): number =>
-  model.startMs + hour * 3_600_000;
+  model.startMs + hour * HOUR_MS;
 
 /** The cells whose level differs between two hours, with their level at `to`. */
 export function diffHours(model: GridModel, from: number, to: number): CellChange[] {

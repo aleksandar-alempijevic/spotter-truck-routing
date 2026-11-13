@@ -1,21 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { ApiError } from '../api/client';
+import { asApiError, type ApiError } from '../api/client';
 import { fetchRoutes, fetchWeather } from '../api/endpoints';
 import type { RoutesOut, WeatherOut } from '../api/types';
+import { NO_REFETCH } from './queryClient';
 import { explain, type Explanation } from './explain';
 import { buildRoutesBody, type Submission } from './trip';
 import { buildPlanView, checkAligned, type PlanView } from './view';
 import { buildWeatherBody } from './weatherRequest';
 
-// Each planning request is made once per submission, and again only when the driver asks. These
-// are repeated here, not left to the client's defaults, because a slow routing call must never be
-// repeated behind the driver's back: not on error, focus, reconnect or remount.
+// Each planning request is made once per submission, and again only when the driver asks. The
+// shared no-retry, no-refocus policy is spelled out here with the rest, not left to the client's
+// defaults, because a slow routing call must never be repeated behind the driver's back: not on
+// error, focus, reconnect or remount.
 const ONCE = {
-  retry: false,
+  ...NO_REFETCH,
   retryOnMount: false,
   refetchOnMount: false,
-  refetchOnWindowFocus: false,
   refetchOnReconnect: false,
   staleTime: Infinity,
 } as const;
@@ -35,13 +36,6 @@ export interface PlanState {
   retryRoutes: () => void;
   retryWeather: () => void;
 }
-
-const asApiError = (error: unknown): ApiError | null =>
-  error === null || error === undefined
-    ? null
-    : error instanceof ApiError
-      ? error
-      : new ApiError('unknown', 'The request failed.', 0);
 
 async function weatherFor(routes: RoutesOut, signal: AbortSignal): Promise<WeatherOut> {
   const weather = await fetchWeather(buildWeatherBody(routes), signal);

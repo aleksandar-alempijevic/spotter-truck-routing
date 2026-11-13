@@ -51,36 +51,38 @@ export const gridNoForecastOpacity: ExpressionSpecification = [
   0,
 ];
 
-export const routeColor = (selectedId: string | null): ExpressionSpecification => [
-  'case',
-  ['==', ['get', 'id'], selectedId ?? ''],
-  '#0d47a1',
-  '#5f7a91',
-];
+/** The map's own colours, outside the risk palette. */
+export const MAP_COLORS = {
+  route: '#5f7a91',
+  routeSelected: '#0d47a1',
+  routeCasing: '#ffffff',
+  truck: '#212121',
+  origin: '#1b5e20',
+  destination: '#0d47a1',
+  ring: '#0d47a1',
+} as const;
 
-export const routeWidth = (
+/** An expression that is `yes` for features whose `key` property is the selected route, else `no`. */
+const ifSelected = <T extends number | string>(
+  key: 'id' | 'routeId',
   selectedId: string | null,
-  selected: number,
-  other: number,
-): ExpressionSpecification => ['case', ['==', ['get', 'id'], selectedId ?? ''], selected, other];
+  yes: T,
+  no: T,
+): ExpressionSpecification => ['case', ['==', ['get', key], selectedId ?? ''], yes, no];
 
-export const checkpointIconSize = (selectedId: string | null): ExpressionSpecification => [
-  'case',
-  ['==', ['get', 'routeId'], selectedId ?? ''],
-  0.85,
-  0.5,
-];
+export const routeColor = (selectedId: string | null) =>
+  ifSelected('id', selectedId, MAP_COLORS.routeSelected, MAP_COLORS.route);
 
-export const checkpointSortKey = (selectedId: string | null): ExpressionSpecification => [
-  'case',
-  ['==', ['get', 'routeId'], selectedId ?? ''],
-  1,
-  0,
-];
+export const routeWidth = (selectedId: string | null, selected: number, other: number) =>
+  ifSelected('id', selectedId, selected, other);
 
-export const truckRadius = (selectedId: string | null): ExpressionSpecification => [
-  'case',
-  ['==', ['get', 'routeId'], selectedId ?? ''],
-  12,
-  9,
-];
+/** Line widths of the route and its casing: the selected route, then the others. */
+export const ROUTE_WIDTH = { line: [6, 4], casing: [10, 7] } as const;
+
+export const checkpointIconSize = (selectedId: string | null) =>
+  ifSelected('routeId', selectedId, 0.85, 0.5);
+
+export const checkpointSortKey = (selectedId: string | null) =>
+  ifSelected('routeId', selectedId, 1, 0);
+
+export const truckRadius = (selectedId: string | null) => ifSelected('routeId', selectedId, 12, 9);

@@ -1,4 +1,4 @@
-import { formatClock, toLocalInput } from '../time/zone';
+import { formatWeekday, HOUR_MS, isLocalMidnight } from '../time/zone';
 import { hourInstant, type GridModel } from './grid';
 
 export interface SliderMark {
@@ -16,7 +16,7 @@ export function sliderMarks(model: GridModel, zone: string, nowMs: number): Slid
   const last = model.hourCount - 1;
   const clamp = (hour: number) => Math.min(last, Math.max(0, Math.round(hour)));
   const departureMs = hourInstant(model, model.departureHour);
-  const now = clamp((nowMs - model.startMs) / 3_600_000);
+  const now = clamp((nowMs - model.startMs) / HOUR_MS);
   const departure = clamp(model.departureHour);
   const together = Math.abs(departureMs - nowMs) < 30 * 60_000 || now === departure;
 
@@ -28,8 +28,8 @@ export function sliderMarks(model: GridModel, zone: string, nowMs: number): Slid
       ];
   for (let hour = 1; hour <= last; hour++) {
     const ms = hourInstant(model, hour);
-    if (toLocalInput(ms, zone).endsWith('T00:00')) {
-      wanted.push({ value: hour, label: formatClock(ms, zone).split(' ')[0] });
+    if (isLocalMidnight(ms, zone)) {
+      wanted.push({ value: hour, label: formatWeekday(ms, zone) });
     }
   }
 

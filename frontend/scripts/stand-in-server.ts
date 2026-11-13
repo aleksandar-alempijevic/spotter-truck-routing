@@ -8,19 +8,24 @@
 //
 // It prints one JSON line per request. It is a development aid, not part of the app.
 import { createServer } from 'node:http';
+import { parseArgs } from 'node:util';
 import { createStandIn } from '../src/test/standIn.ts';
 
-function option(name: string, fallback: number): number {
-  const at = process.argv.indexOf(`--${name}`);
-  return at === -1 ? fallback : Number(process.argv[at + 1]);
-}
+const { values: options } = parseArgs({
+  options: {
+    'routes-delay-ms': { type: 'string', default: '3000' },
+    'weather-delay-ms': { type: 'string', default: '8000' },
+    port: { type: 'string', default: '8000' },
+    'cell-degrees': { type: 'string', default: '0.5' },
+    'weather-error': { type: 'string' },
+  },
+});
 
-const routesDelay = option('routes-delay-ms', 3000);
-const weatherDelay = option('weather-delay-ms', 8000);
-const port = option('port', 8000);
-const answer = createStandIn({ cellDegrees: option('cell-degrees', 0.5) });
-const weatherErrorAt = process.argv.indexOf('--weather-error');
-const weatherError = weatherErrorAt === -1 ? null : process.argv[weatherErrorAt + 1];
+const routesDelay = Number(options['routes-delay-ms']);
+const weatherDelay = Number(options['weather-delay-ms']);
+const port = Number(options.port);
+const answer = createStandIn({ cellDegrees: Number(options['cell-degrees']) });
+const weatherError = options['weather-error'] ?? null;
 
 createServer((request, response) => {
   const chunks: Buffer[] = [];

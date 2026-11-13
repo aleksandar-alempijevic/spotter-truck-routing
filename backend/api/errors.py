@@ -9,10 +9,9 @@ API_ERRORS: dict[int, tuple[ErrorCode, str, int]] = {
 }
 """Status -> (code, message, status) for the answers that are not a validation or provider error."""
 
-VALIDATION_ERROR_CODES: dict[str, ErrorCode] = {
-    OUTSIDE_SERVICE_AREA: "outside_service_area",
-    TOO_MANY_LOCATIONS: "too_many_locations",
-}
-"""Validation error type -> the code its 422 answers with. Any other validation failure is a
-plain `validation_error`. The type is set where the error is raised, so nothing reads the
-message text."""
+SPECIFIC_VALIDATION_CODES: frozenset[ErrorCode] = frozenset(
+    {OUTSIDE_SERVICE_AREA, TOO_MANY_LOCATIONS}
+)
+"""Validation error types that answer with a code of their own: the type is the code. Any other
+validation failure is a plain `validation_error`. The type is set where the error is raised, so
+nothing reads the message text."""

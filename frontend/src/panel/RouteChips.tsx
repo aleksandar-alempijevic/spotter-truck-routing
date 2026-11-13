@@ -2,19 +2,17 @@ import { Box, ButtonBase, Typography } from '@mui/material';
 import type { RouteView } from '../plan/view';
 import { RiskBadge } from '../risk/RiskBadge';
 import { formatDuration } from '../time/zone';
-import { routeWorstRisk } from './riskOfRoute';
+import { selectableSx } from './selectable';
 
 interface Props {
   routes: readonly RouteView[];
   selectedId: string | null;
   recommendedId: string | null;
-  /** The weather request failed, so a route's risk is unavailable rather than still coming. */
-  weatherFailed?: boolean;
   onSelect(routeId: string): void;
 }
 
 /** The peek tier's route switcher: name, time and worst level, one tap each. */
-export function RouteChips({ routes, selectedId, recommendedId, weatherFailed, onSelect }: Props) {
+export function RouteChips({ routes, selectedId, recommendedId, onSelect }: Props) {
   return (
     <Box
       role="group"
@@ -36,9 +34,7 @@ export function RouteChips({ routes, selectedId, recommendedId, weatherFailed, o
               minHeight: 72,
               p: 1,
               borderRadius: 2,
-              border: 2,
-              borderColor: selected ? 'primary.main' : 'divider',
-              bgcolor: selected ? 'action.selected' : 'background.paper',
+              ...selectableSx(selected),
               flexDirection: 'column',
               alignItems: 'flex-start',
               justifyContent: 'center',
@@ -52,10 +48,7 @@ export function RouteChips({ routes, selectedId, recommendedId, weatherFailed, o
             </Typography>
             <Typography variant="body2">{formatDuration(route.travelSeconds)}</Typography>
             <Typography variant="caption" component="span" sx={{ lineHeight: 1.2 }}>
-              <RiskBadge
-                state={routeWorstRisk(route)}
-                pendingLabel={weatherFailed ? 'Weather unavailable' : undefined}
-              />
+              <RiskBadge state={route.risk} />
             </Typography>
           </ButtonBase>
         );

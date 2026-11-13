@@ -1,5 +1,7 @@
 // Wall-clock time in a named zone, using the platform's Intl only.
 
+export const HOUR_MS = 3_600_000;
+
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
 function formatter(zone: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
@@ -64,6 +66,17 @@ export function toLocalInput(ms: number, zone: string): string {
 export function formatClock(ms: number, zone: string): string {
   const p = parts(ms, zone, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
   return `${p.weekday} ${p.hour}:${p.minute}`;
+}
+
+/** "Tue": the weekday's short name on a clock in the zone. */
+export function formatWeekday(ms: number, zone: string): string {
+  return parts(ms, zone, { weekday: 'short' }).weekday;
+}
+
+/** Whether the clock in the zone reads midnight at this instant. */
+export function isLocalMidnight(ms: number, zone: string): boolean {
+  const p = parts(ms, zone, { hour: '2-digit', minute: '2-digit' });
+  return p.hour === '00' && p.minute === '00';
 }
 
 /** "Tue 14:00 CST": the clock plus the zone's short name at that instant. */

@@ -1,6 +1,6 @@
 import { Box, Button, Slider, Typography } from '@mui/material';
 import { useMemo } from 'react';
-import { formatClock, zoneAbbreviation } from '../time/zone';
+import { formatClockWithZone } from '../time/zone';
 import { hourInstant, type GridModel } from './grid';
 import { useHour, type HourHolder } from './hourHolder';
 import { sliderMarks } from './marks';
@@ -27,12 +27,17 @@ export function HourSlider({ holder, model, zone, routes = [], nowMs = 0 }: Prop
   const last = model ? model.hourCount - 1 : 0;
   const marks = useMemo(() => (model ? sliderMarks(model, zone, nowMs) : []), [model, zone, nowMs]);
 
-  const clock = (h: number) =>
-    model
-      ? `${formatClock(hourInstant(model, h), zone)} ${zoneAbbreviation(hourInstant(model, h), zone)}`
-      : '';
+  const clock = (h: number) => (model ? formatClockWithZone(hourInstant(model, h), zone) : '');
+  // What the bar says depends on the hour on screen, so a re-render at the same hour reuses it.
+  const label = useMemo(
+    () => (model ? formatClockWithZone(hourInstant(model, hour), zone) : ''),
+    [model, hour, zone],
+  );
   const atDeparture = model !== null && Math.round(model.departureHour) === hour;
-  const trucks = model && routes.length > 0 ? trucksAt(routes, hourInstant(model, hour)) : [];
+  const trucks = useMemo(
+    () => (model && routes.length > 0 ? trucksAt(routes, hourInstant(model, hour)) : []),
+    [model, routes, hour],
+  );
 
   return (
     <Box sx={{ px: 2, py: 1 }}>
@@ -42,7 +47,7 @@ export function HourSlider({ holder, model, zone, routes = [], nowMs = 0 }: Prop
         </Typography>
         <Typography variant="body2" component="span" aria-live="polite">
           {model
-            ? `${clock(hour)} · +${hour} h${atDeparture ? ' · departure' : ''}`
+            ? `${label} · +${hour} h${atDeparture ? ' · departure' : ''}`
             : 'Waiting for the forecast'}
         </Typography>
       </Box>

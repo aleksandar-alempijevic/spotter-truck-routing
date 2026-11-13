@@ -1,14 +1,16 @@
 import { Autocomplete, Box, Button, TextField } from '@mui/material';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { ApiError } from '../api/client';
+import { asApiError } from '../api/client';
 import { fetchAddresses } from '../api/endpoints';
 import type { AttributionOut, SuggestionOut } from '../api/types';
 import { describeError } from '../plan/errors';
-import { canSearch, SEARCH_MAX_CHARS } from './validation';
+import { SEARCH_MAX_CHARS, SEARCH_MIN_CHARS } from '../plan/trip';
+import { canSearch, tooShortToSearch } from './validation';
 import { useDebouncedValue } from './useDebouncedValue';
 
 export const SEARCH_DEBOUNCE_MS = 350;
+const TOO_SHORT_HINT = `Type at least ${SEARCH_MIN_CHARS} characters`;
 
 /** A search that starts with a number and names no place is slow on the server. */
 export const NUMBER_HINT = 'Add the city for faster results';
@@ -25,7 +27,7 @@ interface Props {
 }
 
 /**
- * Address search: debounced, never sent below 3 or above 100 characters, with superseded searches
+ * Address search: debounced, never sent below the minimum or above the maximum length, with superseded searches
  * cancelled. What the driver picks is a whole suggestion (label, position, time zone).
  */
 export function AddressField({ label, text, choice, onChange, onCredit, error }: Props) {
@@ -46,13 +48,9 @@ export function AddressField({ label, text, choice, onChange, onCredit, error }:
   }, [credit, onCredit]);
 
   const options = searching ? (query.data?.suggestions ?? []) : [];
-  const failure = query.error
-    ? describeError(
-        'address',
-        query.error instanceof ApiError ? query.error : new ApiError('unknown', '', 0),
-      )
-    : null;
-  const shortText = text.trim().length > 0 && text.trim().length < 3;
+  const apiError = asApiError(query.error);
+  const failure = apiError && describeError('address', apiError);
+  const shortText = tooShortToSearch(text);
 
   return (
     <Autocomplete
@@ -70,9 +68,7 @@ export function AddressField({ label, text, choice, onChange, onCredit, error }:
       onChange={(_, picked) => {
         if (picked) onChange(picked.label, picked);
       }}
-      noOptionsText={
-        searching && !query.isFetching ? 'No matching place' : 'Type at least 3 characters'
-      }
+      noOptionsText={searching && !query.isFetching ? 'No matching place' : TOO_SHORT_HINT}
       slotProps={{ listbox: { sx: { '& .MuiAutocomplete-option': { minHeight: 48 } } } }}
       renderInput={(params) => (
         <TextField
@@ -91,7 +87,7 @@ export function AddressField({ label, text, choice, onChange, onCredit, error }:
                 )}
               </>
             ) : shortText ? (
-              'Type at least 3 characters'
+              TOO_SHORT_HINT
             ) : searching && startsWithNumber(text) ? (
               NUMBER_HINT
             ) : choice ? (

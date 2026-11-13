@@ -6,7 +6,7 @@ import type {
   RoutesOut,
   WeatherOut,
 } from '../api/types';
-import type { RiskState } from '../risk/levels';
+import { worstRisk, type RiskState } from '../risk/levels';
 
 /** One checkpoint of one route, by route id and index: what the map and the panel select. */
 export interface CheckpointRef {
@@ -34,6 +34,8 @@ export interface RouteView {
   miles: number;
   line: [number, number][];
   checkpoints: CheckpointView[];
+  /** The worst level on the route, or pending / no forecast when it has none. */
+  risk: RiskState;
   /** Null until the weather lands. */
   summary: RouteSummaryOut | null;
   rank: number | null;
@@ -81,6 +83,28 @@ export function buildPlanView(routes: RoutesOut, weather?: WeatherOut): PlanView
   return {
     routes: routes.routes.map((route, routeIndex) => {
       const w = weatherById.get(route.id);
+      const checkpoints: CheckpointView[] = route.checkpoints.map((cp, index) => {
+        const wc = w?.checkpoints[index];
+        const risk: RiskState = !wc
+          ? { kind: 'pending' }
+          : wc.risk
+            ? {
+                kind: 'level',
+                level: wc.risk.level,
+                condition: wc.risk.condition,
+                loadRaised: wc.risk.load_raised,
+              }
+            : { kind: 'none' };
+        return {
+          index,
+          mile: cp.mile,
+          lat: cp.lat,
+          lon: cp.lon,
+          etaMs: Date.parse(cp.eta),
+          risk,
+          conditions: wc?.weather ?? null,
+        };
+      });
       return {
         id: route.id,
         name: `Route ${routeIndex + 1}`,
@@ -88,28 +112,8 @@ export function buildPlanView(routes: RoutesOut, weather?: WeatherOut): PlanView
         travelSeconds: route.travel_time_seconds,
         miles: route.total_miles,
         line: route.line,
-        checkpoints: route.checkpoints.map((cp, index) => {
-          const wc = w?.checkpoints[index];
-          const risk: RiskState = !wc
-            ? { kind: 'pending' }
-            : wc.risk
-              ? {
-                  kind: 'level',
-                  level: wc.risk.level,
-                  condition: wc.risk.condition,
-                  loadRaised: wc.risk.load_raised,
-                }
-              : { kind: 'none' };
-          return {
-            index,
-            mile: cp.mile,
-            lat: cp.lat,
-            lon: cp.lon,
-            etaMs: Date.parse(cp.eta),
-            risk,
-            conditions: wc?.weather ?? null,
-          };
-        }),
+        checkpoints,
+        risk: worstRisk(checkpoints.map((cp) => cp.risk)),
         summary: w?.summary ?? null,
         rank: rankById.get(route.id) ?? null,
         isFastest: route.id === fastest.id,

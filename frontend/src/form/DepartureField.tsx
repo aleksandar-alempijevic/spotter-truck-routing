@@ -1,6 +1,7 @@
 import { Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useState } from 'react';
-import { toLocalInput, zoneAbbreviation, zoneName } from '../time/zone';
+import { GRACE_MS, HORIZON_HOURS } from '../plan/trip';
+import { HOUR_MS, toLocalInput, zoneAbbreviation, zoneName } from '../time/zone';
 import type { DepartureValue } from './validation';
 
 interface Props {
@@ -30,7 +31,7 @@ export function DepartureField({ value, onChange, zone, error }: Props) {
         onChange={(_, mode: DepartureValue['mode'] | null) => {
           if (mode === 'now') onChange({ mode: 'now' });
           if (mode === 'at') {
-            onChange({ mode: 'at', local: zone ? toLocalInput(openedAt + 3_600_000, zone) : '' });
+            onChange({ mode: 'at', local: zone ? toLocalInput(openedAt + HOUR_MS, zone) : '' });
           }
         }}
       >
@@ -53,8 +54,8 @@ export function DepartureField({ value, onChange, zone, error }: Props) {
             inputLabel: { shrink: true },
             htmlInput: zone
               ? {
-                  min: toLocalInput(openedAt - 10 * 60_000, zone),
-                  max: toLocalInput(openedAt + 48 * 3_600_000, zone),
+                  min: toLocalInput(openedAt - GRACE_MS, zone),
+                  max: toLocalInput(openedAt + HORIZON_HOURS * HOUR_MS, zone),
                 }
               : {},
           }}

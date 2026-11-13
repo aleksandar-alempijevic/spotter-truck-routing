@@ -5,6 +5,7 @@ import type { CheckpointRef } from '../plan/view';
 import type { Trip } from '../plan/trip';
 import type { CheckpointView, RouteView } from '../plan/view';
 import { RiskBadge } from '../risk/RiskBadge';
+import { useWeatherFailed } from '../risk/weatherFailed';
 import { zoneName } from '../time/zone';
 import { displayZone } from '../plan/trip';
 import { originClock } from './times';
@@ -14,7 +15,6 @@ interface Props {
   trip: Trip;
   selected: CheckpointRef | null;
   onSelect(ref: CheckpointRef): void;
-  weatherFailed?: boolean;
 }
 
 const round = (n: number, places: number) => String(Math.round(n * 10 ** places) / 10 ** places);
@@ -39,7 +39,8 @@ export function decisionText(cp: CheckpointView): string | null {
   return cp.risk.loadRaised ? `${by}, raised a level by the load` : by;
 }
 
-function Conditions({ cp, weatherFailed }: { cp: CheckpointView; weatherFailed?: boolean }) {
+function Conditions({ cp }: { cp: CheckpointView }) {
+  const weatherFailed = useWeatherFailed();
   if (cp.risk.kind === 'pending') {
     return <>{weatherFailed ? 'Weather could not be loaded' : 'Weather not checked yet'}</>;
   }
@@ -63,20 +64,11 @@ interface RowProps {
   trip: Trip;
   isSelected: boolean;
   onSelect(ref: CheckpointRef): void;
-  weatherFailed?: boolean;
   buttonRef?: Ref<HTMLButtonElement>;
 }
 
 /** One checkpoint: mile, ETA, level and conditions. */
-export function CheckpointRow({
-  route,
-  cp,
-  trip,
-  isSelected,
-  onSelect,
-  weatherFailed,
-  buttonRef,
-}: RowProps) {
+export function CheckpointRow({ route, cp, trip, isSelected, onSelect, buttonRef }: RowProps) {
   return (
     <ButtonBase
       ref={buttonRef}
@@ -101,14 +93,11 @@ export function CheckpointRow({
           Mile {Math.round(cp.mile)} · {originClock(trip, cp.etaMs)}
         </Typography>
         <Typography variant="body2" component="span">
-          <RiskBadge
-            state={cp.risk}
-            pendingLabel={weatherFailed ? 'Weather unavailable' : undefined}
-          />
+          <RiskBadge state={cp.risk} />
         </Typography>
       </Box>
       <Typography variant="caption" color="text.secondary" component="div">
-        <Conditions cp={cp} weatherFailed={weatherFailed} />
+        <Conditions cp={cp} />
       </Typography>
       {decisionText(cp) && (
         <Typography variant="caption" component="div" sx={{ fontWeight: 600 }}>
@@ -120,7 +109,7 @@ export function CheckpointRow({
 }
 
 /** The selected route's checkpoints in order. */
-export function CheckpointList({ route, trip, selected, onSelect, weatherFailed }: Props) {
+export function CheckpointList({ route, trip, selected, onSelect }: Props) {
   const selectedRef = useRef<HTMLButtonElement>(null);
   const selectedIndex = selected?.routeId === route.id ? selected.index : null;
 
@@ -148,7 +137,6 @@ export function CheckpointList({ route, trip, selected, onSelect, weatherFailed 
                 trip={trip}
                 isSelected={isSelected}
                 onSelect={onSelect}
-                weatherFailed={weatherFailed}
                 buttonRef={isSelected ? selectedRef : undefined}
               />
             </li>

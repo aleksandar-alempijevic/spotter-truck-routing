@@ -7,6 +7,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import { formatMiles } from '../plan/format';
 import {
   formatDifference,
   formatMeasure,
@@ -126,7 +127,7 @@ export function WhyThisRoute({ criteria, routes }: Props) {
             {criteria.noForecast
               .map(
                 ({ routeId, miles }) =>
-                  `${name(routeId)} has no forecast for ${Math.round(miles)} mi`,
+                  `${name(routeId)} has no forecast for ${formatMiles(miles)}`,
               )
               .join('; ')}
             . Routes are compared on the part that has a forecast.

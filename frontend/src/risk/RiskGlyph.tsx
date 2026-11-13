@@ -1,4 +1,4 @@
-import { RISK_STYLE, type RiskKey } from './levels';
+import { GLYPH_STROKE, RISK_STYLE, type RiskKey } from './levels';
 
 /** A level's shape in its colour. Decorative: the label next to it carries the meaning. */
 export function RiskGlyph({ risk, size = 18 }: { risk: RiskKey; size?: number }) {
@@ -8,9 +8,9 @@ export function RiskGlyph({ risk, size = 18 }: { risk: RiskKey; size?: number })
       <path
         d={style.path}
         fill={style.outline ? 'none' : style.color}
-        stroke={style.outline ? style.color : '#1b1b1b'}
-        strokeWidth={style.outline ? 2.5 : 1.5}
-        strokeDasharray={risk === 'pending' ? '3 3' : undefined}
+        stroke={style.outline ? style.color : GLYPH_STROKE.solidColor}
+        strokeWidth={style.outline ? GLYPH_STROKE.outlineWidth : GLYPH_STROKE.solidWidth}
+        strokeDasharray={risk === 'pending' ? GLYPH_STROKE.pendingDash.join(' ') : undefined}
         strokeLinejoin="round"
       />
     </svg>

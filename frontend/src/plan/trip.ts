@@ -4,6 +4,12 @@ export const SPACINGS: readonly Spacing[] = [10, 25, 50];
 export const DEFAULT_SPACING: Spacing = 25;
 /** The backend's bounds on the cargo weight; the form mirrors them. */
 export const MAX_LOAD_LB = 80_000;
+/** Address search is sent only between these lengths; the backend refuses anything outside. */
+export const SEARCH_MIN_CHARS = 3;
+export const SEARCH_MAX_CHARS = 100;
+/** A departure may be up to this far ahead, and a few minutes in the past is forgiven. */
+export const HORIZON_HOURS = 48;
+export const GRACE_MS = 10 * 60_000; // the backend forgives 15 minutes; keep clear of the edge
 
 /** A validated trip: the only thing the form hands to planning. */
 export interface Trip {

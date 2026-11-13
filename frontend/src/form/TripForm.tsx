@@ -1,5 +1,5 @@
 import { Box, Button, Link, Stack, Typography } from '@mui/material';
-import { useCallback, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import type { Trip } from '../plan/trip';
 import { AddressField } from './AddressField';
 import { DepartureField } from './DepartureField';
@@ -19,13 +19,17 @@ export function TripForm({ values, onChange, onSubmit }: Props) {
   const [attemptedAt, setAttemptedAt] = useState<number | null>(null);
   const errors = attemptedAt === null ? {} : (validateTrip(values, attemptedAt).errors ?? {});
 
-  const setCredit = useCallback(
-    (credit: FormValues['addressCredit']) => {
-      if (credit && credit.text !== values.addressCredit?.text)
-        onChange({ ...values, addressCredit: credit });
-    },
-    [values, onChange],
-  );
+  // The credit callback is handed to effects in both address fields, so it must not change with
+  // every keystroke; it reads the latest values from a ref that is current before any effect runs.
+  const latest = useRef({ values, onChange });
+  useLayoutEffect(() => {
+    latest.current = { values, onChange };
+  });
+  const setCredit = useCallback((credit: FormValues['addressCredit']) => {
+    const { values: current, onChange: change } = latest.current;
+    if (credit && credit.text !== current.addressCredit?.text)
+      change({ ...current, addressCredit: credit });
+  }, []);
 
   return (
     <Box

@@ -1,3 +1,4 @@
+import { formatMiles } from './format';
 import type { RankedRouteOut, RankingOut, RankingStep } from '../api/types';
 import { formatDuration } from '../time/zone';
 import type { RouteView } from './view';
@@ -203,7 +204,7 @@ export const STEP_NAME: Record<RankingStep, string> = {
   route_id: 'Route order',
 };
 
-const miles = (n: number) => `${Math.round(n * 10) / 10} mi`;
+const miles = (n: number) => formatMiles(n, 1);
 
 /** A step's value in the unit it is measured in. */
 export function formatMeasure(step: RankingStep, value: number): string {
