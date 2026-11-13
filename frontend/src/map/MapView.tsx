@@ -5,7 +5,8 @@ import type { RouteView } from '../plan/view';
 import type { GridModel } from '../timeline/grid';
 import type { HourHolder } from '../timeline/hourHolder';
 import { MapController } from './controller';
-import type { CheckpointRef, MapInsets } from './types';
+import type { CheckpointRef } from '../plan/view';
+import type { MapInsets } from './types';
 
 export interface MapViewProps {
   routes: readonly RouteView[];

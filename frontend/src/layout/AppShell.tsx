@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { TripForm } from '../form/TripForm';
 import { TripSummary } from '../form/TripSummary';
 import type { FormValues } from '../form/validation';
-import type { CheckpointRef } from '../map/types';
+import type { CheckpointRef } from '../plan/view';
 import { PlanPanel, type PanelTier } from '../panel/PlanPanel';
 import type { PlanState } from '../plan/queries';
 import { displayZone, type Submission, type Trip } from '../plan/trip';

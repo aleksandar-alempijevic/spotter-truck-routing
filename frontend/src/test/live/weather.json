@@ -1,0 +1,3831 @@
+{
+  "plan": { "load_lb": 36000.0, "checkpoint_interval_miles": 25 },
+  "departure": "2026-11-13T10:29:57.989Z",
+  "routes": [
+    {
+      "id": "route-1",
+      "checkpoints": [
+        {
+          "mile": 0.0,
+          "weather": {
+            "wind_mph": 11.30156411111111,
+            "gust_mph": 24.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 25.0,
+          "weather": {
+            "wind_mph": 8.351617666666666,
+            "gust_mph": 25.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 50.0,
+          "weather": {
+            "wind_mph": 15.27372,
+            "gust_mph": 28.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 75.0,
+          "weather": {
+            "wind_mph": 11.231290555555557,
+            "gust_mph": 26.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 100.0,
+          "weather": {
+            "wind_mph": 9.875078333333335,
+            "gust_mph": 24.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 125.0,
+          "weather": {
+            "wind_mph": 8.019104472222223,
+            "gust_mph": 17.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 150.0,
+          "weather": {
+            "wind_mph": 8.766139055555556,
+            "gust_mph": 16.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 175.0,
+          "weather": {
+            "wind_mph": 7.612684166666666,
+            "gust_mph": 20.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 200.0,
+          "weather": {
+            "wind_mph": 8.33145,
+            "gust_mph": 20.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 225.0,
+          "weather": {
+            "wind_mph": 11.294257138888888,
+            "gust_mph": 19.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 250.0,
+          "weather": {
+            "wind_mph": 12.978697,
+            "gust_mph": 16.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 275.0,
+          "weather": {
+            "wind_mph": 11.775570944444445,
+            "gust_mph": 16.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 300.0,
+          "weather": {
+            "wind_mph": 12.176163555555556,
+            "gust_mph": 18.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 325.0,
+          "weather": {
+            "wind_mph": 8.737445833333334,
+            "gust_mph": 10.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 350.0,
+          "weather": {
+            "wind_mph": 7.194994027777778,
+            "gust_mph": 9.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 375.0,
+          "weather": {
+            "wind_mph": 7.42268225,
+            "gust_mph": 8.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 400.0,
+          "weather": {
+            "wind_mph": 6.995347527777777,
+            "gust_mph": 7.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 425.0,
+          "weather": {
+            "wind_mph": 6.618528166666667,
+            "gust_mph": 7.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 450.0,
+          "weather": {
+            "wind_mph": 6.956053,
+            "gust_mph": 8.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 475.0,
+          "weather": {
+            "wind_mph": 5.2890725,
+            "gust_mph": 5.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 500.0,
+          "weather": {
+            "wind_mph": 4.253496222222222,
+            "gust_mph": 4.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 525.0,
+          "weather": {
+            "wind_mph": 3.451130388888889,
+            "gust_mph": 4.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 550.0,
+          "weather": {
+            "wind_mph": 1.4,
+            "gust_mph": 1.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 575.0,
+          "weather": {
+            "wind_mph": 1.6509606944444444,
+            "gust_mph": 2.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 600.0,
+          "weather": {
+            "wind_mph": 6.64896025,
+            "gust_mph": 7.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 625.0,
+          "weather": {
+            "wind_mph": 6.808755666666666,
+            "gust_mph": 8.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 650.0,
+          "weather": {
+            "wind_mph": 8.915748333333333,
+            "gust_mph": 11.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 675.0,
+          "weather": {
+            "wind_mph": 10.87178,
+            "gust_mph": 14.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 700.0,
+          "weather": {
+            "wind_mph": 11.579727333333334,
+            "gust_mph": 16.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 725.0,
+          "weather": {
+            "wind_mph": 12.441103611111112,
+            "gust_mph": 16.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 750.0,
+          "weather": {
+            "wind_mph": 12.141444305555556,
+            "gust_mph": 16.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 775.0,
+          "weather": {
+            "wind_mph": 13.044934722222223,
+            "gust_mph": 16.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 800.0,
+          "weather": {
+            "wind_mph": 13.069937666666666,
+            "gust_mph": 17.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 825.0,
+          "weather": {
+            "wind_mph": 12.454121944444445,
+            "gust_mph": 16.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 850.0,
+          "weather": {
+            "wind_mph": 11.524945111111112,
+            "gust_mph": 19.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 875.0,
+          "weather": {
+            "wind_mph": 11.253097777777775,
+            "gust_mph": 18.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 900.0,
+          "weather": {
+            "wind_mph": 8.646081833333332,
+            "gust_mph": 15.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 925.0,
+          "weather": {
+            "wind_mph": 6.710153666666667,
+            "gust_mph": 13.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 950.0,
+          "weather": {
+            "wind_mph": 7.527378583333332,
+            "gust_mph": 12.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 975.0,
+          "weather": {
+            "wind_mph": 7.9,
+            "gust_mph": 11.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1000.0,
+          "weather": {
+            "wind_mph": 8.650369722222223,
+            "gust_mph": 15.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1025.0,
+          "weather": {
+            "wind_mph": 8.328504888888888,
+            "gust_mph": 17.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1050.0,
+          "weather": {
+            "wind_mph": 6.587447777777778,
+            "gust_mph": 8.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1075.0,
+          "weather": {
+            "wind_mph": 9.62392313888889,
+            "gust_mph": 12.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1100.0,
+          "weather": {
+            "wind_mph": 7.000727833333333,
+            "gust_mph": 8.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1125.0,
+          "weather": {
+            "wind_mph": 7.403866,
+            "gust_mph": 12.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1150.0,
+          "weather": {
+            "wind_mph": 8.759784999999999,
+            "gust_mph": 17.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1175.0,
+          "weather": {
+            "wind_mph": 7.615941000000001,
+            "gust_mph": 13.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1200.0,
+          "weather": {
+            "wind_mph": 7.770039999999999,
+            "gust_mph": 17.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1225.0,
+          "weather": {
+            "wind_mph": 2.4014442222222216,
+            "gust_mph": 11.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1250.0,
+          "weather": {
+            "wind_mph": 8.293973611111111,
+            "gust_mph": 19.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1275.0,
+          "weather": {
+            "wind_mph": 4.345662250000002,
+            "gust_mph": 4.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1300.0,
+          "weather": {
+            "wind_mph": 5.797839444444446,
+            "gust_mph": 5.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1325.0,
+          "weather": {
+            "wind_mph": 2.0034558888888894,
+            "gust_mph": 12.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1350.0,
+          "weather": {
+            "wind_mph": 10.582967777777787,
+            "gust_mph": 33.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1375.0,
+          "weather": {
+            "wind_mph": 11.987719916666665,
+            "gust_mph": 20.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1398.3815765926986,
+          "weather": {
+            "wind_mph": 6.237328444444444,
+            "gust_mph": 7.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        }
+      ],
+      "summary": {
+        "low_miles": 1398.3815765926986,
+        "moderate_miles": 0.0,
+        "high_miles": 0.0,
+        "severe_miles": 0.0,
+        "no_travel_miles": 0.0,
+        "no_forecast_miles": 0.0,
+        "average_risk": 0.0
+      }
+    },
+    {
+      "id": "route-2",
+      "checkpoints": [
+        {
+          "mile": 0.0,
+          "weather": {
+            "wind_mph": 11.30156411111111,
+            "gust_mph": 24.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 25.0,
+          "weather": {
+            "wind_mph": 10.060819055555555,
+            "gust_mph": 28.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 50.0,
+          "weather": {
+            "wind_mph": 13.355070444444443,
+            "gust_mph": 29.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 75.0,
+          "weather": {
+            "wind_mph": 11.30094875,
+            "gust_mph": 29.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 100.0,
+          "weather": {
+            "wind_mph": 10.75430875,
+            "gust_mph": 24.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 125.0,
+          "weather": {
+            "wind_mph": 11.054725972222222,
+            "gust_mph": 24.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 150.0,
+          "weather": {
+            "wind_mph": 11.102724833333333,
+            "gust_mph": 25.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 175.0,
+          "weather": {
+            "wind_mph": 9.451061666666666,
+            "gust_mph": 24.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 200.0,
+          "weather": {
+            "wind_mph": 10.507698666666666,
+            "gust_mph": 24.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 225.0,
+          "weather": {
+            "wind_mph": 9.70027288888889,
+            "gust_mph": 21.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 250.0,
+          "weather": {
+            "wind_mph": 7.89337025,
+            "gust_mph": 18.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 275.0,
+          "weather": {
+            "wind_mph": 9.79373625,
+            "gust_mph": 17.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 300.0,
+          "weather": {
+            "wind_mph": 9.142979916666667,
+            "gust_mph": 16.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 325.0,
+          "weather": {
+            "wind_mph": 11.16352475,
+            "gust_mph": 15.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 350.0,
+          "weather": {
+            "wind_mph": 9.245065277777778,
+            "gust_mph": 13.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 375.0,
+          "weather": {
+            "wind_mph": 9.8457595,
+            "gust_mph": 13.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 400.0,
+          "weather": {
+            "wind_mph": 8.800535666666667,
+            "gust_mph": 9.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 425.0,
+          "weather": {
+            "wind_mph": 8.3,
+            "gust_mph": 9.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 450.0,
+          "weather": {
+            "wind_mph": 6.964514222222222,
+            "gust_mph": 7.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 475.0,
+          "weather": {
+            "wind_mph": 5.8135818611111105,
+            "gust_mph": 6.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 500.0,
+          "weather": {
+            "wind_mph": 2.039460972222222,
+            "gust_mph": 3.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 525.0,
+          "weather": {
+            "wind_mph": 2.2192902777777777,
+            "gust_mph": 2.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 550.0,
+          "weather": {
+            "wind_mph": 2.475854249999999,
+            "gust_mph": 4.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 575.0,
+          "weather": {
+            "wind_mph": 4.2097928611111115,
+            "gust_mph": 5.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 600.0,
+          "weather": {
+            "wind_mph": 6.974974,
+            "gust_mph": 8.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 625.0,
+          "weather": {
+            "wind_mph": 8.423959777777778,
+            "gust_mph": 11.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 650.0,
+          "weather": {
+            "wind_mph": 8.579189666666666,
+            "gust_mph": 10.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 675.0,
+          "weather": {
+            "wind_mph": 9.510459777777777,
+            "gust_mph": 11.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 700.0,
+          "weather": {
+            "wind_mph": 12.7,
+            "gust_mph": 16.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 725.0,
+          "weather": {
+            "wind_mph": 13.686500055555555,
+            "gust_mph": 17.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 750.0,
+          "weather": {
+            "wind_mph": 15.295729666666666,
+            "gust_mph": 20.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 775.0,
+          "weather": {
+            "wind_mph": 17.33780422222222,
+            "gust_mph": 23.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 800.0,
+          "weather": {
+            "wind_mph": 18.36637888888889,
+            "gust_mph": 26.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 825.0,
+          "weather": {
+            "wind_mph": 17.323560583333332,
+            "gust_mph": 23.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 850.0,
+          "weather": {
+            "wind_mph": 14.923894666666667,
+            "gust_mph": 23.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 875.0,
+          "weather": {
+            "wind_mph": 17.778758000000003,
+            "gust_mph": 28.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 900.0,
+          "weather": {
+            "wind_mph": 12.505407916666666,
+            "gust_mph": 20.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 925.0,
+          "weather": {
+            "wind_mph": 10.876838666666666,
+            "gust_mph": 16.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 950.0,
+          "weather": {
+            "wind_mph": 15.322784222222221,
+            "gust_mph": 22.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 975.0,
+          "weather": {
+            "wind_mph": 6.18579,
+            "gust_mph": 6.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1000.0,
+          "weather": {
+            "wind_mph": 2.924876055555554,
+            "gust_mph": 8.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1025.0,
+          "weather": {
+            "wind_mph": 13.318847,
+            "gust_mph": 23.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1050.0,
+          "weather": {
+            "wind_mph": 14.60841436111111,
+            "gust_mph": 22.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1075.0,
+          "weather": {
+            "wind_mph": 16.324260250000002,
+            "gust_mph": 25.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1100.0,
+          "weather": {
+            "wind_mph": 15.266396888888886,
+            "gust_mph": 20.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1125.0,
+          "weather": {
+            "wind_mph": 10.731507694444446,
+            "gust_mph": 20.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1150.0,
+          "weather": {
+            "wind_mph": 13.205968749999998,
+            "gust_mph": 21.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1175.0,
+          "weather": {
+            "wind_mph": 4.66148375,
+            "gust_mph": 7.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1200.0,
+          "weather": {
+            "wind_mph": 9.954230222222225,
+            "gust_mph": 11.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1225.0,
+          "weather": {
+            "wind_mph": 9.366542083333332,
+            "gust_mph": 15.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1250.0,
+          "weather": {
+            "wind_mph": 8.069535166666668,
+            "gust_mph": 14.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1275.0,
+          "weather": {
+            "wind_mph": 5.488343277777776,
+            "gust_mph": 7.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1300.0,
+          "weather": {
+            "wind_mph": 6.514543999999999,
+            "gust_mph": 10.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1325.0,
+          "weather": {
+            "wind_mph": 11.746806972222222,
+            "gust_mph": 14.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1350.0,
+          "weather": {
+            "wind_mph": 12.219023166666666,
+            "gust_mph": 19.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1375.0,
+          "weather": {
+            "wind_mph": 10.286994111111106,
+            "gust_mph": 12.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1400.0,
+          "weather": {
+            "wind_mph": 8.153997888888885,
+            "gust_mph": 13.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1425.0,
+          "weather": {
+            "wind_mph": 14.482177222222223,
+            "gust_mph": 20.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1450.0,
+          "weather": {
+            "wind_mph": 12.308851166666667,
+            "gust_mph": 17.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1475.0,
+          "weather": {
+            "wind_mph": 6.264161999999999,
+            "gust_mph": 13.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1500.0,
+          "weather": {
+            "wind_mph": 2.5031793333333296,
+            "gust_mph": 11.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1525.0,
+          "weather": {
+            "wind_mph": 5.615679305555556,
+            "gust_mph": 7.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1550.0,
+          "weather": {
+            "wind_mph": 5.667341333333335,
+            "gust_mph": 6.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1575.0,
+          "weather": {
+            "wind_mph": 5.763341944444449,
+            "gust_mph": 6.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1600.0,
+          "weather": {
+            "wind_mph": 11.405926111111103,
+            "gust_mph": 25.9,
+            "rain_in_per_hr": 0.05942857142857142,
+            "snow_in_per_hr": 0.193
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1625.0,
+          "weather": {
+            "wind_mph": 18.53622577777778,
+            "gust_mph": 29.3,
+            "rain_in_per_hr": 0.15742857142857142,
+            "snow_in_per_hr": 0.193
+          },
+          "risk": { "level": "moderate", "condition": "rain", "load_raised": false }
+        },
+        {
+          "mile": 1650.0,
+          "weather": {
+            "wind_mph": 8.97459666666667,
+            "gust_mph": 21.0,
+            "rain_in_per_hr": 0.071,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1652.8374294122325,
+          "weather": {
+            "wind_mph": 8.698674000000002,
+            "gust_mph": 21.0,
+            "rain_in_per_hr": 0.071,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        }
+      ],
+      "summary": {
+        "low_miles": 1627.8374294122325,
+        "moderate_miles": 25.0,
+        "high_miles": 0.0,
+        "severe_miles": 0.0,
+        "no_travel_miles": 0.0,
+        "no_forecast_miles": 0.0,
+        "average_risk": 0.015125504514312868
+      }
+    },
+    {
+      "id": "route-3",
+      "checkpoints": [
+        {
+          "mile": 0.0,
+          "weather": {
+            "wind_mph": 11.30156411111111,
+            "gust_mph": 24.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 25.0,
+          "weather": {
+            "wind_mph": 11.012996,
+            "gust_mph": 25.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 50.0,
+          "weather": {
+            "wind_mph": 11.909926666666667,
+            "gust_mph": 26.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 75.0,
+          "weather": {
+            "wind_mph": 14.559120916666666,
+            "gust_mph": 25.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 100.0,
+          "weather": {
+            "wind_mph": 12.252366250000001,
+            "gust_mph": 24.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 125.0,
+          "weather": {
+            "wind_mph": 9.728359555555556,
+            "gust_mph": 24.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 150.0,
+          "weather": {
+            "wind_mph": 12.013676333333333,
+            "gust_mph": 23.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 175.0,
+          "weather": {
+            "wind_mph": 6.617232027777777,
+            "gust_mph": 23.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 200.0,
+          "weather": {
+            "wind_mph": 8.569984444444444,
+            "gust_mph": 23.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 225.0,
+          "weather": {
+            "wind_mph": 9.527246666666667,
+            "gust_mph": 21.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 250.0,
+          "weather": {
+            "wind_mph": 11.984931805555556,
+            "gust_mph": 20.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 275.0,
+          "weather": {
+            "wind_mph": 12.155361111111112,
+            "gust_mph": 20.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 300.0,
+          "weather": {
+            "wind_mph": 12.943793333333334,
+            "gust_mph": 20.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 325.0,
+          "weather": {
+            "wind_mph": 11.450774944444444,
+            "gust_mph": 19.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 350.0,
+          "weather": {
+            "wind_mph": 12.166515555555556,
+            "gust_mph": 17.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 375.0,
+          "weather": {
+            "wind_mph": 10.315342444444445,
+            "gust_mph": 17.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 400.0,
+          "weather": {
+            "wind_mph": 12.343588111111112,
+            "gust_mph": 16.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 425.0,
+          "weather": {
+            "wind_mph": 12.0,
+            "gust_mph": 16.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 450.0,
+          "weather": {
+            "wind_mph": 12.474483833333334,
+            "gust_mph": 15.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 475.0,
+          "weather": {
+            "wind_mph": 11.1,
+            "gust_mph": 13.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 500.0,
+          "weather": {
+            "wind_mph": 8.9601775,
+            "gust_mph": 12.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 525.0,
+          "weather": {
+            "wind_mph": 8.912241944444444,
+            "gust_mph": 10.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 550.0,
+          "weather": {
+            "wind_mph": 9.081408194444444,
+            "gust_mph": 10.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 575.0,
+          "weather": {
+            "wind_mph": 8.240835722222222,
+            "gust_mph": 8.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 600.0,
+          "weather": {
+            "wind_mph": 7.746641250000001,
+            "gust_mph": 8.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 625.0,
+          "weather": {
+            "wind_mph": 7.215043111111111,
+            "gust_mph": 8.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 650.0,
+          "weather": {
+            "wind_mph": 6.333928555555556,
+            "gust_mph": 6.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 675.0,
+          "weather": {
+            "wind_mph": 5.702164000000001,
+            "gust_mph": 6.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 700.0,
+          "weather": {
+            "wind_mph": 5.001194611111111,
+            "gust_mph": 5.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 725.0,
+          "weather": {
+            "wind_mph": 5.742644,
+            "gust_mph": 5.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 750.0,
+          "weather": {
+            "wind_mph": 3.7760601388888886,
+            "gust_mph": 3.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 775.0,
+          "weather": {
+            "wind_mph": 3.1025935555555555,
+            "gust_mph": 3.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 800.0,
+          "weather": {
+            "wind_mph": 4.17022425,
+            "gust_mph": 6.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 825.0,
+          "weather": {
+            "wind_mph": 5.513216944444444,
+            "gust_mph": 8.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 850.0,
+          "weather": {
+            "wind_mph": 7.6284288333333325,
+            "gust_mph": 10.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 875.0,
+          "weather": {
+            "wind_mph": 7.139401666666667,
+            "gust_mph": 13.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 900.0,
+          "weather": {
+            "wind_mph": 7.3160095555555555,
+            "gust_mph": 13.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 925.0,
+          "weather": {
+            "wind_mph": 9.286234555555556,
+            "gust_mph": 15.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 950.0,
+          "weather": {
+            "wind_mph": 8.908828999999999,
+            "gust_mph": 17.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 975.0,
+          "weather": {
+            "wind_mph": 8.233417000000001,
+            "gust_mph": 18.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1000.0,
+          "weather": {
+            "wind_mph": 7.808327333333333,
+            "gust_mph": 17.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1025.0,
+          "weather": {
+            "wind_mph": 9.13486163888889,
+            "gust_mph": 18.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1050.0,
+          "weather": {
+            "wind_mph": 14.387580666666667,
+            "gust_mph": 28.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1075.0,
+          "weather": {
+            "wind_mph": 15.187734638888887,
+            "gust_mph": 28.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1100.0,
+          "weather": {
+            "wind_mph": 13.442640666666666,
+            "gust_mph": 28.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1125.0,
+          "weather": {
+            "wind_mph": 12.581301666666668,
+            "gust_mph": 24.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1150.0,
+          "weather": {
+            "wind_mph": 11.980405333333337,
+            "gust_mph": 21.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1175.0,
+          "weather": {
+            "wind_mph": 15.82279188888889,
+            "gust_mph": 25.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1200.0,
+          "weather": {
+            "wind_mph": 10.769272,
+            "gust_mph": 17.2,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1225.0,
+          "weather": {
+            "wind_mph": 6.516454000000002,
+            "gust_mph": 13.0,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1250.0,
+          "weather": {
+            "wind_mph": 4.433315277777777,
+            "gust_mph": 5.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1275.0,
+          "weather": {
+            "wind_mph": 3.7598862777777784,
+            "gust_mph": 3.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1300.0,
+          "weather": {
+            "wind_mph": 4.5772888888888925,
+            "gust_mph": 10.3,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1325.0,
+          "weather": {
+            "wind_mph": 7.267999138888889,
+            "gust_mph": 10.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1350.0,
+          "weather": {
+            "wind_mph": 5.481116944444449,
+            "gust_mph": 6.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1375.0,
+          "weather": {
+            "wind_mph": 0.4801029999999997,
+            "gust_mph": 1.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1400.0,
+          "weather": {
+            "wind_mph": 6.353976444444447,
+            "gust_mph": 7.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1425.0,
+          "weather": {
+            "wind_mph": 4.9444661666666665,
+            "gust_mph": 5.1,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1450.0,
+          "weather": {
+            "wind_mph": 10.665506583333338,
+            "gust_mph": 6.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1475.0,
+          "weather": {
+            "wind_mph": 7.682273500000004,
+            "gust_mph": 8.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1500.0,
+          "weather": {
+            "wind_mph": 18.99637222222222,
+            "gust_mph": 24.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1525.0,
+          "weather": {
+            "wind_mph": 6.362178277777777,
+            "gust_mph": 6.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1550.0,
+          "weather": {
+            "wind_mph": 5.718658666666665,
+            "gust_mph": 4.9,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1575.0,
+          "weather": {
+            "wind_mph": 10.103154055555555,
+            "gust_mph": 14.8,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1600.0,
+          "weather": {
+            "wind_mph": 4.958001527777781,
+            "gust_mph": 6.5,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1625.0,
+          "weather": {
+            "wind_mph": 6.316252000000005,
+            "gust_mph": 9.4,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1650.0,
+          "weather": {
+            "wind_mph": 2.7923484999999997,
+            "gust_mph": 6.0,
+            "rain_in_per_hr": 0.098,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1675.0,
+          "weather": {
+            "wind_mph": 3.4538271111111083,
+            "gust_mph": 9.6,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1700.0,
+          "weather": {
+            "wind_mph": 6.814085333333334,
+            "gust_mph": 25.7,
+            "rain_in_per_hr": 0.142,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "moderate", "condition": "rain", "load_raised": false }
+        },
+        {
+          "mile": 1725.0,
+          "weather": {
+            "wind_mph": 7.534038222222231,
+            "gust_mph": 10.7,
+            "rain_in_per_hr": 0.0,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1750.0,
+          "weather": {
+            "wind_mph": 14.043774222222236,
+            "gust_mph": 25.3,
+            "rain_in_per_hr": 0.043,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        },
+        {
+          "mile": 1765.9860166626897,
+          "weather": {
+            "wind_mph": 8.858732583333326,
+            "gust_mph": 21.9,
+            "rain_in_per_hr": 0.028,
+            "snow_in_per_hr": 0.0
+          },
+          "risk": { "level": "low", "condition": null, "load_raised": false }
+        }
+      ],
+      "summary": {
+        "low_miles": 1740.9860166626897,
+        "moderate_miles": 25.0,
+        "high_miles": 0.0,
+        "severe_miles": 0.0,
+        "no_travel_miles": 0.0,
+        "no_forecast_miles": 0.0,
+        "average_risk": 0.014156397482265624
+      }
+    }
+  ],
+  "ranking": {
+    "recommended_id": "route-1",
+    "decided_by": "travel_time",
+    "routes": [
+      {
+        "id": "route-1",
+        "rank": 1,
+        "no_forecast_miles": 0.0,
+        "average_risk_tolerance": 0.01787780990430029,
+        "vs_first": null
+      },
+      {
+        "id": "route-2",
+        "rank": 2,
+        "no_forecast_miles": 0.0,
+        "average_risk_tolerance": 0.015125504514312868,
+        "vs_first": {
+          "dropped_at": "travel_time",
+          "dropped_against": {
+            "best_route_id": "route-1",
+            "route_value": 82054.0,
+            "best_value": 69611.0,
+            "tolerance": 0.0
+          },
+          "travel_time_seconds": 12443.0,
+          "no_travel_miles": 0.0,
+          "severe_miles": 0.0,
+          "high_miles": 0.0,
+          "average_risk": 0.015125504514312868
+        }
+      },
+      {
+        "id": "route-3",
+        "rank": 3,
+        "no_forecast_miles": 0.0,
+        "average_risk_tolerance": 0.014156397482265624,
+        "vs_first": {
+          "dropped_at": "travel_time",
+          "dropped_against": {
+            "best_route_id": "route-1",
+            "route_value": 91397.0,
+            "best_value": 69611.0,
+            "tolerance": 0.0
+          },
+          "travel_time_seconds": 21786.0,
+          "no_travel_miles": 0.0,
+          "severe_miles": 0.0,
+          "high_miles": 0.0,
+          "average_risk": 0.014156397482265624
+        }
+      }
+    ]
+  },
+  "grid": {
+    "start": "2026-11-13T10:00:00Z",
+    "cell_degrees": 0.5,
+    "level_codes": ["low", "moderate", "high", "severe", "no_travel"],
+    "cells": [
+      {
+        "lat": 38.75,
+        "lon": -110.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -109.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -109.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -100.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -99.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -99.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -98.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -98.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -97.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -97.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -96.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -96.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -95.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -95.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -94.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -91.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -90.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -90.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 38.75,
+        "lon": -89.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -110.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -110.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -109.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0,
+          0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -109.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -108.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+          0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -108.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+          0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -107.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          1, 0, 0, 0, 0, 0, 0, 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -107.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -106.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -104.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -103.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -103.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -102.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -102.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -101.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -101.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -100.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -100.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -99.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -99.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -97.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -97.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -96.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -96.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -95.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -95.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -94.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -91.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -90.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -89.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.25,
+        "lon": -89.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -111.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -111.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -110.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -110.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -107.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -107.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -106.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -106.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -105.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -105.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -104.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -104.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -103.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -94.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -93.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -93.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -92.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -92.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -91.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -91.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -89.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 39.75,
+        "lon": -89.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.25,
+        "lon": -111.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.25,
+        "lon": -111.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 3, 2, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.25,
+        "lon": -89.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.25,
+        "lon": -89.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.25,
+        "lon": -88.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -112.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -111.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -111.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -102.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -102.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -101.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -100.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -100.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -99.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -99.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -98.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -98.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -97.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -97.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -96.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -96.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -89.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 40.75,
+        "lon": -88.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -111.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -110.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -110.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -109.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -109.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -106.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -105.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -105.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -104.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -104.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -103.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -103.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -102.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -102.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -101.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -101.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -100.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -100.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -96.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -95.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -95.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -94.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -94.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -93.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -90.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -90.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -89.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -88.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.25,
+        "lon": -88.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -110.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -109.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -109.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -108.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -108.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -107.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -107.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -106.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -106.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -105.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -95.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -94.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -94.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -93.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -93.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -92.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -92.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -91.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -91.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -90.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -90.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -89.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -89.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -88.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -88.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -87.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 41.75,
+        "lon": -87.25,
+        "levels": [
+          0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0,
+          1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 42.25,
+        "lon": -107.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 42.25,
+        "lon": -107.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 42.25,
+        "lon": -106.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 42.25,
+        "lon": -88.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 42.25,
+        "lon": -87.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 42.75,
+        "lon": -107.25,
+        "levels": [
+          0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 42.75,
+        "lon": -106.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 42.75,
+        "lon": -106.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 42.75,
+        "lon": -88.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 42.75,
+        "lon": -88.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 42.75,
+        "lon": -87.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.25,
+        "lon": -106.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.25,
+        "lon": -106.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.25,
+        "lon": -96.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.25,
+        "lon": -89.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.25,
+        "lon": -89.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.25,
+        "lon": -88.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.25,
+        "lon": -88.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -106.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -106.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -103.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -102.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -102.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -101.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -101.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -100.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -100.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -99.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -99.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -98.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -98.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -97.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -97.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -96.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -96.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -95.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -95.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -94.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -94.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -93.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -93.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -92.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -92.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -91.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -91.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -90.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -90.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 43.75,
+        "lon": -89.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -106.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -106.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -105.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -105.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -104.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -104.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -103.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -103.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -102.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -102.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -100.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -100.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -92.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -91.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -91.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -90.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.25,
+        "lon": -90.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.75,
+        "lon": -104.25,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      },
+      {
+        "lat": 44.75,
+        "lon": -103.75,
+        "levels": [
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        ]
+      }
+    ]
+  },
+  "attribution": { "text": "Weather data by Open-Meteo.com", "url": "https://open-meteo.com/" }
+}

@@ -27,7 +27,8 @@ import {
   routeWidth,
   SOURCE,
 } from './layers';
-import type { CheckpointRef, MapInsets } from './types';
+import type { CheckpointRef } from '../plan/view';
+import type { MapInsets } from './types';
 
 // Vite emits the worker as its own file; MapLibre cannot find it next to its module otherwise.
 maplibregl.setWorkerUrl(workerUrl);

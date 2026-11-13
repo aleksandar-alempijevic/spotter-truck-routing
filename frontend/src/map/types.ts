@@ -5,8 +5,3 @@ export interface MapInsets {
   bottom: number;
   left: number;
 }
-
-export interface CheckpointRef {
-  routeId: string;
-  index: number;
-}

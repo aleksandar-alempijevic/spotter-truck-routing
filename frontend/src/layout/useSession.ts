@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { CheckpointRef } from '../map/types';
+import type { CheckpointRef } from '../plan/view';
 import type { PlanView } from '../plan/view';
 import { createHourHolder, type HourHolder } from '../timeline/hourHolder';
 

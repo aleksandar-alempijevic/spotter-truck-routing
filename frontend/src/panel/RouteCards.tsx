@@ -3,6 +3,7 @@ import type { Trip } from '../plan/trip';
 import type { RouteView } from '../plan/view';
 import { RISK_STYLE, LEVELS_BY_SEVERITY } from '../risk/levels';
 import { RiskBadge } from '../risk/RiskBadge';
+import { RiskGlyph } from '../risk/RiskGlyph';
 import { formatDuration } from '../time/zone';
 import { routeWorstRisk } from './riskOfRoute';
 import { arrivalInDestinationZone, arrivalMs, originClock } from './times';
@@ -133,6 +134,30 @@ export function RouteCards({ routes, trip, selectedId, recommendedId, onSelect }
                 {inDestination ? ` (${inDestination} there)` : ''}
               </Typography>
               <MilesByLevel route={route} />
+              {route.summary && route.summary.no_travel_miles > 0 && (
+                <Box
+                  role="note"
+                  sx={{
+                    mt: 1,
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 1,
+                    bgcolor: RISK_STYLE.no_travel.color,
+                    color: RISK_STYLE.no_travel.onColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    fontWeight: 700,
+                  }}
+                >
+                  <Box
+                    sx={{ display: 'inline-flex', bgcolor: '#fff', borderRadius: '50%', p: 0.25 }}
+                  >
+                    <RiskGlyph risk="no_travel" size={18} />
+                  </Box>
+                  No Travel on {fmtMiles(route.summary.no_travel_miles)} of this route
+                </Box>
+              )}
             </ButtonBase>
           </li>
         );

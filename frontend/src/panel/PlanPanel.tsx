@@ -1,5 +1,5 @@
 import { Box, Divider, Stack, Typography } from '@mui/material';
-import type { CheckpointRef } from '../map/types';
+import type { CheckpointRef } from '../plan/view';
 import type { PlanState } from '../plan/queries';
 import type { Submission } from '../plan/trip';
 import { Credits } from './Credits';
@@ -7,6 +7,7 @@ import { CheckpointList, CheckpointRow } from './CheckpointList';
 import { PlanHeadline } from './PlanHeadline';
 import { RouteCards } from './RouteCards';
 import { RouteChips } from './RouteChips';
+import { WhyThisRoute } from './WhyThisRoute';
 
 /** Which parts of the panel are shown: the sheet shows one tier at a time, the pane all. */
 export type PanelTier = 'peek' | 'half' | 'full' | 'all';
@@ -52,6 +53,10 @@ export function PlanPanel({
           {state.view.shortfall}
         </Typography>
       )}
+      {state.explanation &&
+        'criteria' in state.explanation &&
+        state.explanation.criteria &&
+        tier !== 'peek' && <WhyThisRoute criteria={state.explanation.criteria} routes={routes} />}
       {showChips && (
         <RouteChips
           routes={routes}

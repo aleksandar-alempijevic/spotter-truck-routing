@@ -8,6 +8,12 @@ import type {
 } from '../api/types';
 import type { RiskState } from '../risk/levels';
 
+/** One checkpoint of one route, by route id and index: what the map and the panel select. */
+export interface CheckpointRef {
+  routeId: string;
+  index: number;
+}
+
 export interface CheckpointView {
   index: number;
   mile: number;

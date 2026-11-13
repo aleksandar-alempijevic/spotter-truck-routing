@@ -15,6 +15,7 @@ export type ConditionsOut = Schemas['ConditionsOut'];
 export type RouteSummaryOut = Schemas['RouteSummaryOut'];
 export type RankingOut = Schemas['RankingOut'];
 export type RankingStep = Schemas['RankingStep'];
+export type RankedRouteOut = Schemas['RankedRouteOut'];
 export type GridOut = Schemas['GridOut'];
 export type Level = Schemas['Level'];
 export type Condition = Schemas['Condition'];
