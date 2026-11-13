@@ -6,8 +6,9 @@ import type { GridModel } from '../timeline/grid';
 import type { HourHolder } from '../timeline/hourHolder';
 import { MapController } from './controller';
 import type { CheckpointRef } from '../plan/view';
+import type { Reading } from '../plan/describe';
 import type { RiskKey } from '../risk/levels';
-import type { CheckpointPopup, MapInsets, MapSpot } from './types';
+import type { MapInsets, MapSpot } from './types';
 
 export interface MapViewProps {
   routes: readonly RouteView[];
@@ -21,9 +22,9 @@ export interface MapViewProps {
   onSelectRoute(routeId: string): void;
   onSelectCheckpoint(ref: CheckpointRef): void;
   /** What the hover popup says about a checkpoint. */
-  describeCheckpoint(ref: CheckpointRef): CheckpointPopup | null;
+  describeCheckpoint(ref: CheckpointRef): Reading | null;
   /** What the readout says about a heatmap cell at the slider's hour. */
-  describeCell(level: RiskKey, hour: number): CheckpointPopup | null;
+  describeCell(level: RiskKey, hour: number): Reading | null;
   /**
    * True: a tapped spot is read in a popup over the map. False: the page shows the reading, and a
    * tap only reports what it landed on through `onSpot`.

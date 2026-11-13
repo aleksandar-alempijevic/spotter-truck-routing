@@ -153,6 +153,16 @@ export function AppShell({
     [isSheet, grid, submission],
   );
 
+  // The reading's own close ends the selection it came from as well: the ring and the list row.
+  const closeSpot = () => {
+    const ref = spot?.checkpoint;
+    const now = session.checkpoint;
+    if (ref && now && now.routeId === ref.routeId && now.index === ref.index) {
+      session.clearCheckpoint();
+    }
+    setTapped(null);
+  };
+
   const popupFor = useCallback(
     (ref: CheckpointRef) => {
       const route = plan.view?.routes.find((r) => r.id === ref.routeId);
@@ -309,7 +319,7 @@ export function AppShell({
                           holder={session.holder}
                           describeCheckpoint={popupFor}
                           describeCell={cellFor}
-                          onClose={() => setTapped(null)}
+                          onClose={closeSpot}
                         />
                       )}
                       {panel(tier)}

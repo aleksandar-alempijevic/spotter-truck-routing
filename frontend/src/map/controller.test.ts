@@ -106,6 +106,7 @@ vi.mock('maplibre-gl', () => {
     unproject = () => ({ lng: 0, lat: 0 });
     project = () => pointOnScreen;
     fitBounds = record('fitBounds');
+    panBy = record('panBy');
     isStyleLoaded = () => styleLoaded;
     once = (event: string, handler: (event: unknown) => void) => {
       onceHandlers.set(event, handler);
@@ -871,4 +872,51 @@ test('a readout whose words change with the hour keeps its cap', () => {
 
   expect(shown.contentStyle.maxHeight).toBe(cap);
   expect(shown.contentStyle.overflowY).toBe('hidden');
+});
+
+const pans = () => log.filter((c) => c.method === 'panBy').map((c) => c.args[0]);
+const sizeOf = (controller: unknown, width: number, height: number) => {
+  const container = (controller as { container: HTMLElement }).container;
+  Object.defineProperty(container, 'clientWidth', { value: width, configurable: true });
+  Object.defineProperty(container, 'clientHeight', { value: height, configurable: true });
+};
+
+test('a spot the page reads is panned back into the open part when the panels rise over it', () => {
+  const { controller, ev, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  sizeOf(controller, 400, 800);
+  controller.setReadoutOnMap(false);
+  queried = [{ id: 0 }];
+  pointOnScreen = { x: 150, y: 600 };
+  handlers.get('click')!({ point: { x: 150, y: 600 } });
+  expect(ev.onSpot).toHaveBeenCalled();
+  controller.setSpotOpen(true);
+
+  // The sheet rises to y 500: the spot at 600 is under it and moves up to 28 px above its top.
+  controller.setInsets({ top: 0, right: 0, bottom: 300, left: 0 });
+  expect(pans()).toEqual([[0, 600 - (800 - 300 - 28)]]);
+  expect(frames.size).toBe(0); // still no fit
+
+  // A spot already in view is left where it is.
+  log.length = 0;
+  controller.setInsets({ top: 0, right: 0, bottom: 100, left: 0 });
+  expect(pans()).toEqual([]);
+});
+
+test('a popup open when the page takes over the reading is handed over, not dropped', () => {
+  const { controller, ev, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  queried = [{ id: 2 }];
+  checkpointUnder(controller);
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+  expect(popups.filter((p) => !p.removed)).toHaveLength(1);
+  ev.onSpot.mockClear();
+
+  controller.setReadoutOnMap(false);
+
+  expect(popups.filter((p) => !p.removed)).toHaveLength(0);
+  expect(ev.onSpot).toHaveBeenCalledWith({
+    cell: 2,
+    checkpoint: { routeId: 'route-1', index: 3 },
+  });
 });

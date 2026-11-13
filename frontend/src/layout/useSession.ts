@@ -11,6 +11,8 @@ export interface Session {
   checkpoint: CheckpointRef | null;
   selectRoute(routeId: string): void;
   selectCheckpoint(ref: CheckpointRef): void;
+  /** Drops the selected checkpoint and keeps the route. */
+  clearCheckpoint(): void;
 }
 
 interface Held {
@@ -58,11 +60,17 @@ export function useSession(submissionId: number | null, view: PlanView | null): 
     [],
   );
 
+  const clearCheckpoint = useCallback(
+    () => setHeld((old) => (old.checkpoint ? { ...old, checkpoint: null } : old)),
+    [],
+  );
+
   return {
     holder: current.holder,
     routeId: current.routeId ?? defaultRoute(view),
     checkpoint: current.checkpoint,
     selectRoute,
     selectCheckpoint,
+    clearCheckpoint,
   };
 }

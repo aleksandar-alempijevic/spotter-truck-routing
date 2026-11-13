@@ -57,6 +57,13 @@ export function Sheet({ state, onState, topClearance, onDragging, children }: Pr
   // Set for the click that ends a drag, so releasing the handle does not also cycle the state.
   const swallowClick = useRef(false);
   const [preview, setPreview] = useState<SheetState | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // A new height starts at the top of its content: what was scrolled to at another height is
+  // not what the driver comes back to.
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [state]);
 
   // The peek height is whatever its content makes it; the drag needs it as a stop.
   useEffect(() => {
@@ -217,6 +224,7 @@ export function Sheet({ state, onState, topClearance, onDragging, children }: Pr
         </Button>
       </Box>
       <Box
+        ref={scrollRef}
         sx={{
           flex: 1,
           minHeight: 0,

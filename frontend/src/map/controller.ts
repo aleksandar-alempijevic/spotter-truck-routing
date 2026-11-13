@@ -32,9 +32,9 @@ import {
   SOURCE,
   truckRadius,
 } from './layers';
-import { labelReadings } from '../plan/describe';
+import { labelReadings, type Reading } from '../plan/describe';
 import type { CheckpointRef } from '../plan/view';
-import type { CheckpointPopup, MapInsets, MapSpot } from './types';
+import type { MapInsets, MapSpot } from './types';
 
 // Vite emits the worker as its own file; MapLibre cannot find it next to its module otherwise.
 maplibregl.setWorkerUrl(workerUrl);
@@ -54,9 +54,9 @@ interface MapEvents {
   onSpot(spot: MapSpot | null): void;
   onBasemapUnavailable(): void;
   /** The popup's words for a checkpoint; null when there is nothing to say. */
-  describeCheckpoint(ref: CheckpointRef): CheckpointPopup | null;
+  describeCheckpoint(ref: CheckpointRef): Reading | null;
   /** The readout's words for a heatmap cell's level at an hour; null when there is nothing to say. */
-  describeCell(level: RiskKey, hour: number): CheckpointPopup | null;
+  describeCell(level: RiskKey, hour: number): Reading | null;
   /** Screen rectangles over the map that a readout must keep clear of, such as the key. */
   coveredRects(): readonly DOMRect[];
 }
@@ -90,7 +90,7 @@ const HOVER_WIDTHS = [280, 220] as const;
 const HOVER_QUERY = '(hover: hover) and (pointer: fine)';
 
 /** The words of a popup as DOM, built with text nodes only. */
-function popupWords(words: CheckpointPopup): HTMLElement {
+function popupWords(words: Reading): HTMLElement {
   const content = document.createElement('div');
   const title = document.createElement('strong');
   title.textContent = words.title;
@@ -109,7 +109,7 @@ function popupWords(words: CheckpointPopup): HTMLElement {
  * at the foot says when there is more below. MapLibre builds the box again on every
  * `setDOMContent`, so the cap is set again each time.
  */
-function fillPopup(popup: maplibregl.Popup, words: CheckpointPopup, maxHeight: number): void {
+function fillPopup(popup: maplibregl.Popup, words: Reading, maxHeight: number): void {
   const root = document.createElement('div');
   Object.assign(root.style, {
     position: 'relative',
@@ -187,12 +187,16 @@ export class MapController {
     /** The height its box is capped at, kept for when its words change. */
     maxHeight: number;
     /** The checkpoint the readout was opened from, when it was; its words do not change with the hour. */
-    checkpoint: CheckpointPopup | null;
+    checkpoint: Reading | null;
+    /** The checkpoint it was opened from, to hand to the page if the layout changes. */
+    ref: CheckpointRef | null;
   } | null = null;
   /** Whether a tapped spot is read in a popup over the map; otherwise the page shows it. */
   private readoutOnMap = true;
   /** The page is showing a spot's reading: the map stays where the driver put it, as under a popup. */
   private spotOpen = false;
+  /** Where the spot the page is reading lies, to keep it in the open part of the map. */
+  private spotAt: maplibregl.LngLatLike | null = null;
   /** While WebGL's context is lost nothing can be drawn, so nothing is pushed. */
   private contextLost = false;
 
@@ -299,6 +303,7 @@ export class MapController {
     // A readout open when the panels change (a chosen checkpoint asks the sheet for room) is
     // placed again in the part that is now open.
     if (changed) this.placeReadoutAgain();
+    if (changed) this.keepSpotVisible();
     // Until the driver moves the map, the routes stay centred in the part the panels leave open;
     // but not under a readout being read, which would slide away from the finger.
     if (changed && this.live && !this.readout && !this.spotOpen) this.queueFit(true);
@@ -306,20 +311,46 @@ export class MapController {
 
   /** Where a tapped spot is read: in a popup on the map, or by the page, which is told of the tap. */
   setReadoutOnMap(onMap: boolean): void {
+    if (onMap === this.readoutOnMap) return;
     this.readoutOnMap = onMap;
-    if (!onMap) this.hideReadout();
+    if (onMap) return;
+    // A popup that is open when the page takes over the reading (a pane turned into a sheet) is
+    // handed over, not dropped.
+    const open = this.readout;
+    this.hideReadout();
+    if (open) {
+      this.spotAt = open.at;
+      this.events.onSpot({ cell: open.cell, checkpoint: open.ref });
+    }
   }
 
   /** The page says whether it is showing a spot's reading; the map then holds its position. */
   setSpotOpen(open: boolean): void {
     this.spotOpen = open;
+    if (!open) this.spotAt = null;
+  }
+
+  /**
+   * The map holds still under a reading, but the spot itself must stay in the open part: when the
+   * panels rise over it, the map is panned just far enough to bring it back.
+   */
+  private keepSpotVisible(): void {
+    if (!this.spotOpen || !this.spotAt || !this.live) return;
+    const { clientWidth: width, clientHeight: height } = this.container;
+    const margin = 28; // a checkpoint's mark and its ring
+    const p = this.map.project(this.spotAt);
+    const low = (v: number, edge: number) => Math.min(0, v - edge);
+    const high = (v: number, edge: number) => Math.max(0, v - edge);
+    const dx = low(p.x, this.insets.left + margin) + high(p.x, width - this.insets.right - margin);
+    const dy = low(p.y, this.insets.top + margin) + high(p.y, height - this.insets.bottom - margin);
+    if (dx !== 0 || dy !== 0) this.map.panBy([dx, dy], { duration: 250 });
   }
 
   /** An open readout is placed again in the part of the map that is open now. */
   private placeReadoutAgain(): void {
     if (!this.readout) return;
-    const { cell, at, checkpoint } = this.readout;
-    this.showReadout(cell, at, checkpoint);
+    const { cell, at, checkpoint, ref } = this.readout;
+    this.showReadout(cell, at, checkpoint, ref);
   }
 
   /**
@@ -728,7 +759,7 @@ export class MapController {
   }
 
   /** What the cell's readout says at the hour on screen. */
-  private readoutWords(cell: number, checkpoint: CheckpointPopup | null): CheckpointPopup | null {
+  private readoutWords(cell: number, checkpoint: Reading | null): Reading | null {
     const grid = this.grid;
     if (!grid) return null;
     const heat = this.events.describeCell(levelKeyAt(grid, cell, this.shownHour), this.shownHour);
@@ -744,7 +775,7 @@ export class MapController {
    */
   private openPopup(
     make: (anchor: PopupAnchor, widthPx: number) => maplibregl.Popup,
-    words: CheckpointPopup,
+    words: Reading,
     widths: readonly number[],
     at: maplibregl.LngLatLike,
   ): { popup: maplibregl.Popup; maxHeight: number } {
@@ -832,7 +863,8 @@ export class MapController {
   private showReadout(
     cell: number,
     at: maplibregl.LngLatLike,
-    checkpoint: CheckpointPopup | null = null,
+    checkpoint: Reading | null = null,
+    ref: CheckpointRef | null = null,
   ): void {
     this.hideReadout();
     const words = this.readoutWords(cell, checkpoint);
@@ -858,7 +890,7 @@ export class MapController {
     popup.on('close', () => {
       if (this.readout?.popup === popup) this.readout = null;
     });
-    this.readout = { cell, at, popup, maxHeight, checkpoint };
+    this.readout = { cell, at, popup, maxHeight, checkpoint, ref };
   }
 
   private hideReadout(): void {
@@ -885,9 +917,10 @@ export class MapController {
       const at = (checkpoint.geometry as unknown as { coordinates: [number, number] }).coordinates;
       const cell = this.cellAt(this.map.project(at));
       this.events.onSpot({ cell: cell ?? null, checkpoint: { routeId, index } });
+      this.spotAt = at;
       if (!this.readoutOnMap || cell === undefined) return;
       const words = this.events.describeCheckpoint({ routeId, index });
-      if (words) this.showReadout(cell, at, words);
+      if (words) this.showReadout(cell, at, words, { routeId, index });
       return;
     }
     // A tap on a route line selects the route, and reads the heatmap cell under the finger as
@@ -896,6 +929,7 @@ export class MapController {
     const line = this.hit(point, [LAYER.routeLine])[0];
     if (line) this.events.onSelectRoute((line.properties as { id: string }).id);
     const cell = this.cellAt(point);
+    this.spotAt = cell === undefined ? null : this.map.unproject(point);
     this.events.onSpot(cell === undefined ? null : { cell, checkpoint: null });
     if (this.readoutOnMap && cell !== undefined) this.showReadout(cell, this.map.unproject(point));
   }

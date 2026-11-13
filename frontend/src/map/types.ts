@@ -8,12 +8,6 @@ export interface MapInsets {
   left: number;
 }
 
-/** What the hover popup on a checkpoint says: a heading and a few plain lines. */
-export interface CheckpointPopup {
-  title: string;
-  lines: string[];
-}
-
 /** What a tap on the map landed on: a heatmap cell, a checkpoint, or both. */
 export interface MapSpot {
   /** The heatmap cell under the tap, when there is one. */

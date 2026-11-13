@@ -646,3 +646,39 @@ test('pane: the map keeps its popup, and the pane shows no reading of its own', 
   expect(spotHeading()).not.toBeInTheDocument();
   expect(mapProps?.spotOpen).toBe(false);
 });
+
+test('phone: closing the reading also drops the selected checkpoint, ring and list row', async () => {
+  useViewport('sheet');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  const ref = { routeId: 'route-3', index: 2 };
+  act(() => {
+    mapProps!.onSelectCheckpoint(ref);
+    mapProps!.onSpot({ cell: 0, checkpoint: ref });
+  });
+  expect(mapProps?.selectedCheckpoint).toEqual(ref);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Close the weather reading' }));
+
+  expect(spotHeading()).not.toBeInTheDocument();
+  expect(mapProps?.selectedCheckpoint).toBeNull();
+  expect(mapProps?.selectedRouteId).toBe('route-3'); // the route stays chosen
+  expect(screen.queryByText('Selected checkpoint on Route 3')).not.toBeInTheDocument();
+});
+
+test('phone: a checkpoint chosen from the list since the tap keeps its selection when the reading closes', async () => {
+  useViewport('sheet');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  act(() => {
+    mapProps!.onSelectCheckpoint({ routeId: 'route-3', index: 2 });
+    mapProps!.onSpot({ cell: 0, checkpoint: { routeId: 'route-3', index: 2 } });
+  });
+  act(() => mapProps!.onSelectCheckpoint({ routeId: 'route-3', index: 4 }));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Close the weather reading' }));
+
+  expect(mapProps?.selectedCheckpoint).toEqual({ routeId: 'route-3', index: 4 });
+});

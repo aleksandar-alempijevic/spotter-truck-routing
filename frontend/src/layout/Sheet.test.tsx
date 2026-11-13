@@ -122,3 +122,21 @@ test('a cancelled drag leaves the state alone', () => {
   fireEvent.pointerCancel(handle, { pointerId: 1 });
   expect(onState).not.toHaveBeenCalled();
 });
+
+test('a new height starts at the top of the content, not where the last one was scrolled', () => {
+  const view = render(
+    <Sheet state="full" onState={vi.fn()} topClearance={0}>
+      {() => <p>content</p>}
+    </Sheet>,
+  );
+  const scroller = screen.getByText('content').parentElement!;
+  scroller.scrollTop = 606;
+
+  view.rerender(
+    <Sheet state="half" onState={vi.fn()} topClearance={0}>
+      {() => <p>content</p>}
+    </Sheet>,
+  );
+
+  expect(scroller.scrollTop).toBe(0);
+});

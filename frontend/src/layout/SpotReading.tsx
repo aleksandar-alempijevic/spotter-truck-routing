@@ -42,7 +42,18 @@ export function SpotReading({
       variant="outlined"
       component="section"
       aria-label="Weather at the tapped spot"
-      sx={{ position: 'relative', mb: 2, py: 1, pl: 1.5, pr: 6, minHeight: 44 }}
+      sx={{
+        // Stuck to the top of the sheet's scroll, so it is in view at every height and scroll.
+        position: 'sticky',
+        top: 0,
+        zIndex: 1,
+        bgcolor: 'background.paper',
+        mb: 2,
+        py: 1,
+        pl: 1.5,
+        pr: 6,
+        minHeight: 44,
+      }}
     >
       <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 700 }}>
         {words.title}
