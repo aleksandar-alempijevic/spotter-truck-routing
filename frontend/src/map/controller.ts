@@ -436,10 +436,17 @@ export class MapController {
     this.pushRouteStyle();
     this.pushSelection();
     this.pushGrid();
-    if (!this.announcedReady) {
-      this.announcedReady = true;
-      this.events.onReady();
-    }
+    this.announceReady();
+  }
+
+  /**
+   * Says the map is ready, once. A style that installs while the context is lost says nothing:
+   * the canvas is dead, so it is announced when the restore comes.
+   */
+  private announceReady(): void {
+    if (this.announcedReady || this.contextLost) return;
+    this.announcedReady = true;
+    this.events.onReady();
   }
 
   /** Drawn and drawable: the style is in and the GL context is not lost. */
@@ -463,13 +470,14 @@ export class MapController {
   private onContextRestored(): void {
     const recover = () => {
       this.contextLost = false;
-      // A loss before the first style install has nothing to redraw, and nothing to report: the
-      // install itself says the map is ready.
-      if (!this.styleReady) return;
-      this.pushRouteData();
-      this.pushRouteStyle();
-      this.pushSelection();
-      this.pushGrid();
+      // Before the first style install there is nothing to redraw; the install says ready.
+      if (this.styleReady) {
+        this.pushRouteData();
+        this.pushRouteStyle();
+        this.pushSelection();
+        this.pushGrid();
+        this.announceReady(); // an install that came while the context was lost
+      }
       this.events.onRecovered();
     };
     if (this.map.isStyleLoaded()) recover();

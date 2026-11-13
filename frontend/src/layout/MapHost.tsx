@@ -65,9 +65,8 @@ export function MapHost({
           <Suspense fallback={null}>
             <MapView
               {...props}
-              // The first style install means the map is alive, even if its context was lost
-              // before then.
-              onReady={() => setFacts((f) => ({ ...f, ready: true, lost: false }))}
+              // Only a restore ends a loss: a style can install while the canvas is dead.
+              onReady={() => setFacts((f) => ({ ...f, ready: true }))}
               onFailed={failed}
               onContextLost={() => setFacts((f) => ({ ...f, lost: true }))}
               onRecovered={() => setFacts((f) => ({ ...f, lost: false }))}

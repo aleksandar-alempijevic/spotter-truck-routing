@@ -448,19 +448,38 @@ test('a popup is capped to the room the open part leaves it, and scrolls', () =>
   expect(shown.contentStyle.overflowY).toBe('auto');
 });
 
-test('a context lost before the style is installed reports nothing on restore: the install does', () => {
+function bare() {
   const container = document.createElement('div');
   container.getBoundingClientRect = () => ({ left: 0, top: 0, right: 400, bottom: 800 }) as DOMRect;
   const ev = events();
   new MapController(container, ev);
+  return ev;
+}
+
+test('a context lost and restored before the style installs reports the restore, then ready at the install', () => {
+  const ev = bare();
 
   canvasListeners.get('webglcontextlost')!();
   canvasListeners.get('webglcontextrestored')!();
   expect(ev.onContextLost).toHaveBeenCalledTimes(1);
-  expect(ev.onRecovered).not.toHaveBeenCalled();
+  expect(ev.onRecovered).toHaveBeenCalledTimes(1);
+  expect(ev.onReady).not.toHaveBeenCalled();
 
   handlers.get('style.load')!({});
   expect(ev.onReady).toHaveBeenCalledTimes(1);
+});
+
+test('a style that installs while the context is lost says nothing until the restore', () => {
+  const ev = bare();
+
+  canvasListeners.get('webglcontextlost')!();
+  handlers.get('style.load')!({});
+  expect(ev.onReady).not.toHaveBeenCalled(); // the canvas is dead: not ready, and nothing recovered
+  expect(ev.onRecovered).not.toHaveBeenCalled();
+
+  canvasListeners.get('webglcontextrestored')!();
+  expect(ev.onReady).toHaveBeenCalledTimes(1);
+  expect(ev.onRecovered).toHaveBeenCalledTimes(1);
 });
 
 test('with no side inside the open part, the first side stands', () => {

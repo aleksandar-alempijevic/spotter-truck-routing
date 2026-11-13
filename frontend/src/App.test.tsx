@@ -536,14 +536,17 @@ test('a basemap error that arrives while the context is lost is kept for after t
   expect(screen.getByText(NO_BASEMAP)).toBeInTheDocument();
 });
 
-test('a context lost before the first load is lifted when the map installs its style', async () => {
+test('a context lost before the first load stays lost through the style install, and a restore lifts it', async () => {
   useViewport('pane');
   renderApp();
   await waitFor(() => expect(mapProps).not.toBeNull());
 
   act(() => mapProps!.onContextLost());
   expect(screen.getByText(LOST)).toBeInTheDocument();
+  // A style can install while the canvas is dead: that does not make the map healthy.
   act(() => mapProps!.onReady());
+  expect(screen.getByText(LOST)).toBeInTheDocument();
+  act(() => mapProps!.onRecovered());
   expect(screen.queryByText(LOST)).not.toBeInTheDocument();
 });
 
