@@ -1,4 +1,4 @@
-"""Ranking two or three routes: safety first, with travel time deciding within forecast noise."""
+"""Ranking one to three routes: safety first, with travel time deciding within forecast noise."""
 
 import math
 from collections.abc import Callable, Sequence
@@ -85,8 +85,9 @@ class Ranking:
     """All routes, best first."""
     recommended_id: str | None
     """The first-ranked route, or None when it has No Travel miles."""
-    decided_by: RankingStep
-    """The step after which only the first-ranked route remained."""
+    decided_by: RankingStep | None
+    """The step after which only the first-ranked route remained; None for a single route, which
+    no step had to decide."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,7 +174,7 @@ def _first_place(
 
 
 def rank_routes(candidates: Sequence[RouteCandidate], checkpoint_interval_miles: float) -> Ranking:
-    """Rank two or three routes. The result does not depend on the order they are given in.
+    """Rank one to three routes. The result does not depend on the order they are given in.
 
     Steps, in order: fewest No Travel miles; fewest Severe miles; High miles within one
     checkpoint interval of the best; average risk within the route's own tolerance of the best
@@ -181,9 +182,12 @@ def rank_routes(candidates: Sequence[RouteCandidate], checkpoint_interval_miles:
     fewest miles; route id. Each tolerance is measured against the best route still in the
     contest at that step, so ties do not chain: adding a route can change the winner between
     two others. Second and third place repeat the steps without the routes already placed.
+
+    A single route is first with no deciding step and no comparison; it is recommended unless it
+    has No Travel miles.
     """
-    if not 2 <= len(candidates) <= 3:
-        raise ValueError(f"ranking takes two or three routes, got {len(candidates)}")
+    if not 1 <= len(candidates) <= 3:
+        raise ValueError(f"ranking takes one to three routes, got {len(candidates)}")
     if len({c.route_id for c in candidates}) != len(candidates):
         raise ValueError("route ids must be unique")
     if not math.isfinite(checkpoint_interval_miles) or checkpoint_interval_miles <= 0:
@@ -196,7 +200,7 @@ def rank_routes(candidates: Sequence[RouteCandidate], checkpoint_interval_miles:
 
     remaining = list(candidates)
     ordered: list[RouteCandidate] = []
-    decided_by = RankingStep.ROUTE_ID
+    decided_by: RankingStep | None = None
     first_round_drops: dict[str, tuple[RankingStep, StepMeasure]] = {}
     while remaining:
         if len(remaining) == 1:

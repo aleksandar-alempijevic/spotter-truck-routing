@@ -5,6 +5,7 @@ Open-Meteo needs no key, so there is no key setting and no not-configured error.
 per IP: 600 locations a minute, 5,000 an hour and 10,000 a day, and a call of N locations costs N.
 """
 
+import asyncio
 import math
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
@@ -33,14 +34,15 @@ ATTRIBUTION_URL = "https://open-meteo.com/"
 SNOW_TO_WATER = 7.0
 """Open-Meteo's `snowfall` is snow depth in inches; its water equivalent is a seventh of it."""
 
-_FIELDS = ("wind_speed_10m", "wind_gusts_10m", "precipitation", "snowfall")
 _UNITS = {
     "wind_speed_10m": "mp/h",
     "wind_gusts_10m": "mp/h",
     "precipitation": "inch",
     "snowfall": "inch",
 }
-"""The unit strings the call is observed to return; any other means the units are unknown."""
+"""The fields requested, with the unit strings the call is observed to return; any other unit
+string means the units are unknown."""
+_FIELDS = tuple(_UNITS)
 
 
 async def fetch_forecasts(outbound: Outbound, points: Sequence[Point]) -> list[ForecastSeries]:
@@ -72,6 +74,11 @@ async def fetch_forecasts(outbound: Outbound, points: Sequence[Point]) -> list[F
     locations = body if isinstance(body, list) else [body]
     if len(locations) != len(points):
         raise MalformedResponse
+    return await asyncio.to_thread(_parse_all, locations)
+
+
+def _parse_all(locations: list[Any]) -> list[ForecastSeries]:
+    """Parsing 150 locations of 96 hours is real work, so it runs off the event loop."""
     return [_parse(location) for location in locations]
 
 
@@ -99,19 +106,25 @@ def _parse(location: Any) -> ForecastSeries:
 def _hourly_start(stamps: Any) -> datetime:
     """The first stamp, after checking that the stamps are consecutive hours.
 
-    Open-Meteo answers naive ISO stamps in the requested time zone, which is UTC.
+    Open-Meteo answers naive ISO stamps in the requested time zone, which is UTC. Only the first
+    and last are parsed; the rest are checked by shape: the same length as the first (minute
+    precision), on the hour and strictly ascending. Ascending whole hours that span exactly
+    `len - 1` hours can only be consecutive.
     """
     if not isinstance(stamps, list) or not stamps or not all(isinstance(s, str) for s in stamps):
         raise MalformedResponse
     try:
-        parsed = [datetime.fromisoformat(stamp).replace(tzinfo=UTC) for stamp in stamps]
+        first = datetime.fromisoformat(stamps[0]).replace(tzinfo=UTC)
+        last = datetime.fromisoformat(stamps[-1]).replace(tzinfo=UTC)
     except ValueError:
         raise MalformedResponse from None
-    first = parsed[0]
+    width = len(stamps[0])
     if (
-        first.minute
-        or first.second
-        or any(stamp != first + timedelta(hours=i) for i, stamp in enumerate(parsed))
+        width != len("2026-11-13T14:00")
+        or first.minute
+        or last != first + timedelta(hours=len(stamps) - 1)
+        or any(len(stamp) != width or not stamp.endswith(":00") for stamp in stamps)
+        or any(earlier >= later for earlier, later in zip(stamps, stamps[1:], strict=False))
     ):
         raise MalformedResponse
     return first

@@ -16,15 +16,16 @@ import sys
 import time
 from datetime import UTC, datetime, timedelta
 
-from live_common import LocationMeter, record_calls, start_django, write_summary
+from live_common import LocationMeter, plan_stats, record_calls, start_django, write_summary
 
 start_django()
 
 from django.test import AsyncClient  # noqa: E402
 
+from api import api as api_module  # noqa: E402
 from api import weather_report  # noqa: E402
 from routing.via_cities import CITIES  # noqa: E402
-from weather import plan_locations  # noqa: E402
+from weather import plan_locations, utc_hour  # noqa: E402
 
 MAX_TOMTOM_CALLS = 5
 MAX_LOCATIONS = 1500
@@ -62,19 +63,18 @@ def describe(weather: dict) -> dict:
 
 async def main(output: str) -> None:
     tomtom = record_calls(MAX_TOMTOM_CALLS, label=lambda url: {"kind": "tomtom"})
-    meter = LocationMeter(MAX_LOCATIONS)
     waits: list[float] = []
-    real_sleep = weather_report._sleep
 
     async def recording_sleep(seconds: float) -> None:
         waits.append(seconds)
-        await real_sleep(seconds)
+        await asyncio.sleep(seconds)
 
-    weather_report._sleep = recording_sleep
+    runtime = weather_report.default_runtime()
+    runtime.sleep = recording_sleep
+    api_module.WEATHER_RUNTIME = runtime  # the endpoint's one wiring point
 
     client = AsyncClient()
     origin, destination = CITIES[ORIGIN], CITIES[DESTINATION]
-    meter.phase = "routes"
     routes, routes_s, routes_bytes, routes_status = await post(
         client,
         "/api/routes",
@@ -98,51 +98,40 @@ async def main(output: str) -> None:
         return
 
     positions = [[(c["lat"], c["lon"]) for c in r["checkpoints"]] for r in routes["routes"]]
-    plan = plan_locations(positions)
     summary["plan"] = {
-        "routes": len(routes["routes"]),
+        "routes": len(positions),
         "checkpoints": sum(len(p) for p in positions),
-        "checkpoint_cells": len(plan.checkpoint_cells),
-        "grid_cells": len(plan.grid),
-        "grid_only_cells": len(plan.grid_only_cells),
-        "locations": len(plan.cells),
-        "chunks": -(-len(plan.cells) // 150),
+        **plan_stats(plan_locations(positions)),
     }
 
-    runs = {}
-    for name in ("cold", "repeat"):
-        meter.phase = name
-        spent_before, requests_before = meter.spent, len(meter.records)
-        hour = weather_report._now().replace(minute=0, second=0, microsecond=0)
-        body, seconds, size, status = await post(client, "/api/weather", routes)
-        runs[name] = {
-            "status": status,
-            "seconds": seconds,
-            "bytes": size,
-            "locations_fetched": meter.spent - spent_before,
-            "open_meteo_requests": meter.records[requests_before:],
-            "waits_s": list(waits),
-            "hour": hour.isoformat(),
-            **(describe(body) if status == 200 else {"error": body.get("code")}),
-        }
-        waits.clear()
-        if status != 200:
-            break
-        runs[name]["_body"] = body
-
-    cold, repeat = runs["cold"], runs.get("repeat")
-    if repeat and cold["status"] == 200 and repeat["status"] == 200:
-        repeat["identical_to_cold"] = repeat.pop("_body") == cold.pop("_body")
-        repeat["straddled_the_hour"] = repeat["hour"] != cold["hour"]
-    for run in runs.values():
-        run.pop("_body", None)
-    summary |= {
-        "weather": runs,
-        "tomtom_calls": len(tomtom),
-        "tomtom": tomtom,
-        "open_meteo_locations": meter.spent,
-    }
-    write_summary(output, summary)
+    runs, bodies = {}, {}
+    with LocationMeter(MAX_LOCATIONS) as meter:
+        for name in ("cold", "repeat"):
+            meter.phase = name
+            spent_before, requests_before = meter.spent, len(meter.records)
+            hour = utc_hour(runtime.now())
+            body, seconds, size, status = await post(client, "/api/weather", routes)
+            runs[name] = {
+                "status": status,
+                "seconds": seconds,
+                "bytes": size,
+                "locations_fetched": meter.spent - spent_before,
+                "open_meteo_requests": meter.records[requests_before:],
+                "waits_s": list(waits),
+                "hour": hour.isoformat(),
+                **(describe(body) if status == 200 else {"error": body.get("code")}),
+            }
+            bodies[name] = body
+            waits.clear()
+            if status != 200:
+                break
+        summary["open_meteo_locations"] = meter.spent
+    if len(runs) == 2 and all(run["status"] == 200 for run in runs.values()):
+        runs["repeat"]["identical_to_cold"] = bodies["repeat"] == bodies["cold"]
+        runs["repeat"]["straddled_the_hour"] = runs["repeat"]["hour"] != runs["cold"]["hour"]
+    write_summary(
+        output, {**summary, "weather": runs, "tomtom_calls": len(tomtom), "tomtom": tomtom}
+    )
 
 
 if __name__ == "__main__":

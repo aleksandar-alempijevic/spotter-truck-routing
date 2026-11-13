@@ -9,17 +9,15 @@ import pytest
 import respx
 from django.test import AsyncClient
 
+from api import api as api_module
 from api import weather_report
 from api.schemas import WeatherIn
 from risk_rules import (
-    FLOAT_MARGIN,
     Checkpoint,
     Level,
-    RouteCandidate,
-    RouteSummary,
-    rank_routes,
     summarize_route,
 )
+from tests.open_meteo_fixtures import location
 from tests.test_routes_api import (
     KEY,
     MAIN,
@@ -30,41 +28,37 @@ from tests.test_routes_api import (
 )
 from tests.test_routes_api import payload as routes_payload
 from tests.test_routes_api import post as post_routes
-from weather import cell_center, forecast_cell, plan_locations
+from weather import ForecastCache, cell_center, forecast_cell, plan_locations, utc_hour
 
 NOW = datetime(2026, 11, 13, 14, 20, tzinfo=UTC)
-HOUR = NOW.replace(minute=0)
+HOUR = utc_hour(NOW)
 
 
 @pytest.fixture(autouse=True)
-def fixed_now(monkeypatch):
-    monkeypatch.setattr(weather_report, "_now", lambda: NOW)
+def runtime(monkeypatch):
+    """The endpoint's clock, sleep and cache, replaced as one object: a fixed time, a fresh cache
+    and a sleep that fails the test, so nothing really waits."""
 
-
-@pytest.fixture(autouse=True)
-def no_real_sleep(monkeypatch):
     async def refuse(seconds):
         raise AssertionError(f"the request slept for {seconds} s")
 
-    monkeypatch.setattr(weather_report, "_sleep", refuse)
+    replacement = weather_report.Runtime(
+        now=lambda: NOW, sleep=refuse, cache=ForecastCache(weather_report.MAX_CACHED_LOCATIONS)
+    )
+    monkeypatch.setattr(api_module, "WEATHER_RUNTIME", replacement)
+    return replacement
 
 
 @pytest.fixture
-def fake_clock(monkeypatch):
-    """Time that moves only when the request sleeps; nothing really waits."""
+def sleeps(runtime):
+    """Sleeps the request asks for, none of which really wait."""
+    asked: list[float] = []
 
-    class Clock:
-        now = 1000.0
-        sleeps: list[float] = []
+    async def record(seconds):
+        asked.append(seconds)
 
-    async def sleep(seconds):
-        Clock.sleeps.append(seconds)
-        Clock.now += seconds
-
-    Clock.sleeps = []
-    monkeypatch.setattr(weather_report, "_monotonic", lambda: Clock.now)
-    monkeypatch.setattr(weather_report, "_sleep", sleep)
-    return Clock
+    runtime.sleep = record
+    return asked
 
 
 def route(route_id="route-1", *, lat=40.0, lon=-100.0, marks=(0, 10, 20), total=None, etas=None):
@@ -113,29 +107,22 @@ def forecast(
     calls = Calls()
 
     def answer(request: httpx.Request) -> httpx.Response:
-        hour = weather_report._now().replace(minute=0, second=0, microsecond=0)
+        hour = utc_hour(api_module.WEATHER_RUNTIME.now())
         form = parse_qs(request.content.decode())
         lats = [float(v) for v in form["latitude"][0].split(",")]
         lons = [float(v) for v in form["longitude"][0].split(",")]
         calls.append(list(zip(lats, lons, strict=True)))
         stamps = [(hour + timedelta(hours=i)).strftime("%Y-%m-%dT%H:%M") for i in range(96)]
-        units = {
-            "wind_speed_10m": "mp/h",
-            "wind_gusts_10m": "mp/h",
-            "precipitation": "inch",
-            "snowfall": "inch",
-        }
         bodies = [
-            {
-                "hourly_units": units,
-                "hourly": {
-                    "time": stamps,
+            location(
+                stamps,
+                hourly={
                     "wind_speed_10m": [wind(lat, lon, i) for i in range(96)],
                     "wind_gusts_10m": [gust(lat, lon, i) for i in range(96)],
                     "precipitation": [precipitation(lat, lon, i) for i in range(96)],
                     "snowfall": [snowfall(lat, lon, i) for i in range(96)],
                 },
-            }
+            )
             for lat, lon in zip(lats, lons, strict=True)
         ]
         return httpx.Response(200, json=bodies[0] if len(bodies) == 1 else bodies)
@@ -339,37 +326,6 @@ async def test_with_several_routes_the_ranking_comes_from_the_rules(provider_moc
     assert lost["no_travel_miles"] == 20.0
 
 
-@pytest.mark.parametrize("no_travel_miles", [0.0, FLOAT_MARGIN / 2, FLOAT_MARGIN, 2 * FLOAT_MARGIN])
-def test_the_one_route_rule_matches_rank_routes(no_travel_miles):
-    def candidate(route_id, no_travel):
-        summary = summarize_route(
-            100.0,
-            [Checkpoint(0, Level.LOW), Checkpoint(100 - no_travel, Level.NO_TRAVEL)],
-        )
-        return RouteCandidate(route_id, 3600, summary)
-
-    mine = candidate("a", no_travel_miles)
-    worse = candidate("b", 50.0)
-    ranking = rank_routes([mine, worse], 25)
-    single = weather_report.single_route_ranking(mine, 25)
-
-    assert ranking.routes[0].route_id == "a"
-    assert single["recommended_id"] == ranking.recommended_id
-    assert single["routes"][0] == ranking.routes[0]
-
-
-def test_the_one_route_rule_matches_rank_routes_without_a_forecast():
-    summary = RouteSummary(0, 0, 0, 0, 0, 100.0, None)
-    mine = RouteCandidate("a", 3600, summary)
-    other = RouteCandidate("b", 7200, RouteSummary(0, 0, 0, 0, 100.0, 0, 4.0))
-
-    ranking = rank_routes([mine, other], 25)
-    single = weather_report.single_route_ranking(mine, 25)
-
-    assert single["recommended_id"] == ranking.recommended_id
-    assert single["routes"][0] == ranking.routes[0]
-
-
 async def test_a_repeated_request_fetches_nothing(provider_mock):
     calls = forecast(provider_mock)
     body = request(route(), route("route-2", lon=-99.0))
@@ -382,12 +338,12 @@ async def test_a_repeated_request_fetches_nothing(provider_mock):
     assert second.json() == first.json()
 
 
-async def test_a_new_hour_fetches_again(provider_mock, monkeypatch):
+async def test_a_new_hour_fetches_again(provider_mock, runtime):
     calls = forecast(provider_mock)
     await post(request(route()))
     fetched = len(calls)
 
-    monkeypatch.setattr(weather_report, "_now", lambda: NOW + timedelta(hours=1))
+    runtime.now = lambda: NOW + timedelta(hours=1)
     await post(request(route()))
 
     assert len(calls) == 2 * fetched
@@ -434,15 +390,17 @@ async def test_locations_go_out_in_chunks_of_at_most_150_with_no_repeats(provide
     assert sorted(locations(calls)) == sorted(cell_center(c) for c in planned_cells(body))
 
 
-async def test_a_chunk_that_fails_leaves_the_others_cached_for_the_retry(provider_mock):
+async def test_a_chunk_that_fails_leaves_the_others_cached_for_the_retry(provider_mock, runtime):
     calls = forecast(provider_mock)
     body = long_trip()
     cells = planned_cells(body)
     failing = cell_center(cells[150])  # the first location of the second chunk
 
-    def answer(request):
+    async def answer(request):
         first_latitude = parse_qs(request.content.decode())["latitude"][0].split(",")[0]
         if first_latitude == f"{failing[0]:.2f}":
+            # The other chunks are parsed in a thread; give them time to be cached first.
+            await asyncio.sleep(0.05)
             return httpx.Response(500)
         return calls.answer(request)
 
@@ -452,7 +410,7 @@ async def test_a_chunk_that_fails_leaves_the_others_cached_for_the_retry(provide
 
     assert failed.status_code == 502
     assert failed.json()["code"] == "provider_unavailable"
-    cached = {cell for cell in cells if weather_report.CACHE.get(cell, HOUR)}
+    cached = {cell for cell in cells if runtime.cache.get(cell, HOUR)}
     assert cached and len(cached) < len(cells)
     calls.route.mock(side_effect=calls.answer)
     calls.clear()
@@ -463,7 +421,7 @@ async def test_a_chunk_that_fails_leaves_the_others_cached_for_the_retry(provide
     assert sorted(locations(calls)) == sorted(cell_center(c) for c in cells if c not in cached)
 
 
-async def test_a_short_refusal_is_waited_out_and_the_request_succeeds(provider_mock, fake_clock):
+async def test_a_short_refusal_is_waited_out_and_the_request_succeeds(provider_mock, sleeps):
     calls = forecast(provider_mock)
     refusals = [httpx.Response(429, headers={"Retry-After": "30"})]
     calls.route.mock(side_effect=lambda r: refusals.pop() if refusals else calls.answer(r))
@@ -471,7 +429,7 @@ async def test_a_short_refusal_is_waited_out_and_the_request_succeeds(provider_m
     response = await post(request(route()))
 
     assert response.status_code == 200
-    assert fake_clock.sleeps == [31.0]
+    assert sleeps == [31.0]
 
 
 async def test_a_refusal_with_a_long_delay_is_a_503_at_once(provider_mock):
@@ -493,14 +451,26 @@ async def test_a_refusal_with_no_delay_is_a_503_at_once(provider_mock):
 
 
 async def test_a_wait_that_would_not_fit_the_deadline_is_a_503_without_sleeping_it(
-    provider_mock, fake_clock
+    provider_mock, runtime
 ):
     provider_mock.post(host="api.open-meteo.com").respond(429, headers={"Retry-After": "60"})
+    runtime.budget_s = 30.0  # the 61 s wait would end past the deadline; sleeping fails the test
 
     response = await post(request(route()))
 
-    # 150 s of budget: two waits of 61 s fit, a third (at 122 s) would end past the deadline.
-    assert fake_clock.sleeps == [61.0, 61.0]
+    assert response.status_code == 503
+    assert response.json()["code"] == "provider_limited"
+
+
+async def test_a_chunk_is_refused_at_most_three_times_then_the_503_stands(provider_mock, sleeps):
+    refused = provider_mock.post(host="api.open-meteo.com").respond(
+        429, headers={"Retry-After": "5"}
+    )
+
+    response = await post(request(route()))
+
+    assert sleeps == [6.0, 6.0, 6.0]
+    assert refused.call_count == 4
     assert response.status_code == 503
     assert response.json()["code"] == "provider_limited"
 
@@ -515,17 +485,17 @@ async def test_a_call_that_times_out_twice_is_a_504(provider_mock):
     assert response.json()["code"] == "provider_timeout"
 
 
-async def test_a_passed_deadline_is_a_504_and_nothing_is_cached(provider_mock, monkeypatch):
+async def test_a_passed_deadline_is_a_504_and_nothing_is_cached(provider_mock, runtime):
     async def hang(request):
         await asyncio.sleep(30)
 
     provider_mock.post(host="api.open-meteo.com").mock(side_effect=hang)
-    monkeypatch.setattr(weather_report, "BUDGET_S", 0.01)
+    runtime.budget_s = 0.01
 
     response = await post(request(route()))
 
     assert response.status_code == 504
-    assert len(weather_report.CACHE) == 0
+    assert len(runtime.cache) == 0
 
 
 async def test_a_malformed_answer_is_a_502(provider_mock):
@@ -546,15 +516,16 @@ async def test_provider_failures_say_nothing_of_the_provider(provider_mock):
 
 
 async def test_routes_that_need_too_many_locations_are_refused_before_any_call(
-    provider_mock, monkeypatch
+    provider_mock, runtime
 ):
     calls = forecast(provider_mock)
-    monkeypatch.setattr(weather_report, "MAX_LOCATIONS", 5)
+    runtime.max_locations = 5
 
     response = await post(request(route()))
 
     assert response.status_code == 422
     assert response.json()["code"] == "validation_error"
+    assert "5 forecast locations" in response.json()["message"]
     assert calls == []
 
 
@@ -647,10 +618,10 @@ def test_the_schema_rejects_everything_summarize_route_rejects(marks, total):
 
 @pytest.mark.parametrize("spacing", [10, 25, 50])
 async def test_what_the_routes_endpoint_returns_is_accepted_as_it_is(
-    provider_mock, monkeypatch, spacing
+    provider_mock, runtime, spacing
 ):
     # Two provider routes and a via-city route, sent back unchanged: lines, sources and all.
-    monkeypatch.setattr(weather_report, "_now", lambda: datetime.now(UTC))
+    runtime.now = lambda: datetime.now(UTC)
     mock_tomtom(provider_mock, base=[MAIN, NORTH], via=via_returns({"Albuquerque": SOUTH_ROUTE}))
     routes_response = await post_routes(routes_payload(checkpoint_interval_miles=spacing))
     sent_back = routes_response.json()

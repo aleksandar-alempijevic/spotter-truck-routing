@@ -7,33 +7,8 @@ import pytest
 
 from providers import MAX_LOCATIONS_PER_CALL, Outbound, fetch_forecasts
 from providers.errors import MalformedResponse, ProviderRateLimited, ProviderUnavailable
+from tests.open_meteo_fixtures import STAMPS, location
 from weather import ForecastSeries
-
-STAMPS = ["2026-11-13T14:00", "2026-11-13T15:00", "2026-11-13T16:00"]
-
-
-def location(**overrides) -> dict:
-    hourly = {
-        "time": STAMPS,
-        "wind_speed_10m": [10.0, 20.0, 30.0],
-        "wind_gusts_10m": [15.0, 25.0, 35.0],
-        "precipitation": [0.0, 0.5, 0.0],
-        "snowfall": [0.0, 0.7, 0.0],
-    }
-    units = {
-        "time": "iso8601",
-        "wind_speed_10m": "mp/h",
-        "wind_gusts_10m": "mp/h",
-        "precipitation": "inch",
-        "snowfall": "inch",
-    }
-    return {
-        "latitude": 39.7,
-        "longitude": -105.0,
-        "hourly_units": {**units, **overrides.pop("hourly_units", {})},
-        "hourly": {**hourly, **overrides.pop("hourly", {})},
-        **overrides,
-    }
 
 
 async def fetch(points):
@@ -188,8 +163,8 @@ async def test_a_non_finite_value_is_malformed(provider_mock):
 
 
 async def test_a_400_is_unavailable_and_says_nothing_of_the_upstream(provider_mock):
-    route = mock(provider_mock, {"error": True, "reason": "Latitude must be in range of -90 to 90"})
-    route.respond(400, json={"error": True, "reason": "Latitude must be in range of -90 to 90"})
+    reason = {"error": True, "reason": "Latitude must be in range of -90 to 90"}
+    route = mock(provider_mock, reason, status_code=400)
 
     with pytest.raises(ProviderUnavailable) as caught:
         await fetch([(39.75, -104.95)])

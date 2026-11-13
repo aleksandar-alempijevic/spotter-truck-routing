@@ -9,7 +9,7 @@ reached through its modules.
 from .cache import ForecastCache
 from .grid import GridCell, LocationPlan, plan_locations
 from .lattice import Cell, cell_center, forecast_cell
-from .series import Conditions, ForecastSeries, conditions_at
+from .series import Conditions, ForecastSeries, conditions_at, conditions_by_hour, utc_hour
 
 __all__ = [
     "Cell",
@@ -20,6 +20,8 @@ __all__ = [
     "LocationPlan",
     "cell_center",
     "conditions_at",
+    "conditions_by_hour",
     "forecast_cell",
     "plan_locations",
+    "utc_hour",
 ]

@@ -1,8 +1,8 @@
 import pytest
 
-from routing.geo import haversine_m
+from routing.geo import METERS_PER_MILE, haversine_m
 from weather import cell_center, forecast_cell, plan_locations
-from weather.grid import BLOCK, CORRIDOR_MILES, METERS_PER_MILE
+from weather.grid import BLOCK, CORRIDOR_MILES
 
 
 def test_a_point_belongs_to_its_tenth_of_a_degree_cell():

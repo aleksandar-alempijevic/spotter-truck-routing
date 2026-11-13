@@ -30,7 +30,7 @@ from .schemas import (
     WeatherIn,
     WeatherOut,
 )
-from .weather_report import MAX_LOCATIONS, WeatherRequestTooLarge, build_report
+from .weather_report import build_report, default_runtime
 
 api = NinjaAPI(title="Spotter truck routing API", version="0.1.0")
 
@@ -61,15 +61,6 @@ def validation_error(request: HttpRequest, exc: ValidationError) -> HttpResponse
 def body_too_big(request: HttpRequest, exc: RequestDataTooBig) -> HttpResponse:
     """A body over Django's upload limit is the client's fault, not a server error."""
     return error_response(request, "validation_error", "The request body is too large.", 422)
-
-
-@api.exception_handler(WeatherRequestTooLarge)
-def weather_request_too_large(request: HttpRequest, exc: WeatherRequestTooLarge) -> HttpResponse:
-    message = (
-        f"routes: these routes need more than {MAX_LOCATIONS} forecast locations; "
-        "use a larger checkpoint interval or shorter routes."
-    )
-    return error_response(request, "validation_error", message, 422)
 
 
 @api.exception_handler(HttpError)
@@ -126,6 +117,11 @@ async def routes(request: HttpRequest, payload: RoutesIn):
     }
 
 
+WEATHER_RUNTIME = default_runtime()
+"""The clock, sleep and forecast cache the weather endpoint uses: one per process, so every
+request shares the cache."""
+
+
 @api.post(
     "/weather",
     response={200: WeatherOut, **ERROR_RESPONSES},
@@ -136,6 +132,7 @@ async def weather(request: HttpRequest, payload: WeatherIn):
         payload.routes,
         load_lb=payload.load_lb,
         spacing_miles=payload.checkpoint_interval_miles,
+        runtime=WEATHER_RUNTIME,
     )
 
 

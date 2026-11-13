@@ -24,7 +24,7 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
-from live_common import LocationMeter, write_summary
+from live_common import LocationMeter, chunked, plan_stats, write_summary
 from providers import MAX_LOCATIONS_PER_CALL, Outbound, fetch_forecasts
 from providers.errors import ProviderError
 from providers.openmeteo import FORECAST_HOURS
@@ -83,11 +83,7 @@ def offline(sets: dict[str, list]) -> tuple[list[dict[str, Any]], dict[int, list
                     "spacing_miles": spacing,
                     "road_miles": [round(r.total_miles * ROAD_FACTOR) for r in routes],
                     "checkpoints": sum(len(p) for p in positions),
-                    "checkpoint_cells": len(plan.checkpoint_cells),
-                    "grid_cells": len(plan.grid),
-                    "grid_only_cells": len(plan.grid_only_cells),
-                    "locations": len(plan.cells),
-                    "chunks_of_150": -(-len(plan.cells) // MAX_LOCATIONS_PER_CALL),
+                    **plan_stats(plan),
                 }
             )
     return rows, cells_by_spacing
@@ -112,48 +108,42 @@ async def chunk(outbound: Outbound, cells: list) -> dict[str, Any]:
     }
 
 
+async def four_in_flight(outbound: Outbound, chunks: list) -> dict[str, Any]:
+    """Four chunks at once (the app's cap), with the wall time of the wave."""
+    started = time.monotonic()
+    results = await asyncio.gather(*(chunk(outbound, c) for c in chunks))
+    return {"chunks": results, "wall_s": round(time.monotonic() - started, 2)}
+
+
 async def live(cells: list) -> dict[str, Any]:
-    meter = LocationMeter(MAX_LOCATIONS)
-    size = MAX_LOCATIONS_PER_CALL
-    chunks = [cells[i : i + size] for i in range(0, len(cells), size)]
-    assert len(chunks) >= 9 and all(len(c) == size for c in chunks[:9]), "not enough cells"
+    chunks = chunked(cells)
+    assert len(chunks) >= 11 and all(len(c) == MAX_LOCATIONS_PER_CALL for c in chunks[:11])
     result: dict[str, Any] = {}
-    async with Outbound() as outbound:
-        meter.phase = "1 single chunk"
-        result["single"] = await chunk(outbound, chunks[0])
+    with LocationMeter(MAX_LOCATIONS) as meter:
+        async with Outbound() as outbound:
+            meter.phase = "1 single chunk"
+            result["single"] = await chunk(outbound, chunks[0])
 
-        await asyncio.sleep(WINDOW_WAIT_S)
-        meter.phase = "2 four in flight"
-        started = time.monotonic()
-        result["four_in_flight_a"] = {
-            "chunks": await asyncio.gather(*(chunk(outbound, c) for c in chunks[1:5])),
-            "wall_s": None,
-        }
-        result["four_in_flight_a"]["wall_s"] = round(time.monotonic() - started, 2)
+            await asyncio.sleep(WINDOW_WAIT_S)
+            meter.phase = "2 four in flight"
+            result["four_in_flight_a"] = await four_in_flight(outbound, chunks[1:5])
 
-        meter.phase = "3 burst past 600 in the minute"
-        burst = await chunk(outbound, chunks[5])
-        result["burst"] = burst
-        wait = burst.get("retry_after_s") if burst.get("error") else None
-        if burst.get("error"):
-            meter.phase = "3b after waiting Retry-After"
-            await asyncio.sleep((wait if wait is not None else WINDOW_WAIT_S) + 1)
-            result["after_wait"] = {"waited_s": wait, **(await chunk(outbound, chunks[6]))}
-        else:
-            meter.phase = "3b second burst"
-            result["second_burst"] = await chunk(outbound, chunks[6])
+            meter.phase = "3 burst past 600 in the minute"
+            burst = result["burst"] = await chunk(outbound, chunks[5])
+            if "error" in burst:
+                wait = burst["retry_after_s"]
+                meter.phase = "3b after waiting Retry-After"
+                await asyncio.sleep((wait if wait is not None else WINDOW_WAIT_S) + 1)
+                result["after_wait"] = {"waited_s": wait, **(await chunk(outbound, chunks[6]))}
+            else:
+                meter.phase = "3b second burst"
+                result["second_burst"] = await chunk(outbound, chunks[6])
 
-        await asyncio.sleep(WINDOW_WAIT_S)
-        meter.phase = "4 four in flight again"
-        started = time.monotonic()
-        result["four_in_flight_b"] = {
-            "chunks": await asyncio.gather(
-                *(chunk(outbound, c) for c in chunks[7:11] or chunks[1:5])
-            ),
-        }
-        result["four_in_flight_b"]["wall_s"] = round(time.monotonic() - started, 2)
-    result["requests"] = meter.records
-    result["locations_spent"] = meter.spent
+            await asyncio.sleep(WINDOW_WAIT_S)
+            meter.phase = "4 four in flight again"
+            result["four_in_flight_b"] = await four_in_flight(outbound, chunks[7:11])
+        result["requests"] = meter.records
+        result["locations_spent"] = meter.spent
     return result
 
 

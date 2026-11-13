@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
-from weather import Conditions, ForecastSeries, conditions_at
+from weather import Conditions, ForecastSeries, conditions_at, conditions_by_hour, utc_hour
 
 START = datetime(2026, 11, 13, 14, 0, tzinfo=UTC)
 
@@ -106,3 +106,32 @@ def test_a_naive_instant_is_refused():
 def test_a_series_must_be_utc_and_whole(overrides):
     with pytest.raises(ValueError):
         series(**overrides)
+
+
+def long_series(start: datetime, hours: int = 5) -> ForecastSeries:
+    def column(scale, gap=None):
+        return tuple(None if i == gap else scale * i for i in range(hours))
+
+    return ForecastSeries(start, column(1.0), column(2.0, gap=3), column(0.01), column(0.5, gap=1))
+
+
+@pytest.mark.parametrize("shift_hours", [-4, -2, -1, 0, 1, 3, 4, 6])
+def test_sampling_by_hour_matches_sampling_by_instant(shift_hours):
+    series = long_series(START)
+    first = START + timedelta(hours=shift_hours)
+
+    by_hour = conditions_by_hour(series, first, 8)
+
+    assert by_hour == [conditions_at(series, first + timedelta(hours=h)) for h in range(8)]
+    assert any(c is None for c in by_hour)
+
+
+def test_sampling_by_hour_needs_a_first_hour_on_the_hour():
+    with pytest.raises(ValueError):
+        conditions_by_hour(series(), START + timedelta(minutes=20), 3)
+
+
+def test_the_utc_hour_is_the_top_of_the_hour_in_utc():
+    belgrade = timezone(timedelta(hours=1))
+
+    assert utc_hour(datetime(2026, 11, 13, 15, 59, 59, 5, tzinfo=belgrade)) == START

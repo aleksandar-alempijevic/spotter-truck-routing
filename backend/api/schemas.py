@@ -155,6 +155,7 @@ class SuggestionOut(Schema):
     """IANA name of the place's time zone, for converting a typed departure time."""
 
 
+# Shared: the address search carries Geoapify's credit and the weather response Open-Meteo's.
 class AttributionOut(Schema):
     text: str
     url: str

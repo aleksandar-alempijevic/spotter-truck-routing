@@ -31,11 +31,6 @@ class ForecastSeries:
         ):
             raise ValueError("a series needs at least one hour, with every field the same length")
 
-    @property
-    def last(self) -> datetime:
-        """The last stamp."""
-        return self.start + HOUR * (len(self.wind_mph) - 1)
-
 
 @dataclass(frozen=True, slots=True)
 class Conditions:
@@ -45,6 +40,11 @@ class Conditions:
     gust_mph: float
     rain_in_per_hr: float
     snow_in_per_hr: float
+
+
+def utc_hour(instant: datetime) -> datetime:
+    """The top of the UTC hour holding the instant."""
+    return instant.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
 
 
 def conditions_at(series: ForecastSeries, instant: datetime) -> Conditions | None:
@@ -79,3 +79,31 @@ def conditions_at(series: ForecastSeries, instant: datetime) -> Conditions | Non
     if any(value is None for value in values):
         return None
     return Conditions(*values)
+
+
+def conditions_by_hour(
+    series: ForecastSeries, first: datetime, hours: int
+) -> list[Conditions | None]:
+    """`conditions_at` for `hours` consecutive whole hours from `first`, which must be on the
+    hour. The series' stamps are whole hours too, so the offset between them is worked out once
+    and each hour is a position in the series, with the same results (an hour that falls one
+    before the first stamp reads the first stamp, and any other outside the series has no
+    forecast)."""
+    if first != utc_hour(first):
+        raise ValueError("the first hour must be on the hour")
+    shift = (first - series.start) // HOUR
+    count = len(series.wind_mph)
+    result: list[Conditions | None] = []
+    for position in range(shift, shift + hours):
+        if position < -1 or position >= count:
+            result.append(None)
+            continue
+        i = max(0, position)
+        values = (
+            series.wind_mph[i],
+            series.gust_mph[i],
+            series.rain_in_per_hr[i],
+            series.snow_in_per_hr[i],
+        )
+        result.append(None if None in values else Conditions(*values))
+    return result

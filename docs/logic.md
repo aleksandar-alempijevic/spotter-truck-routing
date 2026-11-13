@@ -45,7 +45,7 @@ A load of exactly 30,000 or 40,000 lb does not trigger its rule. Rain and snow i
 
 ## 3. Ranking
 
-`rank_routes(candidates, checkpoint_interval_miles)` takes two or three routes (id, travel time, summary; the length comes from the summary) and the checkpoint spacing the request used (10, 25 or 50 miles).
+`rank_routes(candidates, checkpoint_interval_miles)` takes one to three routes (id, travel time, summary; the length comes from the summary) and the checkpoint spacing the request used (10, 25 or 50 miles).
 
 The routes are filtered in the assessment's order of preference. At each step the routes within a tolerance of the best value stay in; the rest drop out of the contest for first place:
 
@@ -59,7 +59,7 @@ The routes are filtered in the assessment's order of preference. At each step th
 | 6. Miles | fewest total miles | none |
 | 7. Route id | smallest id | none |
 
-The first step that leaves a single route decides first place, and the ranking reports which step that was. Second and third place repeat the same steps over the routes not yet placed. The result is the same whatever order the routes arrive in.
+The first step that leaves a single route decides first place, and the ranking reports which step that was. Second and third place repeat the same steps over the routes not yet placed. A single route is first with no deciding step (`decided_by` is none) and no comparison, and is recommended unless it has No Travel miles, judged with `FLOAT_MARGIN`. The result is the same whatever order the routes arrive in.
 
 **Why these tolerances.** The smallest difference the data can show is one checkpoint changing by one level, and a difference that size cannot be told apart from forecast noise. Within it, the next criterion decides, so travel time decides whenever the safety difference is that small, and never overrides a real Severe or High difference. Severe has no tolerance: one more Severe checkpoint always loses, however much faster the route is.
 
@@ -83,5 +83,5 @@ A cap on how much extra time a safer route may cost is not part of the assessmen
 
 - Weather in the units above, with no forecast represented as an absent level. The weather endpoint builds each reading from Open-Meteo's series at the checkpoint's ETA ([architecture.md](architecture.md)), and leaves a checkpoint the forecast does not reach without a level.
 - Checkpoints with a mark at mile 0, ascending, inside the route. The routes endpoint produces them in this form, with a final checkpoint at the destination, and the weather endpoint rejects a body that breaks it before the rules see it.
-- Unique route ids, two or three routes per ranking, and one checkpoint interval for the request. A one-route plan is not ranked: the endpoint recommends the route unless it has No Travel miles, judged with the same `FLOAT_MARGIN` as `rank_routes`.
+- Unique route ids, one to three routes per ranking, and one checkpoint interval for the request.
 - Travel time in seconds.

@@ -3,6 +3,7 @@ import itertools
 import pytest
 
 from risk_rules import (
+    FLOAT_MARGIN,
     Checkpoint,
     Level,
     RankingStep,
@@ -222,7 +223,6 @@ def two_routes(**changes):
     ("candidates", "interval"),
     [
         ([], INTERVAL),
-        ([route("a", [L, L])], INTERVAL),
         ([route(f"r{i}", [L, L]) for i in range(4)], INTERVAL),
         ([route("a", [L, L]), route("a", [L, L])], INTERVAL),
         (two_routes(minutes=-1), INTERVAL),
@@ -235,7 +235,6 @@ def two_routes(**changes):
     ],
     ids=[
         "no routes",
-        "one route",
         "four routes",
         "duplicate id",
         "negative time",
@@ -250,6 +249,38 @@ def two_routes(**changes):
 def test_invalid_ranking_inputs_are_rejected(candidates, interval):
     with pytest.raises(ValueError):
         rank_routes(candidates, interval)
+
+
+def test_a_single_route_is_first_with_no_deciding_step_and_no_comparison():
+    only = route("only", [L, M, L, L])
+
+    ranking = rank(only)
+
+    assert order(ranking) == ["only"]
+    assert ranking.decided_by is None
+    assert ranking.recommended_id == "only"
+    (ranked,) = ranking.routes
+    assert ranked.rank == 1 and ranked.vs_first is None
+    assert ranked.average_risk_tolerance == 0.25 and ranked.no_forecast_miles == 0
+
+
+@pytest.mark.parametrize("no_travel_miles", [0.0, FLOAT_MARGIN / 2, FLOAT_MARGIN, 2 * FLOAT_MARGIN])
+def test_a_single_route_is_recommended_unless_it_has_no_travel_miles(no_travel_miles):
+    only = marked_route("only", [(0, L), (100 - no_travel_miles, N)], 100)
+
+    ranking = rank(only)
+
+    assert (ranking.recommended_id == "only") == (no_travel_miles <= FLOAT_MARGIN)
+
+
+def test_a_single_route_with_no_forecast_has_no_tolerance_and_is_recommended():
+    only = RouteCandidate("only", 3600.0, summarize_route(100, [Checkpoint(0, None)]))
+
+    ranking = rank(only)
+
+    assert ranking.recommended_id == "only"
+    assert ranking.routes[0].average_risk_tolerance is None
+    assert ranking.routes[0].no_forecast_miles == 100
 
 
 def marked_route(route_id, marks, total, minutes=600):

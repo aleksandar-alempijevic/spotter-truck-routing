@@ -11,7 +11,7 @@ import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from routing.geo import EARTH_RADIUS_M, METERS_PER_MILE, Point
+from routing.geo import MILES_PER_DEGREE, Point, distance_to_segment_miles
 
 from .lattice import FORECAST_DEGREES, Cell, cell_center, forecast_cell
 
@@ -23,8 +23,6 @@ CORRIDOR_MILES = 25.0
 """A display cell is in the corridor when its centre is within this distance of a route."""
 
 DISPLAY_DEGREES = BLOCK * FORECAST_DEGREES
-
-MILES_PER_DEGREE = math.radians(1) * EARTH_RADIUS_M / METERS_PER_MILE
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,17 +100,6 @@ def _corridor_blocks(routes: Sequence[Sequence[Point]]) -> set[tuple[int, int]]:
                     if (row, column) in found:
                         continue
                     center = cell_center(_block_center_cell((row, column)))
-                    if _miles_to_segment(center, a, b) <= CORRIDOR_MILES:
+                    if distance_to_segment_miles(center, a, b) <= CORRIDOR_MILES:
                         found.add((row, column))
     return found
-
-
-def _miles_to_segment(p: Point, a: Point, b: Point) -> float:
-    """Distance from p to the segment ab, on a plane fitted at p's latitude."""
-    scale = math.cos(math.radians(p[0]))
-    ax, ay = (a[1] - p[1]) * scale, a[0] - p[0]
-    bx, by = (b[1] - p[1]) * scale, b[0] - p[0]
-    dx, dy = bx - ax, by - ay
-    length2 = dx * dx + dy * dy
-    t = 0.0 if length2 == 0 else max(0.0, min(1.0, -(ax * dx + ay * dy) / length2))
-    return math.hypot(ax + t * dx, ay + t * dy) * MILES_PER_DEGREE

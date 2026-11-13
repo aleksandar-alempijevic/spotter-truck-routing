@@ -87,12 +87,11 @@ class Outbound:
         data: dict[str, Any],
         *,
         timeout: float,
-        retry: bool = True,
         headers: dict[str, str] | None = None,
     ) -> Any:
         """POST a form-encoded body and return the parsed JSON, under the same policy as
-        `get_json`. Used where a request would not fit in a URL."""
-        return await self._call("POST", url, timeout, retry, data=data, headers=headers)
+        `get_json`, with its retry. Used where a request would not fit in a URL."""
+        return await self._call("POST", url, timeout, True, data=data, headers=headers)
 
     async def _call(
         self, method: str, url: str, timeout: float, retry: bool, **content: Any
@@ -124,7 +123,8 @@ def _decode(response: httpx.Response) -> Any:
     """The parsed JSON of an answer below 500, or the neutral error for its status."""
     status = response.status_code
     if status in RATE_LIMIT_STATUSES:
-        raise ProviderRateLimited(_retry_after_s(response))
+        # Only a 429 is a rate limit that passes; 401 and 403 are credentials and never do.
+        raise ProviderRateLimited(_retry_after_s(response) if status == 429 else None)
     try:
         body = response.json()
     except ValueError:

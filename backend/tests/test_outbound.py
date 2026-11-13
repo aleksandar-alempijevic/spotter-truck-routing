@@ -13,6 +13,15 @@ from providers.outbound import Outbound, UpstreamBadRequest
 
 URL = "https://api.tomtom.com/slow"
 
+METHODS = ["GET", "POST"]
+
+
+def send(outbound, method, **kwargs):
+    """The call a method stands for: a GET with query parameters or a form POST."""
+    if method == "GET":
+        return outbound.get_json(URL, {}, **kwargs)
+    return outbound.post_form(URL, {}, **kwargs)
+
 
 async def test_the_cap_limits_calls_in_flight(provider_mock):
     in_flight = peak = 0
@@ -115,10 +124,11 @@ BODY_WITH_KEY = {"message": f"echoes {KEY}"}
         ),
     ],
 )
+@pytest.mark.parametrize("method", METHODS)
 async def test_every_upstream_failure_becomes_a_neutral_error_and_only_some_are_retried(
-    provider_mock, upstream, error, calls
+    provider_mock, method, upstream, error, calls
 ):
-    route = provider_mock.get(URL)
+    route = provider_mock.route(method=method, url=URL)
     if isinstance(upstream, Exception):
         route.mock(side_effect=upstream)
     else:
@@ -126,7 +136,7 @@ async def test_every_upstream_failure_becomes_a_neutral_error_and_only_some_are_
 
     async with Outbound() as outbound:
         with pytest.raises(error) as caught:
-            await outbound.get_json(URL, {}, timeout=5)
+            await send(outbound, method, timeout=5)
 
     assert route.call_count == calls
     assert KEY not in str(caught.value)
@@ -134,12 +144,15 @@ async def test_every_upstream_failure_becomes_a_neutral_error_and_only_some_are_
     assert caught.value.__context__ is None or caught.value.__suppress_context__
 
 
-async def test_a_400_is_handed_to_the_adapter_with_its_body_and_not_retried(provider_mock):
-    route = provider_mock.get(URL).respond(400, json={"detailedError": {"code": "BAD_INPUT"}})
+@pytest.mark.parametrize("method", METHODS)
+async def test_a_400_is_handed_to_the_adapter_with_its_body_and_not_retried(provider_mock, method):
+    route = provider_mock.route(method=method, url=URL).respond(
+        400, json={"detailedError": {"code": "BAD_INPUT"}}
+    )
 
     async with Outbound() as outbound:
         with pytest.raises(UpstreamBadRequest) as caught:
-            await outbound.get_json(URL, {}, timeout=5)
+            await send(outbound, method, timeout=5)
 
     assert caught.value.body == {"detailedError": {"code": "BAD_INPUT"}}
     assert route.call_count == 1
@@ -216,42 +229,6 @@ async def test_a_form_post_shares_the_cap(provider_mock):
 
 
 @pytest.mark.parametrize(
-    ("upstream", "error", "calls"),
-    [
-        pytest.param(httpx.Response(429), ProviderRateLimited, 1, id="429"),
-        pytest.param(httpx.Response(404), ProviderUnavailable, 1, id="404"),
-        pytest.param(httpx.Response(500, text=KEY), ProviderUnavailable, 2, id="500"),
-        pytest.param(httpx.Response(200, text="<html>"), MalformedResponse, 1, id="not JSON"),
-        pytest.param(httpx.ReadTimeout(f"slow {KEY}"), ProviderTimeout, 2, id="timeout"),
-    ],
-)
-async def test_a_form_post_fails_as_a_get_does(provider_mock, upstream, error, calls):
-    route = provider_mock.post(POST_URL)
-    if isinstance(upstream, Exception):
-        route.mock(side_effect=upstream)
-    else:
-        route.mock(return_value=upstream)
-
-    async with Outbound() as outbound:
-        with pytest.raises(error) as caught:
-            await outbound.post_form(POST_URL, {}, timeout=5)
-
-    assert route.call_count == calls
-    assert KEY not in str(caught.value)
-
-
-async def test_a_form_post_400_is_handed_to_the_adapter_and_not_retried(provider_mock):
-    route = provider_mock.post(POST_URL).respond(400, json={"reason": "x"})
-
-    async with Outbound() as outbound:
-        with pytest.raises(UpstreamBadRequest) as caught:
-            await outbound.post_form(POST_URL, {}, timeout=5)
-
-    assert caught.value.body == {"reason": "x"}
-    assert route.call_count == 1
-
-
-@pytest.mark.parametrize(
     ("header", "seconds"),
     [
         pytest.param("12", 12.0, id="seconds"),
@@ -276,3 +253,14 @@ async def test_a_rate_limit_carries_the_retry_delay_it_was_given_as_data(
 
     assert caught.value.retry_after_s == seconds
     assert str(caught.value) == ProviderRateLimited.message
+
+
+@pytest.mark.parametrize("status", [401, 403])
+async def test_only_a_429_carries_a_retry_delay(provider_mock, status):
+    provider_mock.get(URL).respond(status, headers={"Retry-After": "12"})
+
+    async with Outbound() as outbound:
+        with pytest.raises(ProviderRateLimited) as caught:
+            await outbound.get_json(URL, {}, timeout=5)
+
+    assert caught.value.retry_after_s is None
