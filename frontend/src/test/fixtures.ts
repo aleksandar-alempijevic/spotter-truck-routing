@@ -30,7 +30,7 @@ export const DALLAS: SuggestionOut = {
   timezone: 'America/Chicago',
 };
 
-export type ScenarioKey = 'mixed' | 'tie' | 'shortfall' | 'oneRoute' | 'noneSafe';
+export type ScenarioKey = 'mixed' | 'tie' | 'shortfall' | 'oneRoute' | 'noneSafe' | 'crossCountry';
 
 interface ScenarioSpec {
   destination: SuggestionOut;
@@ -157,6 +157,42 @@ const SPECS: Record<ScenarioKey, ScenarioSpec> = {
       message:
         'Only two distinct routes were found: every other candidate, including a route through Oklahoma City, overlapped them by more than half.',
     },
+  },
+  // Three long routes to the Pacific Northwest: the corridor grid is as wide as a real
+  // cross-country trip makes it, which is what the slider measurement needs.
+  crossCountry: {
+    destination: place('Seattle, WA', 47.61, -122.33),
+    paths: [
+      [
+        [32.78, -96.8],
+        [39.74, -104.99],
+        [40.76, -111.89],
+        [43.62, -116.2],
+        [47.61, -122.33],
+      ],
+      [
+        [32.78, -96.8],
+        [33.45, -112.07],
+        [34.05, -118.24],
+        [37.77, -122.42],
+        [45.52, -122.68],
+        [47.61, -122.33],
+      ],
+      [
+        [32.78, -96.8],
+        [39.1, -94.58],
+        [41.88, -87.63],
+        [44.98, -93.27],
+        [45.78, -108.5],
+        [47.61, -122.33],
+      ],
+    ],
+    mph: [55, 52, 50],
+    levelAt: (_r, i, n) => (band(i, n) > 0.45 && band(i, n) < 0.6 ? 'moderate' : 'low'),
+    decidedBy: 'travel_time',
+    order: ['route-1', 'route-2', 'route-3'],
+    recommended: 'route-1',
+    shortfall: null,
   },
   // One route: no deciding step.
   oneRoute: {
@@ -416,9 +452,9 @@ function buildGrid(
   linePoints: LatLon[][],
   departureMs: number,
   levelCodes: Level[],
+  size: number,
   hours = 49,
 ): GridOut {
-  const size = 0.5;
   const centres = new Map<string, LatLon>();
   for (const points of linePoints) {
     for (const [lat, lon] of points) {
@@ -460,7 +496,14 @@ function buildGrid(
 
 export function buildWeather(
   key: ScenarioKey,
-  options: { departure: string; spacing?: Spacing; loadLb?: number; levelCodes?: Level[] },
+  options: {
+    departure: string;
+    spacing?: Spacing;
+    loadLb?: number;
+    levelCodes?: Level[];
+    /** Cell size of the corridor grid; smaller cells make a denser grid, for stress runs. */
+    cellDegrees?: number;
+  },
 ): WeatherOut {
   const spec = SPECS[key];
   const spacing = options.spacing ?? 25;
@@ -492,6 +535,7 @@ export function buildWeather(
       built.map((b) => b.points),
       departureMs,
       options.levelCodes ?? LEVEL_CODES,
+      options.cellDegrees ?? 0.5,
     ),
     attribution: { text: 'Weather data by Open-Meteo.com', url: 'https://open-meteo.com/' },
   };

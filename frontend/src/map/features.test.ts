@@ -9,6 +9,7 @@ import {
   routeBounds,
   routeLines,
   selectedPoint,
+  truckPoints,
 } from './features';
 import { gridFillColor } from './layers';
 
@@ -85,4 +86,17 @@ test('the heatmap colours follow level_codes, not severity order', () => {
   // index 0 is severe's colour, index 1 is low's
   expect(String(expr[3])).toMatch(/211,47,47/);
   expect(String(expr[5])).toMatch(/157,184,166/);
+});
+
+test('only trucks on the road are marked', () => {
+  const truck = (routeId: string, status: 'before' | 'driving' | 'arrived') => ({
+    routeId,
+    name: routeId,
+    status,
+    mile: 1,
+    position: [-100, 40] as [number, number],
+  });
+  const marks = truckPoints([truck('a', 'before'), truck('b', 'driving'), truck('c', 'arrived')]);
+  expect(marks.features.map((f) => f.properties.routeId)).toEqual(['b']);
+  expect(marks.features[0].geometry.coordinates).toEqual([-100, 40]);
 });

@@ -2,7 +2,8 @@ import * as maplibregl from 'maplibre-gl';
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import type { RouteView } from '../plan/view';
 import { RISK_STYLE, type RiskKey } from '../risk/levels';
-import { diffHours, type GridModel } from '../timeline/grid';
+import { diffHours, hourInstant, type GridModel } from '../timeline/grid';
+import { trucksAt } from '../timeline/trucks';
 import type { HourHolder } from '../timeline/hourHolder';
 import { BASEMAP_STYLE_URL, PLAIN_STYLE } from './basemap';
 import {
@@ -13,6 +14,7 @@ import {
   routeBounds,
   routeLines,
   selectedPoint,
+  truckPoints,
 } from './features';
 import { glyphImage, hatchImage, ICON_PIXEL_RATIO } from './icons';
 import {
@@ -26,6 +28,7 @@ import {
   routeColor,
   routeWidth,
   SOURCE,
+  truckRadius,
 } from './layers';
 import type { CheckpointRef } from '../plan/view';
 import type { MapInsets } from './types';
@@ -268,6 +271,17 @@ export class MapController {
       },
     });
     add({
+      id: LAYER.trucks,
+      type: 'circle',
+      source: SOURCE.trucks,
+      paint: {
+        'circle-radius': 9,
+        'circle-color': '#212121',
+        'circle-stroke-color': '#ffffff',
+        'circle-stroke-width': 3,
+      },
+    });
+    add({
       id: LAYER.endpoints,
       type: 'circle',
       source: SOURCE.endpoints,
@@ -304,6 +318,8 @@ export class MapController {
     map.setPaintProperty(LAYER.routeCasing, 'line-width', routeWidth(id, 10, 7));
     map.setLayoutProperty(LAYER.checkpoints, 'icon-size', checkpointIconSize(id));
     map.setLayoutProperty(LAYER.checkpoints, 'symbol-sort-key', checkpointSortKey(id));
+    map.setPaintProperty(LAYER.trucks, 'circle-radius', truckRadius(id));
+    this.pushTrucks();
   }
 
   private pushSelection(): void {
@@ -323,6 +339,7 @@ export class MapController {
       return;
     }
     this.shownHour = this.hour?.get() ?? 0;
+    this.pushTrucks();
     this.map.setPaintProperty(LAYER.gridFill, 'fill-color', gridFillColor(this.grid.levelNames));
     source.setData(gridCells(this.grid, this.shownHour) as never);
   }
@@ -335,6 +352,16 @@ export class MapController {
       this.map.setFeatureState({ source: SOURCE.grid, id: cell }, { level });
     }
     this.shownHour = hour;
+    this.pushTrucks();
+  }
+
+  /** The truck on each route at the hour on screen: a few points, set directly, no React. */
+  private pushTrucks(): void {
+    const source = this.source(SOURCE.trucks);
+    if (!source) return;
+    const grid = this.grid;
+    const trucks = grid ? trucksAt(this.routes, hourInstant(grid, this.shownHour)) : [];
+    source.setData(truckPoints(trucks) as never);
   }
 
   // ---------- events ----------

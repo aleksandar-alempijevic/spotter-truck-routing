@@ -2,7 +2,7 @@
 // Vite proxy can be driven in a real browser with no providers and no keys.
 //
 //   node scripts/stand-in-server.ts [--routes-delay-ms 3000] [--weather-delay-ms 8000] [--port 8000]
-//                                   [--weather-error outside_service_area]
+//                                   [--weather-error outside_service_area] [--cell-degrees 0.5]
 //
 // With --weather-error the weather endpoint answers 422 with that error code instead.
 //
@@ -18,7 +18,7 @@ function option(name: string, fallback: number): number {
 const routesDelay = option('routes-delay-ms', 3000);
 const weatherDelay = option('weather-delay-ms', 8000);
 const port = option('port', 8000);
-const answer = createStandIn();
+const answer = createStandIn({ cellDegrees: option('cell-degrees', 0.5) });
 const weatherErrorAt = process.argv.indexOf('--weather-error');
 const weatherError = weatherErrorAt === -1 ? null : process.argv[weatherErrorAt + 1];
 

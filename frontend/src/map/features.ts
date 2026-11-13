@@ -2,6 +2,7 @@
 import type { RiskKey } from '../risk/levels';
 import { riskKey } from '../risk/levels';
 import { levelAt, type GridModel } from '../timeline/grid';
+import type { Truck } from '../timeline/trucks';
 import type { RouteView } from '../plan/view';
 
 interface Feature<G, P> {
@@ -157,4 +158,20 @@ export function routeBounds(
         [east, north],
       ]
     : null;
+}
+
+/** The trucks that are on the road: one point each. A truck not yet left or already arrived has none. */
+export function truckPoints(
+  trucks: readonly Truck[],
+): FeatureCollection<Point, { routeId: string }> {
+  return {
+    type: 'FeatureCollection',
+    features: trucks
+      .filter((truck) => truck.status === 'driving')
+      .map((truck) => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: truck.position },
+        properties: { routeId: truck.routeId },
+      })),
+  };
 }

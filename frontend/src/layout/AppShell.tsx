@@ -119,6 +119,8 @@ export function AppShell({
         holder={session.holder}
         model={grid}
         zone={submission ? displayZone(submission.trip) : 'UTC'}
+        routes={plan.view?.routes}
+        nowMs={submission?.startedAt}
       />
     </Paper>
   );

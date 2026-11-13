@@ -30,7 +30,7 @@ function scenarioFor(destination: { lat: number; lon: number }): ScenarioKey {
  * A stand-in for the three endpoints. The weather request does not repeat the destination or the
  * departure, so the stand-in remembers the routes request the weather answer belongs to.
  */
-export function createStandIn() {
+export function createStandIn(options: { cellDegrees?: number } = {}) {
   let last: { scenario: ScenarioKey; departure: string } | null = null;
 
   return function answer(method: string, url: string, bodyText: string): StandInReply {
@@ -64,6 +64,7 @@ export function createStandIn() {
           departure: last.departure,
           spacing: body.checkpoint_interval_miles,
           loadLb: body.load_lb,
+          cellDegrees: options.cellDegrees,
         }),
       };
     }

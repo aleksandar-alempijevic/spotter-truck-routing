@@ -9,6 +9,7 @@ export const SOURCE = {
   grid: 'grid-cells',
   endpoints: 'endpoints',
   selected: 'selected-checkpoint',
+  trucks: 'trucks',
 } as const;
 
 export const LAYER = {
@@ -19,6 +20,7 @@ export const LAYER = {
   checkpoints: 'checkpoints',
   selectedRing: 'selected-checkpoint-ring',
   endpoints: 'endpoints',
+  trucks: 'trucks',
 } as const;
 
 export const ICON_PREFIX = 'risk-';
@@ -74,4 +76,11 @@ export const checkpointSortKey = (selectedId: string | null): ExpressionSpecific
   ['==', ['get', 'routeId'], selectedId ?? ''],
   1,
   0,
+];
+
+export const truckRadius = (selectedId: string | null): ExpressionSpecification => [
+  'case',
+  ['==', ['get', 'routeId'], selectedId ?? ''],
+  12,
+  9,
 ];
