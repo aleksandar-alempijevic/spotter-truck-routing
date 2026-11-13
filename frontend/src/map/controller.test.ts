@@ -21,7 +21,10 @@ const onceHandlers = new Map<string, (event: unknown) => void>();
 let queried: { id?: number }[] = [];
 let queriedLines: { properties: { id: string } }[] = [];
 const canvasListeners = new Map<string, () => void>();
-let rectFor: (anchor: string) => { left: number; top: number; right: number; bottom: number };
+let rectFor: (
+  anchor: string,
+  width: number,
+) => { left: number; top: number; right: number; bottom: number };
 
 const record =
   (method: string) =>
@@ -31,10 +34,12 @@ const record =
 
 class StubPopup {
   anchor: string;
+  width: number;
   removed = false;
   content: HTMLElement | null = null;
-  constructor(options: { anchor: string }) {
+  constructor(options: { anchor: string; maxWidth?: string }) {
     this.anchor = options.anchor;
+    this.width = parseInt(options.maxWidth ?? '0');
     popups.push(this);
   }
   setLngLat = () => this;
@@ -48,7 +53,7 @@ class StubPopup {
     this.removed = true;
     return this;
   };
-  getElement = () => ({ getBoundingClientRect: () => rectFor(this.anchor) });
+  getElement = () => ({ getBoundingClientRect: () => rectFor(this.anchor, this.width) });
 }
 
 vi.mock('maplibre-gl/dist/maplibre-gl-worker.mjs?url', () => ({ default: 'worker.js' }));
@@ -529,4 +534,44 @@ test('a restored context waits for the style to finish loading before it draws o
   onceHandlers.get('idle')!({});
   expect(ev.onRecovered).toHaveBeenCalledTimes(1);
   expect(log.some((c) => c.method === 'setData:grid-cells')).toBe(true);
+});
+
+test('on a narrow map the readout is narrowed until it clears the control column', () => {
+  const { controller, ev, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setInsets({ top: 0, right: 0, bottom: 0, left: 0 });
+  // The zoom column covers x 340-390. A popup 320 or 280 wide reaches into it on every side; one 240
+  // wide, which wraps its text, does not.
+  ev.coveredRects.mockReturnValue([{ left: 340, top: 0, right: 390, bottom: 200 } as DOMRect]);
+  rectFor = (_anchor, width) => ({
+    left: 80,
+    top: 100,
+    right: 80 + width,
+    bottom: 100 + 40000 / width,
+  });
+  queried = [{ id: 0 }];
+
+  handlers.get('click')!({ point: { x: 100, y: 300 } });
+
+  const shown = popups.filter((p) => !p.removed)[0];
+  expect(shown.width).toBe(240); // the widest of 320, 280, 240 that still ends before x 340
+  expect(ev.describeCell).toHaveBeenCalled();
+});
+
+test('when every side crosses something, a popup over the credit beats one over a control', () => {
+  const { controller, ev, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setInsets({ top: 0, right: 0, bottom: 0, left: 0 });
+  const credit = document.createElement('div');
+  credit.className = 'maplibregl-ctrl-attrib';
+  credit.getBoundingClientRect = () => ({ left: 0, top: 700, right: 400, bottom: 730 }) as DOMRect;
+  (controller as unknown as { container: HTMLElement }).container.append(credit);
+  ev.coveredRects.mockReturnValue([{ left: 300, top: 0, right: 400, bottom: 200 } as DOMRect]);
+  // "bottom" lies over a control; "top" lies over the credit; both are inside the open part.
+  placeAround({ bottom: [250, 100, 350, 150], top: [100, 690, 200, 740] });
+  queried = [{ id: 0 }];
+
+  handlers.get('click')!({ point: { x: 150, y: 200 } });
+
+  expect(popups.filter((p) => !p.removed)[0].anchor).toBe('top');
 });

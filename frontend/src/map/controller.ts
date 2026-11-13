@@ -73,6 +73,12 @@ const POPUP_ANCHORS = [
 type PopupAnchor = (typeof POPUP_ANCHORS)[number];
 // A popup on hover is for a mouse or a trackpad. A touch screen reports `hover: none`, and the
 // panel's list says all the popup does.
+/** Widest first: a popup on a narrow map is tried narrower, and its text wraps. */
+/** A popup whose weighted spill is within this is still on the map, for choosing among the rest. */
+const SPILL_EDGE_WEIGHT = 20;
+const NEARLY_ON_MAP = 240;
+const READOUT_WIDTHS = [320, 280, 240, 200, 160] as const;
+const HOVER_WIDTHS = [280, 220] as const;
 const HOVER_QUERY = '(hover: hover) and (pointer: fine)';
 
 /** The words of a popup as DOM, built with text nodes only. */
@@ -594,20 +600,22 @@ export class MapController {
     const at = (checkpoint.geometry as unknown as { coordinates: [number, number] }).coordinates;
     this.hidePopup();
     this.popupKey = key;
-    this.popup = this.openPopup((anchor) =>
-      new maplibregl.Popup({
-        anchor,
-        closeButton: false,
-        closeOnClick: false,
-        closeOnMove: false,
-        focusAfterOpen: false,
-        offset: 16,
-        maxWidth: '280px',
-        className: 'checkpoint-popup',
-      })
-        .setLngLat(at)
-        .setDOMContent(content)
-        .addTo(this.map),
+    this.popup = this.openPopup(
+      (anchor, width) =>
+        new maplibregl.Popup({
+          anchor,
+          closeButton: false,
+          closeOnClick: false,
+          closeOnMove: false,
+          focusAfterOpen: false,
+          offset: 16,
+          maxWidth: `${width}px`,
+          className: 'checkpoint-popup',
+        })
+          .setLngLat(at)
+          .setDOMContent(content)
+          .addTo(this.map),
+      HOVER_WIDTHS,
     );
   }
 
@@ -637,10 +645,13 @@ export class MapController {
   /**
    * Opens a popup on the side of its point that fits: inside the part of the map the panels leave
    * open, and clear of anything lying over the map, such as the key and the map's own controls.
-   * Each anchor is tried in turn and measured; if none is both, the one that spills least out of
-   * the open part stands.
+   * Each width, widest first, and each anchor in turn is tried and measured, so a narrow map gets
+   * a narrower popup whose text wraps. If none is both, see the ranking below.
    */
-  private openPopup(make: (anchor: PopupAnchor) => maplibregl.Popup): maplibregl.Popup {
+  private openPopup(
+    make: (anchor: PopupAnchor, widthPx: number) => maplibregl.Popup,
+    widths: readonly number[],
+  ): maplibregl.Popup {
     const box = this.container.getBoundingClientRect();
     const open = {
       left: box.left + this.insets.left,
@@ -649,32 +660,48 @@ export class MapController {
       bottom: box.bottom - this.insets.bottom,
     };
     const covered = this.events.coveredRects();
+    // The map's own credit: worth keeping clear of, but less than a control.
+    const creditEl = this.container.querySelector('.maplibregl-ctrl-attrib');
+    const credit = creditEl ? [creditEl.getBoundingClientRect()] : [];
     const inOpenPart = (r: DOMRect) =>
       r.left >= open.left && r.right <= open.right && r.top >= open.top && r.bottom <= open.bottom;
-    const clearOfCovered = (r: DOMRect) =>
-      !covered.some(
+    const overlaps = (r: DOMRect, rects: readonly DOMRect[]) =>
+      rects.some(
         (c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top,
       );
-    const rects = POPUP_ANCHORS.map((anchor) => {
-      const trial = make(anchor);
-      const rect = trial.getElement().getBoundingClientRect();
-      trial.remove();
-      return rect;
-    });
-    const pick = rects.findIndex((r) => inOpenPart(r) && clearOfCovered(r));
-    if (pick >= 0) return make(POPUP_ANCHORS[pick]);
-    // None is both: the side that spills least out of the open part stands (the first on a tie),
-    // so a popup taller than the open part still has its top or its start on screen.
+    const clearOfCovered = (r: DOMRect) => !overlaps(r, covered) && !overlaps(r, credit);
+    // How far a popup is out of the open part. Running out at the bottom is mild (it passes under
+    // the credit); at the sides it leaves the screen, and at the top it hides under the trip bar.
     const spill = (r: DOMRect) =>
-      Math.max(0, open.left - r.left) +
-      Math.max(0, r.right - open.right) +
-      Math.max(0, open.top - r.top) +
+      SPILL_EDGE_WEIGHT *
+        (Math.max(0, open.left - r.left) +
+          Math.max(0, r.right - open.right) +
+          Math.max(0, open.top - r.top)) +
       Math.max(0, r.bottom - open.bottom);
-    let best = 0;
-    rects.forEach((r, i) => {
-      if (spill(r) < spill(rects[best])) best = i;
-    });
-    return make(POPUP_ANCHORS[best]);
+    const tries = widths.flatMap((width) =>
+      POPUP_ANCHORS.map((anchor) => {
+        const trial = make(anchor, width);
+        const rect = trial.getElement().getBoundingClientRect();
+        trial.remove();
+        return { anchor, width, rect };
+      }),
+    );
+    const fits = tries.find((t) => inOpenPart(t.rect) && clearOfCovered(t.rect));
+    // Otherwise, among popups that are nearly on the map, one clear of the controls beats one that
+    // covers them, one clear of the credit beats one over it, and the least spill decides the rest (the first on a tie). A popup that is not
+    // nearly on the map is chosen only when none is.
+    const rank = (t: (typeof tries)[number]) => [
+      spill(t.rect) <= NEARLY_ON_MAP ? 0 : 1,
+      overlaps(t.rect, covered) ? 1 : 0,
+      overlaps(t.rect, credit) ? 1 : 0,
+      spill(t.rect),
+    ];
+    const before = (a: number[], b: number[]) => {
+      for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return a[k] < b[k];
+      return false;
+    };
+    const chosen = fits ?? tries.reduce((best, t) => (before(rank(t), rank(best)) ? t : best));
+    return make(chosen.anchor, chosen.width);
   }
 
   /** The readout for a cell, opened beside the point that was tapped. */
@@ -686,20 +713,22 @@ export class MapController {
     this.hideReadout();
     const words = this.readoutWords(cell, checkpoint);
     if (!words) return;
-    const popup = this.openPopup((anchor) =>
-      new maplibregl.Popup({
-        anchor,
-        closeButton: true,
-        closeOnClick: false,
-        closeOnMove: false,
-        focusAfterOpen: false,
-        offset: 10,
-        maxWidth: '320px',
-        className: 'cell-readout',
-      })
-        .setLngLat(at)
-        .setDOMContent(popupContent(words))
-        .addTo(this.map),
+    const popup = this.openPopup(
+      (anchor, width) =>
+        new maplibregl.Popup({
+          anchor,
+          closeButton: true,
+          closeOnClick: false,
+          closeOnMove: false,
+          focusAfterOpen: false,
+          offset: 10,
+          maxWidth: `${width}px`,
+          className: 'cell-readout',
+        })
+          .setLngLat(at)
+          .setDOMContent(popupContent(words))
+          .addTo(this.map),
+      READOUT_WIDTHS,
     );
     popup.on('close', () => {
       if (this.readout?.popup === popup) this.readout = null;
