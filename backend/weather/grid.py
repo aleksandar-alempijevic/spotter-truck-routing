@@ -121,7 +121,7 @@ def _corridor_blocks(routes: Sequence[Sequence[Point]], limit: int | None) -> se
                         continue
                     center = cell_center(_block_center_cell((row, column)))
                     if not (-90 <= center[0] <= 90 and -180 <= center[1] <= 180):
-                        continue  # a corridor reaching past a pole or the antimeridian
+                        continue  # the unclamped centre is off the map: a pole or the antimeridian
                     if distance_to_segment_miles(center, a, b) <= CORRIDOR_MILES:
                         found.add((row, column))
                         if limit is not None and len(found) > limit:

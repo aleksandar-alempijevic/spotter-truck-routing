@@ -20,5 +20,4 @@ def forecast_cell(point: Point) -> Cell:
 def cell_center(cell: Cell) -> Point:
     """The point a cell's forecast is requested for."""
     row, column = cell
-    lat, lon = round((row + 0.5) * FORECAST_DEGREES, 6), round((column + 0.5) * FORECAST_DEGREES, 6)
-    return min(90.0, max(-90.0, lat)), min(180.0, max(-180.0, lon))  # a cell on a pole or the edge
+    return round((row + 0.5) * FORECAST_DEGREES, 6), round((column + 0.5) * FORECAST_DEGREES, 6)

@@ -42,7 +42,6 @@ MAX_ID_LENGTH = 64
 MAX_WEATHER_ROUTES = 3
 SERVICE_LATITUDES = (24.0, 72.0)
 SERVICE_LONGITUDES = (-170.0, -50.0)
-SERVICE_BOX_TEXT = "latitude 24 to 72, longitude -170 to -50"
 """The box the weather request's checkpoints must lie in: the contiguous US with its margin, Alaska
 and the Canadian corridors a US-to-US truck route can cross. Outside it the corridor sweep's
 planar and pole-and-antimeridian assumptions stop holding."""
@@ -205,7 +204,11 @@ def _check_marks(route: RouteCore, interval_miles: float) -> None:
         and SERVICE_LONGITUDES[0] <= c.lon <= SERVICE_LONGITUDES[1]
         for c in route.checkpoints
     ):
-        raise ValueError(f"{where}: checkpoints must lie in North America ({SERVICE_BOX_TEXT})")
+        raise ValueError(
+            f"{where}: checkpoints must lie in North America (latitude "
+            f"{SERVICE_LATITUDES[0]:g} to {SERVICE_LATITUDES[1]:g}, longitude "
+            f"{SERVICE_LONGITUDES[0]:g} to {SERVICE_LONGITUDES[1]:g})"
+        )
     if marks[0] != 0:
         raise ValueError(f"{where}: the first checkpoint must be at mile 0")
     if marks[-1] > route.total_miles:

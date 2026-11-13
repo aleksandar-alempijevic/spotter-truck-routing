@@ -182,27 +182,34 @@ def test_a_segment_is_coverable_when_its_longitude_span_fits_its_miles(a, b, cov
     assert longitude_span_coverable(a, b, 50.0) is coverable
 
 
-def test_a_cell_centre_never_leaves_the_valid_ranges():
-    assert cell_center(forecast_cell((90.0, 180.0))) == (90.0, 180.0)
-    assert cell_center(forecast_cell((-90.0, -180.0)))[0] >= -90.0
-
-
 @pytest.mark.parametrize(
     "route",
     [
-        [(90.0, -170.0), (90.0, -126.5)],
+        [(89.95, -170.0), (89.95, -126.5)],
         [(89.95, 179.0), (89.95, 179.95)],
         [(40.0, 179.0), (40.0, 179.95)],
         [(-89.95, -179.95), (-89.95, -179.0)],
     ],
     ids=["north pole", "pole and the antimeridian", "the antimeridian", "south pole"],
 )
-def test_the_corridor_never_has_a_cell_outside_the_valid_coordinates(route):
+def test_the_corridor_leaves_out_cells_whose_centre_is_off_the_map(route):
     plan = plan_locations([route])
 
     assert plan.grid
+    # Every kept cell is on the map, and none was clamped onto the edge to stand in for a
+    # skipped one: each display cell reads a request point of its own.
     for cell in plan.grid:
         assert -90 <= cell.lat <= 90 and -180 <= cell.lon <= 180
-        assert -90 <= cell_center(cell.forecast)[0] <= 90
-    for cell in plan.cells:
-        assert -90 <= cell_center(cell)[0] <= 90 and -180 <= cell_center(cell)[1] <= 180
+    assert len({(cell.lat, cell.lon) for cell in plan.grid}) == len(plan.grid)
+    assert len({cell_center(c) for c in plan.cells}) == len(plan.cells)
+    for point in plan.cells:
+        assert -90 <= cell_center(point)[0] <= 90 and -180 <= cell_center(point)[1] <= 180
+
+
+def test_cells_beyond_a_pole_are_absent_from_the_corridor():
+    near_pole = plan_locations([[(89.95, -100.0), (89.95, -99.0)]])
+    rows = {cell.row for cell in near_pole.grid}
+
+    # Display row 179 is 89.5 to 90.0 (centre 89.75), the last on the map. Row 180 would be
+    # centred at 90.25, 16 miles from the route: in the corridor if it were not left out.
+    assert rows == {179}

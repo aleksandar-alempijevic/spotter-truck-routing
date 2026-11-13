@@ -154,7 +154,8 @@ async def _fetch(
         cells[i : i + openmeteo.MAX_LOCATIONS_PER_CALL]
         for i in range(0, len(cells), openmeteo.MAX_LOCATIONS_PER_CALL)
     ]
-    storing: list[asyncio.Future[None]] = []
+    storing: set[asyncio.Future[None]] = set()
+    """Parse-and-cache tasks whose chunk was cancelled before it saw the result."""
 
     async def store(chunk: list[Cell], raw: openmeteo.RawForecasts) -> None:
         series = await asyncio.to_thread(openmeteo.parse_forecasts, raw)
@@ -165,8 +166,17 @@ async def _fetch(
     async def one(outbound: Outbound, chunk: list[Cell]) -> None:
         raw = await _request_chunk(outbound, chunk, deadline, runtime)
         # Its own task, so cancelling this chunk after its response arrived does not stop it.
-        storing.append(asyncio.ensure_future(store(chunk, raw)))
-        await asyncio.shield(storing[-1])
+        stored = asyncio.ensure_future(store(chunk, raw))
+        storing.add(stored)
+        cancelled = False
+        try:
+            await asyncio.shield(stored)
+        except asyncio.CancelledError:
+            cancelled = True
+            raise
+        finally:
+            if not cancelled:
+                storing.discard(stored)  # the request has seen how it ended
 
     try:
         async with asyncio.timeout(max(0.0, deadline - runtime.time())):
@@ -185,10 +195,9 @@ async def _fetch(
     return fetched
 
 
-async def _settle(storing: list[asyncio.Future[None]]) -> None:
-    """Wait for the parse-and-cache tasks still running, and log one that failed: a failure of
-    the request itself is raised, but one that happens after the request has already failed would
-    otherwise go unseen."""
+async def _settle(storing: set[asyncio.Future[None]]) -> None:
+    """Wait for the parse-and-cache tasks left running when their chunk was cancelled, and log
+    one that failed: no chunk is left to raise it, so it would otherwise go unseen."""
     for outcome in await asyncio.gather(*storing, return_exceptions=True):
         if isinstance(outcome, Exception):
             logger.warning("weather: parsing a chunk failed: %s", type(outcome).__name__)

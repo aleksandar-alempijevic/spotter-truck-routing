@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from collections.abc import Callable
 from contextlib import nullcontext
 from datetime import UTC, datetime, timedelta
@@ -13,6 +14,8 @@ from django.test import AsyncClient
 from api import api as api_module
 from api import weather_report
 from api.schemas import WeatherIn
+from providers import openmeteo
+from providers.errors import MalformedResponse
 from providers.openmeteo import MAX_LOCATIONS_PER_CALL
 from risk_rules import (
     Checkpoint,
@@ -457,10 +460,17 @@ async def test_a_chunk_that_fails_leaves_every_other_chunk_cached_for_the_retry(
     assert sorted(locations(calls)) == sorted(cell_center(c) for c in cells if c not in cached)
 
 
-async def test_a_chunk_whose_response_arrived_is_cached_although_a_sibling_fails_at_once(
-    provider_mock, runtime
+async def test_a_chunk_whose_response_arrived_is_cached_before_the_error_answer_goes_out(
+    provider_mock, runtime, monkeypatch
 ):
     calls = forecast(provider_mock)
+    real_parse = openmeteo.parse_forecasts
+
+    def slow_parse(raw):
+        time.sleep(0.05)  # in a worker thread: the failing chunk's error is ready long before
+        return real_parse(raw)
+
+    monkeypatch.setattr(openmeteo, "parse_forecasts", slow_parse)
     body = long_trip()
     cells = planned_cells(body)
     chunks = -(-len(cells) // MAX_LOCATIONS_PER_CALL)
@@ -474,6 +484,44 @@ async def test_a_chunk_whose_response_arrived_is_cached_although_a_sibling_fails
     assert failed.status_code == 502
     cached = {cell for cell in cells if runtime.cache.get(cell, HOUR)}
     assert cached == set(cells[:MAX_LOCATIONS_PER_CALL]) | set(cells[2 * MAX_LOCATIONS_PER_CALL :])
+
+
+async def test_a_parse_that_fails_after_the_request_already_failed_is_logged(
+    provider_mock, monkeypatch, caplog
+):
+    calls = forecast(provider_mock)
+    cells = planned_cells(long_trip())
+    chunks = -(-len(cells) // MAX_LOCATIONS_PER_CALL)
+
+    def failing_parse(raw):
+        time.sleep(0.05)
+        raise MalformedResponse
+
+    monkeypatch.setattr(openmeteo, "parse_forecasts", failing_parse)
+    calls.route.mock(
+        side_effect=failing_second_chunk(calls, cells, lambda answered: len(answered) == chunks - 1)
+    )
+
+    with caplog.at_level("WARNING", logger="api.weather_report"):
+        failed = await post(long_trip())
+
+    assert failed.json()["code"] == "provider_unavailable"  # the chunk that failed first
+    assert caplog.text.count("parsing a chunk failed: MalformedResponse") == chunks - 1
+
+
+async def test_a_parse_failure_the_request_itself_raised_is_not_logged_again(
+    provider_mock, monkeypatch, caplog
+):
+    forecast(provider_mock)
+    monkeypatch.setattr(
+        openmeteo, "parse_forecasts", lambda raw: (_ for _ in ()).throw(MalformedResponse())
+    )
+
+    with caplog.at_level("WARNING", logger="api.weather_report"):
+        response = await post(request(route()))
+
+    assert response.json()["code"] == "provider_malformed_response"
+    assert "parsing a chunk failed" not in caplog.text
 
 
 async def test_a_short_refusal_is_waited_out_and_the_request_succeeds(provider_mock, sleeps):
@@ -731,7 +779,7 @@ def box_corner(lat=None, lon=None):
 
 @pytest.mark.parametrize(
     "mutate",
-    [box_corner(lat=80.0), box_corner(lat=23.9), box_corner(lon=-170.1), box_corner(lon=-49.9)],
+    [box_corner(lat=72.1), box_corner(lat=23.9), box_corner(lon=-170.1), box_corner(lon=-49.9)],
     ids=["too far north", "too far south", "too far west", "too far east"],
 )
 async def test_checkpoints_outside_north_america_are_a_422_before_any_call(provider_mock, mutate):
@@ -742,7 +790,7 @@ async def test_checkpoints_outside_north_america_are_a_422_before_any_call(provi
     response = await post(body)
 
     assert response.status_code == 422
-    assert "North America" in response.json()["message"]
+    assert "latitude 24 to 72, longitude -170 to -50" in response.json()["message"]
     assert calls == []
 
 
