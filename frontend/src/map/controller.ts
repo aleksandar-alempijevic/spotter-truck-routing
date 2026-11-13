@@ -197,6 +197,8 @@ export class MapController {
   private spotOpen = false;
   /** Where the spot the page is reading lies, to keep it in the open part of the map. */
   private spotAt: maplibregl.LngLatLike | null = null;
+  /** What that spot is, to hand back to a popup if the page turns into a pane. */
+  private spotWhat: { cell: number | null; ref: CheckpointRef | null } | null = null;
   /** While WebGL's context is lost nothing can be drawn, so nothing is pushed. */
   private contextLost = false;
 
@@ -255,6 +257,7 @@ export class MapController {
       this.map.resize();
       this.queueFit(false);
       this.placeReadoutAgain();
+      this.keepSpotVisible();
     });
     this.resizeObserver.observe(container);
   }
@@ -313,21 +316,40 @@ export class MapController {
   setReadoutOnMap(onMap: boolean): void {
     if (onMap === this.readoutOnMap) return;
     this.readoutOnMap = onMap;
-    if (onMap) return;
+    if (onMap) {
+      // A sheet that turns into a pane: the reading it held becomes a popup for the same spot.
+      const { spotAt: at, spotWhat: what } = this;
+      if (at && what?.cell != null && this.live) {
+        const words = what.ref ? this.events.describeCheckpoint(what.ref) : null;
+        if (!what.ref || words) this.showReadout(what.cell, at, words, what.ref);
+      }
+      this.spotAt = null;
+      this.spotWhat = null;
+      return;
+    }
     // A popup that is open when the page takes over the reading (a pane turned into a sheet) is
     // handed over, not dropped.
     const open = this.readout;
     this.hideReadout();
+    this.spotAt = null;
+    this.spotWhat = null;
     if (open) {
       this.spotAt = open.at;
+      this.spotWhat = { cell: open.cell, ref: open.ref };
       this.events.onSpot({ cell: open.cell, checkpoint: open.ref });
     }
   }
 
   /** The page says whether it is showing a spot's reading; the map then holds its position. */
   setSpotOpen(open: boolean): void {
+    // Only a reading that was shown and is now closed forgets its spot: one handed over a moment
+    // before the page says it is showing it has not been shown yet.
+    const closed = this.spotOpen && !open;
     this.spotOpen = open;
-    if (!open) this.spotAt = null;
+    if (closed) {
+      this.spotAt = null;
+      this.spotWhat = null;
+    }
   }
 
   /**
@@ -365,7 +387,8 @@ export class MapController {
     const frame = requestAnimationFrame(() => {
       const queued = this.queuedFit;
       this.queuedFit = null;
-      if (queued && !this.userMoved) {
+      // Not under a reading the page holds: the spot is kept in view by a pan instead.
+      if (queued && !this.userMoved && !this.spotOpen) {
         this.fit(queued.animate);
         // The fit moved the point the readout hangs from.
         this.placeReadoutAgain();
@@ -918,6 +941,7 @@ export class MapController {
       const cell = this.cellAt(this.map.project(at));
       this.events.onSpot({ cell: cell ?? null, checkpoint: { routeId, index } });
       this.spotAt = at;
+      this.spotWhat = { cell: cell ?? null, ref: { routeId, index } };
       if (!this.readoutOnMap || cell === undefined) return;
       const words = this.events.describeCheckpoint({ routeId, index });
       if (words) this.showReadout(cell, at, words, { routeId, index });
@@ -930,6 +954,7 @@ export class MapController {
     if (line) this.events.onSelectRoute((line.properties as { id: string }).id);
     const cell = this.cellAt(point);
     this.spotAt = cell === undefined ? null : this.map.unproject(point);
+    this.spotWhat = cell === undefined ? null : { cell, ref: null };
     this.events.onSpot(cell === undefined ? null : { cell, checkpoint: null });
     if (this.readoutOnMap && cell !== undefined) this.showReadout(cell, this.map.unproject(point));
   }

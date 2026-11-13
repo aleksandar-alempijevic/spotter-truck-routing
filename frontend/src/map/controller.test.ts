@@ -920,3 +920,88 @@ test('a popup open when the page takes over the reading is handed over, not drop
     checkpoint: { routeId: 'route-1', index: 3 },
   });
 });
+
+test('a reading the page holds becomes a popup for the same spot when the page turns into a pane', () => {
+  const { controller, ev, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setReadoutOnMap(false);
+  queried = [{ id: 2 }];
+  ev.describeCheckpoint.mockReturnValue({ title: 'Route 1 · mile 75', lines: ['Moderate'] });
+  checkpointUnder(controller);
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+  controller.setSpotOpen(true);
+  expect(popups).toHaveLength(0);
+
+  controller.setReadoutOnMap(true);
+
+  const shown = popups.filter((p) => !p.removed);
+  expect(shown).toHaveLength(1);
+  expect(shown[0].content!.textContent).toContain('Checkpoint at arrival: Moderate');
+  expect(shown[0].content!.textContent).toContain('Heatmap at slider hour');
+});
+
+test('a reading the driver closed does not come back as a popup when the page turns into a pane', () => {
+  const { controller, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setReadoutOnMap(false);
+  queried = [{ id: 2 }];
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+  controller.setSpotOpen(true);
+  controller.setSpotOpen(false); // the page's close
+
+  controller.setReadoutOnMap(true);
+
+  expect(popups.filter((p) => !p.removed)).toHaveLength(0);
+});
+
+test('a spot the page reads is brought back into view when the map itself is resized', () => {
+  const resized = recordResizes();
+  const { controller, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setReadoutOnMap(false);
+  queried = [{ id: 0 }];
+  pointOnScreen = { x: 150, y: 300 };
+  handlers.get('click')!({ point: { x: 150, y: 300 } });
+  controller.setSpotOpen(true);
+  sizeOf(controller, 100, 800); // the map is narrower now: the spot at x 150 is off its edge
+  log.length = 0;
+
+  resized();
+
+  expect(pans()).toEqual([[150 - (100 - 28), 0]]);
+});
+
+test('a resize does not re-fit the map under a reading the page holds', () => {
+  const resized = recordResizes();
+  const { controller, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setRoutes(buildPlanView(buildRoutes('mixed', { departure: GRID.start })).routes);
+  controller.setReadoutOnMap(false);
+  controller.setSpotOpen(true);
+  log.length = 0;
+
+  resized();
+  flushFrames();
+
+  expect(log.some((c) => c.method === 'fitBounds')).toBe(false);
+});
+
+test('a popup handed to the page is kept in view even though the page says so a render later', () => {
+  const { controller, ev, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  sizeOf(controller, 400, 800);
+  queried = [{ id: 0 }];
+  pointOnScreen = { x: 150, y: 600 };
+  handlers.get('click')!({ point: { x: 150, y: 600 } });
+  expect(popups.filter((p) => !p.removed)).toHaveLength(1);
+
+  // The page's order: the layout changes first, and only then does it report the reading shown.
+  controller.setReadoutOnMap(false);
+  controller.setSpotOpen(false);
+  controller.setSpotOpen(true);
+  log.length = 0;
+  controller.setInsets({ top: 0, right: 0, bottom: 300, left: 0 });
+
+  expect(ev.onSpot).toHaveBeenCalled();
+  expect(pans()).toEqual([[0, 600 - (800 - 300 - 28)]]);
+});
