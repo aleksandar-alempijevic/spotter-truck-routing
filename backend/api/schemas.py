@@ -40,11 +40,11 @@ MAX_CHECKPOINTS_PER_ROUTE = 600
 room for a route of about 6,000 miles."""
 MAX_ID_LENGTH = 64
 MAX_WEATHER_ROUTES = 3
-SERVICE_LATITUDES = (24.0, 72.0)
+SERVICE_LATITUDES = (15.0, 72.0)
 SERVICE_LONGITUDES = (-170.0, -50.0)
-"""The box the weather request's checkpoints must lie in: the contiguous US with its margin, Alaska
-and the Canadian corridors a US-to-US truck route can cross. Outside it the corridor sweep's
-planar and pole-and-antimeridian assumptions stop holding."""
+"""The box the weather request's checkpoints must lie in: the contiguous US with its margin,
+Alaska, Hawaii, Puerto Rico and the Canadian corridors a US-to-US truck route can cross. Outside
+it the corridor sweep's planar and pole-and-antimeridian assumptions stop holding."""
 GAP_DISTANCE_SLACK = 1.05
 GAP_DISTANCE_SLACK_MILES = 0.25
 """Two consecutive checkpoints are never farther apart in a straight line than their mark gap;

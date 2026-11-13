@@ -779,7 +779,7 @@ def box_corner(lat=None, lon=None):
 
 @pytest.mark.parametrize(
     "mutate",
-    [box_corner(lat=72.1), box_corner(lat=23.9), box_corner(lon=-170.1), box_corner(lon=-49.9)],
+    [box_corner(lat=72.1), box_corner(lat=14.9), box_corner(lon=-170.1), box_corner(lon=-49.9)],
     ids=["too far north", "too far south", "too far west", "too far east"],
 )
 async def test_checkpoints_outside_north_america_are_a_422_before_any_call(provider_mock, mutate):
@@ -790,17 +790,26 @@ async def test_checkpoints_outside_north_america_are_a_422_before_any_call(provi
     response = await post(body)
 
     assert response.status_code == 422
-    assert "latitude 24 to 72, longitude -170 to -50" in response.json()["message"]
+    assert "latitude 15 to 72, longitude -170 to -50" in response.json()["message"]
     assert calls == []
 
 
 @pytest.mark.parametrize(
-    ("lat", "lon"), [(24.0, -100.0), (72.0, -100.0), (40.0, -170.0), (40.0, -50.0)]
+    ("lat", "lon"), [(15.0, -100.0), (72.0, -100.0), (40.0, -170.0), (40.0, -50.0)]
 )
 def test_the_edges_of_the_service_box_are_inside_it(lat, lon):
     body = request(route(lat=lat, lon=lon, marks=(0,), etas=[NOW]), spacing=10)
 
     WeatherIn.model_validate(body)
+
+
+@pytest.mark.parametrize(
+    ("lat", "lon"),
+    [(21.3069, -157.8583), (19.7297, -155.09), (18.4655, -66.1057), (24.5551, -81.78)],
+    ids=["Honolulu", "Hilo", "San Juan", "Key West"],
+)
+def test_the_islands_and_the_keys_are_inside_the_box(lat, lon):
+    WeatherIn.model_validate(request(route(lat=lat, lon=lon, marks=(0,), etas=[NOW]), spacing=10))
 
 
 def test_a_northern_route_with_wide_longitude_steps_is_accepted():
