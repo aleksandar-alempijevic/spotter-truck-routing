@@ -2,6 +2,9 @@
 // Vite proxy can be driven in a real browser with no providers and no keys.
 //
 //   node scripts/stand-in-server.ts [--routes-delay-ms 3000] [--weather-delay-ms 8000] [--port 8000]
+//                                   [--weather-error outside_service_area]
+//
+// With --weather-error the weather endpoint answers 422 with that error code instead.
 //
 // It prints one JSON line per request. It is a development aid, not part of the app.
 import { createServer } from 'node:http';
@@ -16,6 +19,8 @@ const routesDelay = option('routes-delay-ms', 3000);
 const weatherDelay = option('weather-delay-ms', 8000);
 const port = option('port', 8000);
 const answer = createStandIn();
+const weatherErrorAt = process.argv.indexOf('--weather-error');
+const weatherError = weatherErrorAt === -1 ? null : process.argv[weatherErrorAt + 1];
 
 createServer((request, response) => {
   const chunks: Buffer[] = [];
@@ -29,6 +34,13 @@ createServer((request, response) => {
         : 0;
     console.log(JSON.stringify({ at: new Date().toISOString(), method: request.method, url }));
     setTimeout(() => {
+      if (weatherError && url.startsWith('/api/weather')) {
+        response.writeHead(422, { 'Content-Type': 'application/json' });
+        response.end(
+          JSON.stringify({ code: weatherError, message: 'Value error, routes: stand-in refusal' }),
+        );
+        return;
+      }
       const reply = answer(request.method ?? 'GET', url, Buffer.concat(chunks).toString('utf8'));
       response.writeHead(reply.status, { 'Content-Type': 'application/json' });
       response.end(JSON.stringify(reply.body));

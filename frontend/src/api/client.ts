@@ -16,6 +16,8 @@ const KNOWN_CODES: Record<ErrorOut['code'], true> = {
   provider_not_configured: true,
   provider_malformed_response: true,
   provider_error: true,
+  outside_service_area: true,
+  too_many_locations: true,
 };
 
 export class ApiError extends Error {

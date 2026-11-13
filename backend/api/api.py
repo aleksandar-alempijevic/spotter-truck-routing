@@ -19,7 +19,7 @@ from providers import (
 )
 from providers.errors import error_classes
 
-from .errors import API_ERRORS
+from .errors import API_ERRORS, VALIDATION_ERROR_CODES
 from .planner import plan_routes
 from .schemas import (
     AddressSearchOut,
@@ -54,7 +54,15 @@ def validation_error(request: HttpRequest, exc: ValidationError) -> HttpResponse
         return ".".join(str(part) for part in error["loc"] if part not in ("body", "query"))
 
     details = "; ".join(f"{field(error)}: {error['msg']}" for error in exc.errors)
-    return error_response(request, "validation_error", details, 422)
+    code = next(
+        (
+            VALIDATION_ERROR_CODES[error["type"]]
+            for error in exc.errors
+            if error.get("type") in VALIDATION_ERROR_CODES
+        ),
+        "validation_error",
+    )
+    return error_response(request, code, details, 422)
 
 
 @api.exception_handler(RequestDataTooBig)

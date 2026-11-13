@@ -87,7 +87,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "validation_error" | "not_found" | "method_not_allowed" | "internal_error" | "no_route" | "provider_timeout" | "provider_unavailable" | "provider_limited" | "provider_not_configured" | "provider_malformed_response" | "provider_error";
+            code: "validation_error" | "not_found" | "method_not_allowed" | "internal_error" | "no_route" | "provider_timeout" | "provider_unavailable" | "provider_limited" | "provider_not_configured" | "provider_malformed_response" | "provider_error" | "outside_service_area" | "too_many_locations";
             /** Message */
             message: string;
         };

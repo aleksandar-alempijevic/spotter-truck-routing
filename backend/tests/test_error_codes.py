@@ -1,6 +1,6 @@
 import typing
 
-from api.errors import API_ERRORS
+from api.errors import API_ERRORS, VALIDATION_ERROR_CODES
 from api.schemas import ErrorCode, ErrorOut
 from providers import ProviderError
 from providers.errors import (
@@ -55,3 +55,11 @@ def test_every_error_the_api_answers_itself_uses_a_declared_code():
     for key, (code, _message, status) in API_ERRORS.items():
         assert code in declared
         assert status == key
+
+
+def test_the_two_weather_refusals_have_codes_of_their_own():
+    declared = set(typing.get_args(ErrorCode))
+
+    assert {"outside_service_area", "too_many_locations"} <= declared
+    assert set(VALIDATION_ERROR_CODES.values()) <= declared
+    assert len(set(VALIDATION_ERROR_CODES.values())) == len(VALIDATION_ERROR_CODES)

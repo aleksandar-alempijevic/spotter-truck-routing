@@ -37,6 +37,7 @@ export function PlanPanel({
   const routes = state.view?.routes ?? [];
   const recommendedId = state.view?.ranking?.recommended_id ?? null;
   const selected = routes.find((r) => r.id === selectedRouteId) ?? null;
+  const weatherFailed = state.phase === 'weather_error';
   const showChips = routes.length > 0 && (tier === 'peek' || tier === 'full');
   const showCards = routes.length > 0 && (tier === 'half' || tier === 'all');
   const detailCp =
@@ -62,6 +63,7 @@ export function PlanPanel({
           routes={routes}
           selectedId={selectedRouteId}
           recommendedId={recommendedId}
+          weatherFailed={weatherFailed}
           onSelect={onSelectRoute}
         />
       )}
@@ -71,6 +73,7 @@ export function PlanPanel({
           trip={submission.trip}
           selectedId={selectedRouteId}
           recommendedId={recommendedId}
+          weatherFailed={weatherFailed}
           onSelect={onSelectRoute}
         />
       )}
@@ -85,6 +88,7 @@ export function PlanPanel({
             trip={submission.trip}
             isSelected
             onSelect={onSelectCheckpoint}
+            weatherFailed={weatherFailed}
           />
         </Box>
       )}
@@ -96,6 +100,7 @@ export function PlanPanel({
             trip={submission.trip}
             selected={selectedCheckpoint}
             onSelect={onSelectCheckpoint}
+            weatherFailed={weatherFailed}
           />
         </>
       )}

@@ -8,6 +8,9 @@ from .outbound import Outbound, UpstreamBadRequest
 
 AUTOCOMPLETE_URL = "https://api.geoapify.com/v1/geocode/autocomplete"
 CALL_TIMEOUT_S = 5.0
+NUMBER_FIRST_TIMEOUT_S = 10.0
+"""A search that starts with a house number and names no place is slow (7 to 9 s measured), and no
+filter or type speeds it up, so it gets a longer deadline."""
 SUGGESTION_LIMIT = 5
 
 ATTRIBUTION_TEXT = "Powered by Geoapify"
@@ -26,25 +29,43 @@ class PlaceSuggestion:
 
 
 async def autocomplete(outbound: Outbound, api_key: str, text: str) -> list[PlaceSuggestion]:
-    """US places matching the typed text, of any type (address, street, city).
+    """US places matching the typed text.
+
+    Text with no digit is a city or a place name, so it is searched as `type=city` first, which
+    keeps "Salt Lake" from answering with a town in New Mexico; if that finds nothing, one more
+    search runs without a type, so a depot name stays findable. Text with a digit keeps the
+    untyped search, since it can be an address, and one that starts with a number gets the longer
+    deadline.
 
     A suggestion without a label, coordinates or time zone is dropped, because the UI could not
-    place it or convert a departure time for it. An empty list is a normal answer. The call is
+    place it or convert a departure time for it. An empty list is a normal answer. A call is
     not retried: a keystroke's answer is stale by the time a retry would arrive.
     """
     if not api_key:
         raise ProviderNotConfigured
-    params = {
+    if any(char.isdigit() for char in text):
+        timeout = NUMBER_FIRST_TIMEOUT_S if text.lstrip()[:1].isdigit() else CALL_TIMEOUT_S
+        return await _search(outbound, api_key, text, place_type=None, timeout=timeout)
+    cities = await _search(outbound, api_key, text, place_type="city", timeout=CALL_TIMEOUT_S)
+    if cities:
+        return cities
+    return await _search(outbound, api_key, text, place_type=None, timeout=CALL_TIMEOUT_S)
+
+
+async def _search(
+    outbound: Outbound, api_key: str, text: str, *, place_type: str | None, timeout: float
+) -> list[PlaceSuggestion]:
+    params: dict[str, Any] = {
         "text": text,
         "apiKey": api_key,
         "format": "json",
         "limit": SUGGESTION_LIMIT,
         "filter": "countrycode:us",
     }
+    if place_type:
+        params["type"] = place_type
     try:
-        body = await outbound.get_json(
-            AUTOCOMPLETE_URL, params, timeout=CALL_TIMEOUT_S, retry=False
-        )
+        body = await outbound.get_json(AUTOCOMPLETE_URL, params, timeout=timeout, retry=False)
     except UpstreamBadRequest:
         raise ProviderUnavailable from None
     if not isinstance(body, dict) or not isinstance(body.get("results"), list):

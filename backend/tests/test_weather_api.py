@@ -638,7 +638,7 @@ async def test_routes_that_need_too_many_locations_are_refused_before_any_call(
     response = await post(request(route()))
 
     assert response.status_code == 422
-    assert response.json()["code"] == "validation_error"
+    assert response.json()["code"] == "too_many_locations"
     assert "5 forecast locations" in response.json()["message"]
     assert calls == []
 
@@ -761,7 +761,7 @@ async def test_checkpoints_that_jump_across_the_antimeridian_are_a_422_before_an
     response = await post(body)
 
     assert response.status_code == 422
-    assert response.json()["code"] == "validation_error"
+    assert response.json()["code"] == "outside_service_area"
     # The service box rejects it first; the planning bound's message would read differently.
     assert (
         "the service area (latitude 15 to 72, longitude -170 to -50)"
@@ -793,7 +793,37 @@ async def test_checkpoints_outside_north_america_are_a_422_before_any_call(provi
     response = await post(body)
 
     assert response.status_code == 422
+    assert response.json()["code"] == "outside_service_area"
     assert "latitude 15 to 72, longitude -170 to -50" in response.json()["message"]
+    assert calls == []
+
+
+async def test_a_body_that_breaks_a_send_back_rule_inside_the_area_stays_a_validation_error(
+    provider_mock,
+):
+    # The two coded refusals must not swallow the plain ones, and the code comes from the error's
+    # type, never from its message text.
+    calls = forecast(provider_mock)
+    body = request(route(lat=40.0, marks=(0, 10, 20)), spacing=10)
+    body["routes"][0]["checkpoints"][1]["mile"] = 5
+
+    response = await post(body)
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "validation_error"
+    assert calls == []
+
+
+async def test_a_body_with_a_checkpoint_outside_the_area_and_another_fault_names_the_area(
+    provider_mock,
+):
+    calls = forecast(provider_mock)
+    body = request(route(lat=40.0, marks=(0, 10, 20)), spacing=10)
+    body["routes"][0]["checkpoints"][1]["lat"] = 72.1
+
+    response = await post(body)
+
+    assert response.json()["code"] == "outside_service_area"
     assert calls == []
 
 

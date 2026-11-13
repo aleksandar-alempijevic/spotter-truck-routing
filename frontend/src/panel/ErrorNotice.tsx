@@ -16,11 +16,21 @@ export function ErrorNotice({
       severity="error"
       action={
         message.action === 'retry' ? (
-          <Button color="inherit" size="small" sx={{ minHeight: 44 }} onClick={onRetry}>
+          <Button
+            color="inherit"
+            size="small"
+            sx={{ minHeight: 44, whiteSpace: 'nowrap' }}
+            onClick={onRetry}
+          >
             Try again
           </Button>
         ) : message.action === 'edit' ? (
-          <Button color="inherit" size="small" sx={{ minHeight: 44 }} onClick={onEdit}>
+          <Button
+            color="inherit"
+            size="small"
+            sx={{ minHeight: 44, whiteSpace: 'nowrap' }}
+            onClick={onEdit}
+          >
             Edit trip
           </Button>
         ) : undefined

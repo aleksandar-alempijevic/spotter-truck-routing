@@ -17,6 +17,8 @@ const CODES: Record<ErrorOut['code'], true> = {
   provider_not_configured: true,
   provider_malformed_response: true,
   provider_error: true,
+  outside_service_area: true,
+  too_many_locations: true,
 };
 const ALL: ApiErrorCode[] = [...(Object.keys(CODES) as ErrorOut['code'][]), 'unknown'];
 const CONTEXTS: ErrorContext[] = ['routes', 'weather', 'address'];
@@ -33,9 +35,31 @@ test.each(CONTEXTS.flatMap((c) => ALL.map((code) => [c, code] as const)))(
 );
 
 test('the same code reads differently per request', () => {
-  const err = new ApiError('validation_error', 'x', 422);
-  expect(describeError('weather', err).body).toMatch(/outside the area/);
-  expect(describeError('routes', err).body).not.toMatch(/outside the area/);
+  const err = new ApiError('provider_limited', 'x', 503);
+  expect(describeError('weather', err).title).toMatch(/weather/i);
+  expect(describeError('address', err).title).toMatch(/address/i);
+  expect(describeError('routes', err).title).not.toMatch(/weather|address/i);
+});
+
+test('the two weather refusals each say their own way forward', () => {
+  const area = describeError('weather', new ApiError('outside_service_area', 'x', 422));
+  const many = describeError('weather', new ApiError('too_many_locations', 'x', 422));
+  expect(area.body).toMatch(/latitude 15 and 72/);
+  expect(area.body).not.toMatch(/spacing/);
+  expect(many.body).toMatch(/wider checkpoint spacing/);
+  expect(many.body).not.toMatch(/latitude/);
+  expect([area.action, many.action]).toEqual(['edit', 'edit']);
+});
+
+test('a plain validation error on the weather request no longer claims either cause', () => {
+  const row = describeError('weather', new ApiError('validation_error', 'x', 422));
+  expect(row.body).not.toMatch(/spacing|latitude/);
+});
+
+test('a timed-out address search is retryable and says why numbers are slow', () => {
+  const row = describeError('address', new ApiError('provider_timeout', 'x', 504));
+  expect(row.action).toBe('retry');
+  expect(row.body).toMatch(/city/);
 });
 
 test('branching is on the code, never on the message', () => {

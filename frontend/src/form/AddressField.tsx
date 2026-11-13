@@ -1,4 +1,4 @@
-import { Autocomplete, Box, TextField } from '@mui/material';
+import { Autocomplete, Box, Button, TextField } from '@mui/material';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { ApiError } from '../api/client';
@@ -9,6 +9,10 @@ import { canSearch, SEARCH_MAX_CHARS } from './validation';
 import { useDebouncedValue } from './useDebouncedValue';
 
 export const SEARCH_DEBOUNCE_MS = 350;
+
+/** A search that starts with a number and names no place is slow on the server. */
+export const NUMBER_HINT = 'Add the city for faster results';
+export const startsWithNumber = (text: string) => /^\s*\d/.test(text);
 
 interface Props {
   label: string;
@@ -77,13 +81,24 @@ export function AddressField({ label, text, choice, onChange, onCredit, error }:
           error={Boolean(error) || failure !== null}
           helperText={
             error ??
-            (failure
-              ? `${failure.title}. ${failure.body}`
-              : shortText
-                ? 'Type at least 3 characters'
-                : choice
-                  ? ' '
-                  : 'City, address or place, with the state')
+            (failure ? (
+              <>
+                {failure.title}. {failure.body}{' '}
+                {failure.action === 'retry' && (
+                  <Button size="small" sx={{ minHeight: 44 }} onClick={() => void query.refetch()}>
+                    Try again
+                  </Button>
+                )}
+              </>
+            ) : shortText ? (
+              'Type at least 3 characters'
+            ) : searching && startsWithNumber(text) ? (
+              NUMBER_HINT
+            ) : choice ? (
+              ' '
+            ) : (
+              'City, address or place, with the state'
+            ))
           }
           slotProps={{
             ...params.slotProps,

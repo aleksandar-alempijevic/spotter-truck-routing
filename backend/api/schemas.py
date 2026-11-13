@@ -5,6 +5,7 @@ from typing import Annotated, Literal, Self
 
 from ninja import Schema
 from pydantic import AwareDatetime, Field, model_validator
+from pydantic_core import PydanticCustomError
 
 from risk_rules import Condition, Level, RankingStep
 from routing.checkpoints import MARK_EPSILON_MILES
@@ -32,8 +33,15 @@ ErrorCode = Literal[
     "provider_not_configured",
     "provider_malformed_response",
     "provider_error",
+    "outside_service_area",
+    "too_many_locations",
 ]
 """Every `code` an error body can carry. A test ties each error class to this set."""
+
+OUTSIDE_SERVICE_AREA = "outside_service_area"
+TOO_MANY_LOCATIONS = "too_many_locations"
+"""Validation error types that the API answers with a code of their own, because each needs
+different advice from the person who sent the request (see `api/errors.py`)."""
 
 MAX_CHECKPOINTS_PER_ROUTE = 600
 """The longest test route (about 3,560 miles) has 357 checkpoints at 10-mile spacing; this leaves
@@ -204,10 +212,11 @@ def _check_marks(route: RouteCore, interval_miles: float) -> None:
         and SERVICE_LONGITUDES[0] <= c.lon <= SERVICE_LONGITUDES[1]
         for c in route.checkpoints
     ):
-        raise ValueError(
+        raise PydanticCustomError(
+            OUTSIDE_SERVICE_AREA,
             f"{where}: checkpoints must lie in the service area (latitude "
             f"{SERVICE_LATITUDES[0]:g} to {SERVICE_LATITUDES[1]:g}, longitude "
-            f"{SERVICE_LONGITUDES[0]:g} to {SERVICE_LONGITUDES[1]:g})"
+            f"{SERVICE_LONGITUDES[0]:g} to {SERVICE_LONGITUDES[1]:g})",
         )
     if marks[0] != 0:
         raise ValueError(f"{where}: the first checkpoint must be at mile 0")

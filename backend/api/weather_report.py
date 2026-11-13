@@ -42,7 +42,7 @@ from weather import (
 )
 from weather.grid import DISPLAY_DEGREES
 
-from .schemas import RouteCore
+from .schemas import TOO_MANY_LOCATIONS, RouteCore
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +113,7 @@ async def build_report(
         raise ValidationError(
             [
                 {
+                    "type": TOO_MANY_LOCATIONS,
                     "loc": ("body", "routes"),
                     "msg": f"these routes need more than {runtime.max_locations} "
                     "forecast locations; use a larger checkpoint interval or shorter routes",

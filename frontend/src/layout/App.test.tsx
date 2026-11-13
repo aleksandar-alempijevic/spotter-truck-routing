@@ -26,12 +26,23 @@ function useViewport(mode: 'sheet' | 'pane') {
 let fetchMock: ReturnType<typeof vi.fn>;
 let answer: ReturnType<typeof createStandIn>;
 let weatherFails: boolean;
+let weatherFailure: Response | null;
+let addressTimeouts: number;
 
 beforeEach(() => {
   mapProps = null;
   weatherFails = false;
+  weatherFailure = null;
+  addressTimeouts = 0;
   answer = createStandIn();
   fetchMock = vi.fn((url: string, init?: RequestInit) => {
+    if (weatherFailure && url === '/api/weather') return Promise.resolve(weatherFailure.clone());
+    if (addressTimeouts > 0 && url.startsWith('/api/address-search')) {
+      addressTimeouts -= 1;
+      return Promise.resolve(
+        Response.json({ code: 'provider_timeout', message: 'slow' }, { status: 504 }),
+      );
+    }
     if (weatherFails && url === '/api/weather') {
       return Promise.resolve(
         Response.json({ code: 'provider_limited', message: 'busy' }, { status: 503 }),
@@ -183,4 +194,98 @@ test('a plan with no safe route says so instead of recommending one', async () =
   renderApp();
   await planTrip(['Wichita', 'Wichita, KS, United States']);
   expect(await screen.findByText('No route is safe to recommend')).toBeInTheDocument();
+});
+
+test('a search that starts with a number hints at adding the city', async () => {
+  useViewport('sheet');
+  renderApp();
+  fireEvent.change(screen.getByLabelText('Starting place'), { target: { value: '1600 Penn' } });
+  expect(await screen.findByText('Add the city for faster results')).toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText('Starting place'), { target: { value: 'Dallas' } });
+  await waitFor(() =>
+    expect(screen.queryByText('Add the city for faster results')).not.toBeInTheDocument(),
+  );
+});
+
+test('a timed-out address search is shown inline and retried only on request', async () => {
+  useViewport('sheet');
+  addressTimeouts = 1;
+  renderApp();
+  fireEvent.change(screen.getByLabelText('Starting place'), { target: { value: 'Dallas' } });
+
+  expect(await screen.findByText(/Address search took too long/)).toBeInTheDocument();
+  await new Promise((r) => setTimeout(r, 400));
+  expect(calls('/api/address-search')).toBe(1);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  fireEvent.keyDown(screen.getByLabelText('Starting place'), { key: 'ArrowDown' });
+  expect(
+    await screen.findByRole('option', { name: 'Dallas, TX, United States' }),
+  ).toBeInTheDocument();
+  expect(calls('/api/address-search')).toBe(2);
+});
+
+test('the long-trip notice shows for 10-mile spacing and not otherwise', () => {
+  useViewport('sheet');
+  renderApp();
+  const notice = /on a long trip the weather can take about a minute/;
+  expect(screen.queryByText(notice)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '10 mi' }));
+  expect(screen.getByText(notice)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '50 mi' }));
+  expect(screen.queryByText(notice)).not.toBeInTheDocument();
+});
+
+test.each([
+  ['outside_service_area', /outside the area we cover/, 'Edit trip'],
+  ['too_many_locations', /too many forecast points/, 'Edit trip'],
+] as const)(
+  'a weather %s refusal keeps the routes and sends the driver to edit',
+  async (code, title, action) => {
+    useViewport('pane');
+    weatherFailure = Response.json({ code, message: 'Value error, routes: x' }, { status: 422 });
+    renderApp();
+    await planTrip();
+
+    expect(await screen.findByText(title)).toBeInTheDocument();
+    expect(mapProps?.routes).toHaveLength(3);
+    expect(screen.getAllByText(/Arrives /)).toHaveLength(3);
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: action }));
+    expect(screen.getByRole('button', { name: 'Plan routes' })).toBeInTheDocument();
+    expect(calls('/api/weather')).toBe(1);
+  },
+);
+
+test('a gateway page instead of an API body is an unknown failure with one retry', async () => {
+  useViewport('pane');
+  weatherFailure = new Response('<html>Bad gateway</html>', { status: 502 });
+  renderApp();
+  await planTrip();
+
+  expect(await screen.findByText('Something unexpected happened')).toBeInTheDocument();
+  expect(mapProps?.routes).toHaveLength(3);
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  expect(screen.queryByText(/Bad gateway/)).not.toBeInTheDocument();
+});
+
+test('a routes failure shows the message in the panel and plans again only when asked', async () => {
+  useViewport('pane');
+  fetchMock.mockImplementation((url: string) =>
+    Promise.resolve(
+      url.startsWith('/api/address-search')
+        ? Response.json(answer('GET', url, '').body)
+        : Response.json({ code: 'no_route', message: 'x' }, { status: 422 }),
+    ),
+  );
+  renderApp();
+  await planTrip();
+
+  expect(await screen.findByText('No truck route found')).toBeInTheDocument();
+  expect(calls('/api/routes')).toBe(1);
+  fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Edit trip' }));
+  expect(screen.getByRole('button', { name: 'Plan routes' })).toBeInTheDocument();
+  expect(calls('/api/routes')).toBe(1);
 });

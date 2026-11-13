@@ -58,7 +58,7 @@ async def test_suggestions_carry_label_coordinates_zone_and_the_attribution(prov
     params = route.calls.last.request.url.params
     assert params["filter"] == "countrycode:us"
     assert params["text"] == "Spring"
-    assert "type" not in params
+    assert params["type"] == "city"
     assert route.calls.last.request.extensions["timeout"]["read"] == 5
 
 
@@ -201,3 +201,118 @@ async def test_the_openapi_schema_declares_the_endpoint_and_its_errors():
     responses = schema["paths"]["/api/address-search"]["get"]["responses"]
     assert {"200", "422", "502", "503", "504"} <= set(responses)
     assert json.dumps(responses["200"]).count("AddressSearchOut") == 1
+
+
+def sent(route) -> list[dict]:
+    return [dict(call.request.url.params) for call in route.calls]
+
+
+async def test_text_without_a_digit_searches_cities_with_the_country_filter(provider_mock):
+    route = respond(provider_mock, place())
+
+    response = await search("Salt Lake")
+
+    assert response.status_code == 200
+    (only,) = sent(route)
+    assert only["type"] == "city"
+    assert only["filter"] == "countrycode:us"
+    assert only["text"] == "Salt Lake"
+
+
+async def test_an_empty_city_search_falls_back_once_to_the_untyped_search(provider_mock):
+    route = provider_mock.get(host="api.geoapify.com").mock(
+        side_effect=[
+            httpx.Response(200, json={"results": []}),
+            httpx.Response(200, json={"results": [place(formatted="Pilot Travel Center, KS")]}),
+        ]
+    )
+
+    response = await search("Pilot Travel Center")
+
+    assert [s["label"] for s in response.json()["suggestions"]] == ["Pilot Travel Center, KS"]
+    first, second = sent(route)
+    assert first["type"] == "city"
+    assert "type" not in second
+    assert second["filter"] == "countrycode:us"
+    assert route.calls.last.request.extensions["timeout"]["read"] == 5
+
+
+async def test_a_city_search_that_finds_something_makes_no_second_call(provider_mock):
+    route = respond(provider_mock, place())
+
+    await search("Spokane, W")
+
+    assert route.call_count == 1
+
+
+async def test_a_city_search_whose_results_are_all_unusable_also_falls_back(provider_mock):
+    route = provider_mock.get(host="api.geoapify.com").mock(
+        side_effect=[
+            httpx.Response(200, json={"results": [place(timezone=None)]}),
+            httpx.Response(200, json={"results": [place()]}),
+        ]
+    )
+
+    assert len((await search("Spring")).json()["suggestions"]) == 1
+    assert route.call_count == 2
+
+
+async def test_when_both_searches_are_empty_the_answer_is_empty_after_exactly_two_calls(
+    provider_mock,
+):
+    route = respond(provider_mock)
+
+    response = await search("zzzzzz")
+
+    assert response.status_code == 200
+    assert response.json()["suggestions"] == []
+    assert route.call_count == 2
+
+
+async def test_a_failed_city_search_is_an_error_and_is_not_retried_untyped(provider_mock):
+    route = provider_mock.get(host="api.geoapify.com").mock(return_value=httpx.Response(500))
+
+    response = await search("Spring")
+
+    assert response.status_code == 502
+    assert route.call_count == 1
+
+
+async def test_text_that_starts_with_a_number_keeps_the_untyped_search_and_waits_longer(
+    provider_mock,
+):
+    route = respond(provider_mock, place(formatted="1600 Pennsylvania Ave NW, Washington, DC"))
+
+    await search("1600 Pennsylvania")
+
+    (only,) = sent(route)
+    assert "type" not in only
+    assert only["filter"] == "countrycode:us"
+    assert route.calls.last.request.extensions["timeout"]["read"] == 10
+
+
+async def test_a_numeric_search_that_finds_nothing_is_not_repeated(provider_mock):
+    route = respond(provider_mock)
+
+    await search("99999 nowhere")
+
+    assert route.call_count == 1
+
+
+async def test_a_digit_later_in_the_text_is_untyped_with_the_ordinary_deadline(provider_mock):
+    route = respond(provider_mock, place())
+
+    await search("Route 66, Tulsa")
+
+    (only,) = sent(route)
+    assert "type" not in only
+    assert route.calls.last.request.extensions["timeout"]["read"] == 5
+
+
+async def test_a_numeric_search_that_times_out_is_a_gateway_timeout(provider_mock):
+    provider_mock.get(host="api.geoapify.com").mock(side_effect=httpx.ReadTimeout("slow"))
+
+    response = await search("1600 Pennsylvania")
+
+    assert response.status_code == 504
+    assert response.json()["code"] == "provider_timeout"

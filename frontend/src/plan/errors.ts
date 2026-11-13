@@ -11,6 +11,9 @@ export interface ErrorMessage {
   action: ErrorAction;
 }
 
+/** The weather service area (d15), as the backend states it in its refusal. */
+const SERVICE_AREA = { south: 15, north: 72, west: -170, east: -50 } as const;
+
 const TRY_LATER = 'Please try again in a moment.';
 
 // A Record over the full code union: a code added on the backend fails `tsc` until it has a row.
@@ -58,6 +61,16 @@ const BASE: Record<ApiErrorCode, ErrorMessage> = {
     action: 'retry',
   },
   provider_error: { title: 'The data provider failed', body: TRY_LATER, action: 'retry' },
+  outside_service_area: {
+    title: 'Part of the trip is outside the area we cover',
+    body: `Weather is covered between latitude ${SERVICE_AREA.south} and ${SERVICE_AREA.north} and longitude ${SERVICE_AREA.west} to ${SERVICE_AREA.east}: the contiguous US, Alaska, Hawaii, Puerto Rico and the Canadian roads nearby. Choose places inside it.`,
+    action: 'edit',
+  },
+  too_many_locations: {
+    title: 'The trip needs too many forecast points',
+    body: 'Choose a wider checkpoint spacing (25 or 50 miles) or a shorter trip, then plan again.',
+    action: 'edit',
+  },
   unknown: {
     title: 'Something unexpected happened',
     body: 'The request failed in a way we do not recognise. Try again.',
@@ -74,12 +87,6 @@ const OVERRIDES: Record<ErrorContext, Partial<Record<ApiErrorCode, ErrorMessage>
     },
   },
   weather: {
-    // One code covers two causes, and the code is all the client may branch on: say both.
-    validation_error: {
-      title: 'Weather could not be checked for this trip',
-      body: 'Either part of the trip is outside the area we cover (latitude 15 to 72, longitude -170 to -50), or the trip needs too many forecast points. Try a wider checkpoint spacing, or a trip inside the area.',
-      action: 'edit',
-    },
     provider_limited: {
       title: 'The weather service is busy',
       body: 'We hit its request limit. Your routes are still shown. Try again in a minute; forecasts already fetched are reused.',
@@ -92,6 +99,11 @@ const OVERRIDES: Record<ErrorContext, Partial<Record<ApiErrorCode, ErrorMessage>
     },
   },
   address: {
+    provider_timeout: {
+      title: 'Address search took too long',
+      body: 'Searches that start with a number can be slow. Add the city, or try again.',
+      action: 'retry',
+    },
     provider_limited: {
       title: 'Address search is busy',
       body: 'Wait a moment and keep typing.',

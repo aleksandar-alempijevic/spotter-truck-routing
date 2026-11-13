@@ -13,13 +13,15 @@ interface Props {
   trip: Trip;
   selectedId: string | null;
   recommendedId: string | null;
+  /** The weather request failed, so a route's risk is unavailable rather than still coming. */
+  weatherFailed?: boolean;
   onSelect(routeId: string): void;
 }
 
 const fmtMiles = (miles: number) => `${Math.round(miles).toLocaleString('en-US')} mi`;
 
 /** Miles at each level as a bar and as text, so the bar never carries the meaning alone. */
-function MilesByLevel({ route }: { route: RouteView }) {
+function MilesByLevel({ route, weatherFailed }: { route: RouteView; weatherFailed?: boolean }) {
   const summary = route.summary;
   if (!summary) {
     // Holds the space the summary will take, so late weather shifts nothing.
@@ -27,7 +29,9 @@ function MilesByLevel({ route }: { route: RouteView }) {
       <Box sx={{ minHeight: 44 }}>
         <Box sx={{ height: 10, borderRadius: 1, bgcolor: 'action.hover' }} />
         <Typography variant="caption" color="text.secondary">
-          Risk along the route appears when the weather is in.
+          {weatherFailed
+            ? 'Risk along this route could not be loaded.'
+            : 'Risk along the route appears when the weather is in.'}
         </Typography>
       </Box>
     );
@@ -86,7 +90,14 @@ function MilesByLevel({ route }: { route: RouteView }) {
 }
 
 /** One card per route: time, distance, arrival and the miles at each level. */
-export function RouteCards({ routes, trip, selectedId, recommendedId, onSelect }: Props) {
+export function RouteCards({
+  routes,
+  trip,
+  selectedId,
+  recommendedId,
+  weatherFailed,
+  onSelect,
+}: Props) {
   return (
     <Stack spacing={1.5} component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
       {routes.map((route) => {
@@ -123,7 +134,10 @@ export function RouteCards({ routes, trip, selectedId, recommendedId, onSelect }
                 )}
                 {route.isFastest && <Chip size="small" variant="outlined" label="Fastest" />}
                 <Box sx={{ flex: 1 }} />
-                <RiskBadge state={routeWorstRisk(route)} />
+                <RiskBadge
+                  state={routeWorstRisk(route)}
+                  pendingLabel={weatherFailed ? 'Weather unavailable' : undefined}
+                />
               </Stack>
               <Typography variant="body2" sx={{ mt: 0.5 }}>
                 {formatDuration(route.travelSeconds)} · {fmtMiles(route.miles)}
@@ -133,7 +147,7 @@ export function RouteCards({ routes, trip, selectedId, recommendedId, onSelect }
                 Arrives {originClock(trip, arrival)}
                 {inDestination ? ` (${inDestination} there)` : ''}
               </Typography>
-              <MilesByLevel route={route} />
+              <MilesByLevel route={route} weatherFailed={weatherFailed} />
               {route.summary && route.summary.no_travel_miles > 0 && (
                 <Box
                   role="note"
