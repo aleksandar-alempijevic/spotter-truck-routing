@@ -1,8 +1,8 @@
 import { createTheme } from '@mui/material';
 
-// Light (the default) and dark colour schemes; MUI picks one from the system setting.
+// One light scheme: the risk palette is checked once, against the one light basemap, for a phone
+// read in daylight.
 export const theme = createTheme({
-  colorSchemes: { dark: true },
   typography: {
     fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
   },

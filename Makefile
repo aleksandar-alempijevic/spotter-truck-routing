@@ -42,3 +42,5 @@ check: test types-check
 	pnpm -C frontend typecheck
 	pnpm -C frontend lint
 	pnpm -C frontend format:check
+	# The build is the only check that sees the map's worker file and its lazy chunk.
+	pnpm -C frontend build
