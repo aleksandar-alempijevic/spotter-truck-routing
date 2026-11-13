@@ -22,13 +22,33 @@ export type MapStatus = 'loading' | 'ready' | 'failed' | 'no-basemap';
 export function MapHost({
   onStatus,
   ...props
-}: Omit<MapViewProps, 'onReady' | 'onFailed' | 'onRecovered' | 'onBasemapUnavailable'> & {
+}: Omit<
+  MapViewProps,
+  'onReady' | 'onFailed' | 'onContextLost' | 'onRecovered' | 'onBasemapUnavailable'
+> & {
   /** Told when the map loads or cannot; the page decides what to say about it. */
   onStatus(status: MapStatus): void;
 }) {
   const [wanted, setWanted] = useState(false);
-  const [status, setStatus] = useState<MapStatus>('loading');
-  const failed = useCallback(() => setStatus('failed'), []);
+  // What is known about the map, as separate facts: what the corner says follows from them, so one
+  // arriving in any order (a basemap error while the context is lost) is never overwritten.
+  const [facts, setFacts] = useState({
+    ready: false,
+    /** It will not come back: the chunk, the render or the construction failed. */
+    broken: false,
+    /** The WebGL context is lost, and may come back. */
+    lost: false,
+    noBasemap: false,
+  });
+  const status: MapStatus =
+    facts.broken || facts.lost
+      ? 'failed'
+      : facts.noBasemap
+        ? 'no-basemap'
+        : facts.ready
+          ? 'ready'
+          : 'loading';
+  const failed = useCallback(() => setFacts((f) => ({ ...f, broken: true })), []);
   useEffect(() => onStatus(status), [status, onStatus]);
 
   useEffect(() => {
@@ -45,10 +65,13 @@ export function MapHost({
           <Suspense fallback={null}>
             <MapView
               {...props}
-              onReady={() => setStatus((s) => (s === 'loading' ? 'ready' : s))}
+              // The first style install means the map is alive, even if its context was lost
+              // before then.
+              onReady={() => setFacts((f) => ({ ...f, ready: true, lost: false }))}
               onFailed={failed}
-              onRecovered={() => setStatus((s) => (s === 'failed' ? 'ready' : s))}
-              onBasemapUnavailable={() => setStatus((s) => (s === 'failed' ? s : 'no-basemap'))}
+              onContextLost={() => setFacts((f) => ({ ...f, lost: true }))}
+              onRecovered={() => setFacts((f) => ({ ...f, lost: false }))}
+              onBasemapUnavailable={() => setFacts((f) => ({ ...f, noBasemap: true }))}
             />
           </Suspense>
         </ErrorBoundary>

@@ -10,6 +10,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 function Broken(): never {
@@ -50,5 +51,4 @@ test('the crash notice says what happened and reloads the page on request', () =
   expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong');
   fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
   expect(reload).toHaveBeenCalledTimes(1);
-  vi.unstubAllGlobals();
 });

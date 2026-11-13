@@ -76,9 +76,8 @@ export function TripForm({ values, onChange, onSubmit, autoFocus = false }: Prop
             onChange({ ...values, destinationText, destination })
           }
         />
-        {/* The button is a 44 px target; the negative margin (tripled selector, to outrank the stack's own margins) leaves its text about as far from the
-          fields as the fields are from each other. */}
-        <Box sx={{ '&&&': { mt: -0.5, mb: -1 } }}>
+        {/* The button is a 44 px target in a row of its own, so its box never overlaps a field. */}
+        <Box>
           <Button
             size="small"
             sx={{ minHeight: 44 }}
@@ -111,11 +110,7 @@ export function TripForm({ values, onChange, onSubmit, autoFocus = false }: Prop
           onChange={(spacing) => onChange({ ...values, spacing })}
         />
         {values.addressCredit && (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ '&&&': { mt: -0.25, mb: -0.5 } }}
-          >
+          <Typography variant="caption" color="text.secondary">
             Address search:{' '}
             <Link
               href={values.addressCredit.url}

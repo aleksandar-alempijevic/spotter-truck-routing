@@ -27,7 +27,10 @@ export interface MapViewProps {
   /** Screen rectangles that lie over the map and that a readout must keep clear of. */
   coveredRects(): readonly DOMRect[];
   onReady(): void;
+  /** The map could not be built, or its chunk or render failed: it will not come back. */
   onFailed(): void;
+  /** The WebGL context was lost, and may come back. */
+  onContextLost(): void;
   onRecovered(): void;
   onBasemapUnavailable(): void;
 }
@@ -60,7 +63,7 @@ export default function MapView(props: MapViewProps) {
         onSelectRoute: (id) => latest.current.onSelectRoute(id),
         onSelectCheckpoint: (ref) => latest.current.onSelectCheckpoint(ref),
         onBasemapUnavailable: () => latest.current.onBasemapUnavailable(),
-        onFailed: () => latest.current.onFailed(),
+        onContextLost: () => latest.current.onContextLost(),
         onRecovered: () => latest.current.onRecovered(),
         describeCheckpoint: (ref) => latest.current.describeCheckpoint(ref),
         describeCell: (level, hour) => latest.current.describeCell(level, hour),

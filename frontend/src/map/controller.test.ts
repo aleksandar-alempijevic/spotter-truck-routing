@@ -16,6 +16,7 @@ const handlers = new Map<string, (event: unknown) => void>();
 const sources = new Map<string, { setData: (data: unknown) => void }>();
 const popups: StubPopup[] = [];
 let styleLayers: { id: string; type: string; layout?: Record<string, unknown> }[] = [];
+let pointOnScreen = { x: 50, y: 50 };
 let styleLoaded = true;
 const onceHandlers = new Map<string, (event: unknown) => void>();
 let queried: { id?: number }[] = [];
@@ -53,7 +54,11 @@ class StubPopup {
     this.removed = true;
     return this;
   };
-  getElement = () => ({ getBoundingClientRect: () => rectFor(this.anchor, this.width) });
+  contentStyle: Record<string, string> = {};
+  getElement = () => ({
+    getBoundingClientRect: () => rectFor(this.anchor, this.width),
+    querySelector: () => ({ style: this.contentStyle }),
+  });
 }
 
 vi.mock('maplibre-gl/dist/maplibre-gl-worker.mjs?url', () => ({ default: 'worker.js' }));
@@ -99,7 +104,7 @@ vi.mock('maplibre-gl', () => {
           ? queriedLines
           : [];
     unproject = () => ({ lng: 0, lat: 0 });
-    project = () => ({ x: 50, y: 50 });
+    project = () => pointOnScreen;
     fitBounds = record('fitBounds');
     isStyleLoaded = () => styleLoaded;
     once = (event: string, handler: (event: unknown) => void) => {
@@ -152,7 +157,7 @@ const flushFrames = () => {
 
 const events = () => ({
   onReady: vi.fn(),
-  onFailed: vi.fn(),
+  onContextLost: vi.fn(),
   onRecovered: vi.fn(),
   onSelectRoute: vi.fn(),
   onSelectCheckpoint: vi.fn(),
@@ -191,6 +196,7 @@ beforeEach(() => {
   queriedLines = [];
   styleLayers = [];
   styleLoaded = true;
+  pointOnScreen = { x: 50, y: 50 };
   onceHandlers.clear();
   canvasListeners.clear();
   rectFor = () => ({ left: 100, top: 100, right: 200, bottom: 150 });
@@ -293,15 +299,18 @@ test('a tap on a route line selects the route and reads the cell under the finge
 });
 
 /** Makes the next query for checkpoints find one, so a click lands on it. */
-function checkpointUnder(controller: unknown) {
+function checkpointUnder(controller: unknown, seen: unknown[][] = []) {
   const hit = {
     properties: { routeId: 'route-1', index: 3 },
     geometry: { coordinates: [-97, 35] },
   };
   const map = (controller as { map: { queryRenderedFeatures: unknown } }).map;
   const original = map.queryRenderedFeatures as (...args: unknown[]) => unknown[];
-  map.queryRenderedFeatures = (area: unknown, options: { layers: string[] }) =>
-    options.layers.includes('checkpoints') ? [hit] : original(area, options);
+  map.queryRenderedFeatures = (area: unknown, options: { layers: string[] }) => {
+    if (!options.layers.includes('checkpoints')) return original(area, options);
+    seen.push(area as unknown[]);
+    return [hit];
+  };
 }
 
 test('a tap on a checkpoint selects it and opens one readout that labels both readings', () => {
@@ -394,18 +403,64 @@ test('a popup stays out of the part of the map the panels cover', () => {
   expect(popups.filter((p) => !p.removed)[0].anchor).toBe('top');
 });
 
-test('with every side covered, a popup still opens, on a side inside the open part', () => {
+test('with every side covered, the side that stays inside the open part wins over the first', () => {
   const { controller, ev, holder } = setup();
   controller.setGrid(model(GRID), holder);
+  controller.setInsets({ top: 100, right: 0, bottom: 0, left: 0 });
   ev.coveredRects.mockReturnValue([{ left: 0, top: 0, right: 400, bottom: 800 } as DOMRect]);
-  placeAround({ bottom: [100, 100, 200, 150], 'bottom-left': [120, 100, 220, 150] });
-  controller.setInsets({ top: 0, right: 0, bottom: 0, left: 0 });
+  // "bottom", the first side, hangs 60 px above the open part (under the trip bar); "top-left" is
+  // inside it. Both are covered, so only the spill can tell them apart.
+  placeAround({ bottom: [100, 40, 200, 140], 'top-left': [100, 200, 200, 250] });
   queried = [{ id: 0 }];
 
   handlers.get('click')!({ point: { x: 150, y: 200 } });
 
-  // Nothing is clear, so the first side inside the open part stands.
-  expect(popups.filter((p) => !p.removed)[0].anchor).toBe('bottom');
+  expect(popups.filter((p) => !p.removed)[0].anchor).toBe('top-left');
+});
+
+test('a popup that runs under the slider bar loses to one inside the open part, even over a control', () => {
+  const { controller, ev, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setInsets({ top: 0, right: 0, bottom: 200, left: 0 }); // open part ends at y 600
+  ev.coveredRects.mockReturnValue([{ left: 300, top: 0, right: 400, bottom: 800 } as DOMRect]);
+  // "bottom" is clear of the control but ends at 650, behind the bar; "left" is inside, over it.
+  placeAround({ bottom: [100, 500, 200, 650], left: [310, 100, 390, 200] });
+  queried = [{ id: 0 }];
+
+  handlers.get('click')!({ point: { x: 150, y: 200 } });
+
+  expect(popups.filter((p) => !p.removed)[0].anchor).toBe('left');
+});
+
+test('a popup is capped to the room the open part leaves it, and scrolls', () => {
+  const { controller, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setInsets({ top: 0, right: 0, bottom: 200, left: 0 }); // open part ends at y 600
+  pointOnScreen = { x: 150, y: 400 };
+  placeAround({ 'top-left': [150, 410, 350, 590] }); // the only side inside: it hangs below the point
+  queried = [{ id: 0 }];
+
+  handlers.get('click')!({ point: { x: 150, y: 400 } });
+
+  const shown = popups.filter((p) => !p.removed)[0];
+  expect(shown.anchor).toBe('top-left');
+  expect(shown.contentStyle.maxHeight).toBe('172px'); // 600 - 400 - 28
+  expect(shown.contentStyle.overflowY).toBe('auto');
+});
+
+test('a context lost before the style is installed reports nothing on restore: the install does', () => {
+  const container = document.createElement('div');
+  container.getBoundingClientRect = () => ({ left: 0, top: 0, right: 400, bottom: 800 }) as DOMRect;
+  const ev = events();
+  new MapController(container, ev);
+
+  canvasListeners.get('webglcontextlost')!();
+  canvasListeners.get('webglcontextrestored')!();
+  expect(ev.onContextLost).toHaveBeenCalledTimes(1);
+  expect(ev.onRecovered).not.toHaveBeenCalled();
+
+  handlers.get('style.load')!({});
+  expect(ev.onReady).toHaveBeenCalledTimes(1);
 });
 
 test('with no side inside the open part, the first side stands', () => {
@@ -442,7 +497,8 @@ test('mouse movement is answered once per frame, with the last position', () => 
   vi.stubGlobal('matchMedia', () => ({ matches: true }));
   const { controller, ev, holder } = setup();
   controller.setGrid(model(GRID), holder);
-  checkpointUnder(controller);
+  const seen: unknown[][] = [];
+  checkpointUnder(controller, seen);
 
   for (const x of [10, 20, 30]) handlers.get('mousemove')!({ point: { x, y: 10 } });
   expect(ev.describeCheckpoint).not.toHaveBeenCalled();
@@ -451,16 +507,19 @@ test('mouse movement is answered once per frame, with the last position', () => 
 
   expect(ev.describeCheckpoint).toHaveBeenCalledTimes(1);
   expect(popups.filter((p) => !p.removed)).toHaveLength(1);
+  // The one answer was for the last position, 30 (the query reaches 14 px each side of it).
+  expect(seen.length).toBeGreaterThan(0);
+  expect(seen.every((area) => (area[0] as number[])[0] === 30 - 14)).toBe(true);
 });
 
-test('a lost WebGL context is reported as a failed map, and nothing is pushed while it is lost', () => {
+test('a lost WebGL context is reported as lost, and nothing is pushed while it is lost', () => {
   const { controller, ev, holder } = setup();
   controller.setGrid(model(GRID), holder);
   flushFrames();
-  expect(ev.onFailed).not.toHaveBeenCalled();
+  expect(ev.onContextLost).not.toHaveBeenCalled();
 
   canvasListeners.get('webglcontextlost')!();
-  expect(ev.onFailed).toHaveBeenCalledTimes(1);
+  expect(ev.onContextLost).toHaveBeenCalledTimes(1);
 
   log.length = 0;
   const view = buildPlanView(buildRoutes('mixed', { departure: GRID.start }));
@@ -574,4 +633,27 @@ test('when every side crosses something, a popup over the credit beats one over 
   handlers.get('click')!({ point: { x: 150, y: 200 } });
 
   expect(popups.filter((p) => !p.removed)[0].anchor).toBe('top');
+});
+
+test('a readout is placed again when the panels change under it, and the map does not re-fit', () => {
+  const { controller, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setInsets({ top: 250, right: 0, bottom: 0, left: 0 });
+  pointOnScreen = { x: 150, y: 400 };
+  // With a trip bar down to 250 the side above the point (220-390) pokes out and the one below it
+  // (410-600) is used; when the trip bar goes and a sheet covers from 500 down, it is the other way.
+  placeAround({ 'top-left': [150, 410, 350, 600], 'bottom-left': [150, 220, 350, 390] });
+  queried = [{ id: 0 }];
+  handlers.get('click')!({ point: { x: 150, y: 400 } });
+  expect(popups.filter((p) => !p.removed)[0].anchor).toBe('top-left');
+  flushFrames();
+  log.length = 0;
+
+  controller.setInsets({ top: 0, right: 0, bottom: 300, left: 0 });
+
+  const shown = popups.filter((p) => !p.removed);
+  expect(shown).toHaveLength(1);
+  expect(shown[0].anchor).toBe('bottom-left');
+  expect(frames.size).toBe(0); // no fit queued while a readout is being read
+  expect(log.some((c) => c.method === 'fitBounds')).toBe(false);
 });

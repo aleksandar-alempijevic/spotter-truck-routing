@@ -1,4 +1,5 @@
 import { Box, Button, Paper, Typography } from '@mui/material';
+import { useEffect, useRef, useState } from 'react';
 import { cellFill, HATCH_CSS, LEVELS_BY_SEVERITY, RISK_STYLE } from '../risk/levels';
 
 const SWATCH = 18;
@@ -13,10 +14,41 @@ interface Props {
  * It is a toggle, so on a phone it can be out of the way. Every row is a swatch and a word.
  */
 export function Legend({ open, onToggle }: Props) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const [scroll, setScroll] = useState({ scrolls: false, moreBelow: false });
+
+  // On a short map the rows scroll; a fade and a word at the foot say there are more below.
+  useEffect(() => {
+    const list = listRef.current;
+    if (!open || !list) {
+      setScroll({ scrolls: false, moreBelow: false });
+      return;
+    }
+    const read = () =>
+      setScroll({
+        scrolls: list.scrollHeight > list.clientHeight + 1,
+        moreBelow: list.scrollHeight - list.scrollTop - list.clientHeight > 2,
+      });
+    read();
+    list.addEventListener('scroll', read);
+    const observer = new ResizeObserver(read);
+    observer.observe(list);
+    return () => {
+      list.removeEventListener('scroll', read);
+      observer.disconnect();
+    };
+  }, [open]);
+
   return (
     <Paper
       elevation={3}
-      sx={{ maxWidth: 220, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+      sx={{
+        position: 'relative',
+        maxWidth: 220,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
     >
       <Button
         aria-expanded={open}
@@ -36,8 +68,12 @@ export function Legend({ open, onToggle }: Props) {
       {open && (
         // The room the corner leaves it: a short map scrolls the rows instead of hiding them.
         <Box
+          ref={listRef}
           id="map-legend"
           component="ul"
+          // A list that scrolls is a tab stop, so a keyboard can reach the rows below.
+          tabIndex={scroll.scrolls ? 0 : undefined}
+          aria-label={scroll.scrolls ? 'Map key, scrolls' : undefined}
           sx={{ listStyle: 'none', m: 0, px: 1.5, pb: 1.5, minHeight: 0, overflowY: 'auto' }}
         >
           <Typography
@@ -52,6 +88,30 @@ export function Legend({ open, onToggle }: Props) {
             <Row key={level} label={RISK_STYLE[level].label} background={cellFill(level)} />
           ))}
           <Row label={RISK_STYLE.none.label} background={HATCH_CSS} />
+        </Box>
+      )}
+      {open && scroll.moreBelow && (
+        <Box
+          aria-hidden
+          sx={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 32,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            pb: 0.25,
+            borderRadius: 1,
+            pointerEvents: 'none',
+            background: 'linear-gradient(to bottom, rgba(255,255,255,0), #fff 70%)',
+            fontSize: 12,
+            fontWeight: 700,
+            color: 'text.secondary',
+          }}
+        >
+          More ▾
         </Box>
       )}
     </Paper>

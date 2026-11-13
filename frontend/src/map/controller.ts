@@ -40,9 +40,9 @@ maplibregl.setWorkerUrl(workerUrl);
 
 interface MapEvents {
   onReady(): void;
-  /** The map cannot go on: its WebGL context was lost, or it could not be built. */
-  onFailed(): void;
-  /** The WebGL context came back and the map has drawn its data again. */
+  /** The map's WebGL context was lost; it may come back. */
+  onContextLost(): void;
+  /** The context came back and the map, whose style had been installed, drew its data again. */
   onRecovered(): void;
   onSelectRoute(routeId: string): void;
   onSelectCheckpoint(ref: CheckpointRef): void;
@@ -74,9 +74,11 @@ type PopupAnchor = (typeof POPUP_ANCHORS)[number];
 // A popup on hover is for a mouse or a trackpad. A touch screen reports `hover: none`, and the
 // panel's list says all the popup does.
 /** Widest first: a popup on a narrow map is tried narrower, and its text wraps. */
-/** A popup whose weighted spill is within this is still on the map, for choosing among the rest. */
-const SPILL_EDGE_WEIGHT = 20;
-const NEARLY_ON_MAP = 240;
+/** A popup spilling out of the open part by no more than this (px, for rounding) counts as on the map. */
+/** Between a point and the near edge of the popup's box: its offset (up to 16) and its 10 px tip. */
+const POPUP_GAP_PX = 28;
+const MIN_POPUP_HEIGHT_PX = 96;
+const NEARLY_ON_MAP = 2;
 const READOUT_WIDTHS = [320, 280, 240, 200, 160] as const;
 const HOVER_WIDTHS = [280, 220] as const;
 const HOVER_QUERY = '(hover: hover) and (pointer: fine)';
@@ -118,6 +120,8 @@ export class MapController {
   /** The heatmap cell the driver tapped, and its readout, which follows the slider's hour. */
   private readout: {
     cell: number;
+    /** Where it opened, so it can be placed again when the open part of the map changes. */
+    at: maplibregl.LngLatLike;
     popup: maplibregl.Popup;
     /** The checkpoint the readout was opened from, when it was; its words do not change with the hour. */
     checkpoint: CheckpointPopup | null;
@@ -224,8 +228,15 @@ export class MapController {
       (k) => insets[k] !== this.insets[k],
     );
     this.insets = insets;
-    // Until the driver moves the map, the routes stay centred in the part the panels leave open.
-    if (changed && this.live) this.queueFit(true);
+    // A readout open when the panels change (a chosen checkpoint asks the sheet for room) is
+    // placed again in the part that is now open.
+    if (changed && this.readout) {
+      const { cell, at, checkpoint } = this.readout;
+      this.showReadout(cell, at, checkpoint);
+    }
+    // Until the driver moves the map, the routes stay centred in the part the panels leave open;
+    // but not under a readout being read, which would slide away from the finger.
+    if (changed && this.live && !this.readout) this.queueFit(true);
   }
 
   /**
@@ -441,7 +452,7 @@ export class MapController {
     this.cancelHourFrame();
     this.hideReadout();
     this.hidePopup();
-    this.events.onFailed();
+    this.events.onContextLost();
   }
 
   /**
@@ -452,12 +463,13 @@ export class MapController {
   private onContextRestored(): void {
     const recover = () => {
       this.contextLost = false;
-      if (this.styleReady) {
-        this.pushRouteData();
-        this.pushRouteStyle();
-        this.pushSelection();
-        this.pushGrid();
-      }
+      // A loss before the first style install has nothing to redraw, and nothing to report: the
+      // install itself says the map is ready.
+      if (!this.styleReady) return;
+      this.pushRouteData();
+      this.pushRouteStyle();
+      this.pushSelection();
+      this.pushGrid();
       this.events.onRecovered();
     };
     if (this.map.isStyleLoaded()) recover();
@@ -616,6 +628,7 @@ export class MapController {
           .setDOMContent(content)
           .addTo(this.map),
       HOVER_WIDTHS,
+      at,
     );
   }
 
@@ -651,6 +664,7 @@ export class MapController {
   private openPopup(
     make: (anchor: PopupAnchor, widthPx: number) => maplibregl.Popup,
     widths: readonly number[],
+    at: maplibregl.LngLatLike,
   ): maplibregl.Popup {
     const box = this.container.getBoundingClientRect();
     const open = {
@@ -670,30 +684,62 @@ export class MapController {
         (c) => r.left < c.right && r.right > c.left && r.top < c.bottom && r.bottom > c.top,
       );
     const clearOfCovered = (r: DOMRect) => !overlaps(r, covered) && !overlaps(r, credit);
-    // How far a popup is out of the open part. Running out at the bottom is mild (it passes under
-    // the credit); at the sides it leaves the screen, and at the top it hides under the trip bar.
+    // How much of a popup lies over a set of rectangles, in px squared.
+    const overlapArea = (r: DOMRect, rects: readonly DOMRect[]) =>
+      rects.reduce(
+        (sum, c) =>
+          sum +
+          Math.max(0, Math.min(r.right, c.right) - Math.max(r.left, c.left)) *
+            Math.max(0, Math.min(r.bottom, c.bottom) - Math.max(r.top, c.top)),
+        0,
+      );
+    // How far a popup is out of the open part. Every edge of it is hard: the trip bar, the sheet
+    // and the slider bar lie over the map just as the controls do, and what runs under them is lost.
     const spill = (r: DOMRect) =>
-      SPILL_EDGE_WEIGHT *
-        (Math.max(0, open.left - r.left) +
-          Math.max(0, r.right - open.right) +
-          Math.max(0, open.top - r.top)) +
+      Math.max(0, open.left - r.left) +
+      Math.max(0, r.right - open.right) +
+      Math.max(0, open.top - r.top) +
       Math.max(0, r.bottom - open.bottom);
+    // The room the open part leaves on the side of the point an anchor puts the popup: a popup
+    // that cannot be that tall is capped there and scrolls, so it can always stay inside.
+    const pointY = this.map.project(at).y + box.top;
+    const roomFor = (anchor: PopupAnchor) => {
+      const below = anchor.startsWith('top'); // anchored by its top: the popup hangs under the point
+      const above = anchor.startsWith('bottom');
+      const room = below
+        ? open.bottom - pointY - POPUP_GAP_PX
+        : above
+          ? pointY - open.top - POPUP_GAP_PX
+          : // beside the point, centred on it: as tall as twice the room to the nearer edge
+            2 * Math.min(pointY - open.top, open.bottom - pointY);
+      return Math.max(MIN_POPUP_HEIGHT_PX, Math.floor(room));
+    };
+    const made = (anchor: PopupAnchor, width: number) => {
+      const popup = make(anchor, width);
+      const content = popup.getElement().querySelector<HTMLElement>('.maplibregl-popup-content');
+      if (content) {
+        content.style.boxSizing = 'border-box';
+        content.style.maxHeight = `${roomFor(anchor)}px`;
+        content.style.overflowY = 'auto';
+      }
+      return popup;
+    };
     const tries = widths.flatMap((width) =>
       POPUP_ANCHORS.map((anchor) => {
-        const trial = make(anchor, width);
+        const trial = made(anchor, width);
         const rect = trial.getElement().getBoundingClientRect();
         trial.remove();
         return { anchor, width, rect };
       }),
     );
     const fits = tries.find((t) => inOpenPart(t.rect) && clearOfCovered(t.rect));
-    // Otherwise, among popups that are nearly on the map, one clear of the controls beats one that
-    // covers them, one clear of the credit beats one over it, and the least spill decides the rest (the first on a tie). A popup that is not
-    // nearly on the map is chosen only when none is.
+    // Otherwise, among popups that are on the map, the one with least over the controls wins, then
+    // least over the credit, then least spill (the first on a tie). One that is not on the map is
+    // chosen only when none is.
     const rank = (t: (typeof tries)[number]) => [
       spill(t.rect) <= NEARLY_ON_MAP ? 0 : 1,
-      overlaps(t.rect, covered) ? 1 : 0,
-      overlaps(t.rect, credit) ? 1 : 0,
+      overlapArea(t.rect, covered),
+      overlapArea(t.rect, credit),
       spill(t.rect),
     ];
     const before = (a: number[], b: number[]) => {
@@ -701,7 +747,7 @@ export class MapController {
       return false;
     };
     const chosen = fits ?? tries.reduce((best, t) => (before(rank(t), rank(best)) ? t : best));
-    return make(chosen.anchor, chosen.width);
+    return made(chosen.anchor, chosen.width);
   }
 
   /** The readout for a cell, opened beside the point that was tapped. */
@@ -729,11 +775,12 @@ export class MapController {
           .setDOMContent(popupContent(words))
           .addTo(this.map),
       READOUT_WIDTHS,
+      at,
     );
     popup.on('close', () => {
       if (this.readout?.popup === popup) this.readout = null;
     });
-    this.readout = { cell, popup, checkpoint };
+    this.readout = { cell, at, popup, checkpoint };
   }
 
   private hideReadout(): void {

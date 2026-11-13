@@ -488,3 +488,72 @@ test('the routes handed to the map keep their identity across form keystrokes, b
   fireEvent.change(screen.getByLabelText('Cargo weight (lb)'), { target: { value: '30,000' } });
   expect(mapProps!.routes).toBe(planned);
 });
+
+const LOST = /map is not available on this device/;
+const NO_BASEMAP = /map background could not be loaded/;
+
+test('a restored context clears the failed notice and brings the key back', async () => {
+  useViewport('pane');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+
+  act(() => mapProps!.onContextLost());
+  expect(screen.getByText(LOST)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /key/ })).not.toBeInTheDocument();
+
+  act(() => mapProps!.onRecovered());
+  expect(screen.queryByText(LOST)).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Hide key' })).toBeInTheDocument();
+});
+
+test('a restore leaves a "no basemap" notice in place, however the two arrived', async () => {
+  useViewport('pane');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+
+  // The basemap failed first, then the context was lost and came back.
+  act(() => mapProps!.onBasemapUnavailable());
+  act(() => mapProps!.onContextLost());
+  expect(screen.getByText(LOST)).toBeInTheDocument();
+  act(() => mapProps!.onRecovered());
+  expect(screen.getByText(NO_BASEMAP)).toBeInTheDocument();
+  expect(screen.queryByText(LOST)).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Hide key' })).toBeInTheDocument();
+});
+
+test('a basemap error that arrives while the context is lost is kept for after the restore', async () => {
+  useViewport('pane');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+
+  act(() => mapProps!.onContextLost());
+  act(() => mapProps!.onBasemapUnavailable());
+  expect(screen.getByText(LOST)).toBeInTheDocument(); // failed outranks no-basemap
+  act(() => mapProps!.onRecovered());
+  expect(screen.getByText(NO_BASEMAP)).toBeInTheDocument();
+});
+
+test('a context lost before the first load is lifted when the map installs its style', async () => {
+  useViewport('pane');
+  renderApp();
+  await waitFor(() => expect(mapProps).not.toBeNull());
+
+  act(() => mapProps!.onContextLost());
+  expect(screen.getByText(LOST)).toBeInTheDocument();
+  act(() => mapProps!.onReady());
+  expect(screen.queryByText(LOST)).not.toBeInTheDocument();
+});
+
+test('a map that failed for good is not lifted by a ready or a restore', async () => {
+  useViewport('pane');
+  renderApp();
+  await waitFor(() => expect(mapProps).not.toBeNull());
+
+  act(() => mapProps!.onFailed());
+  act(() => mapProps!.onReady());
+  act(() => mapProps!.onRecovered());
+  expect(screen.getByText(LOST)).toBeInTheDocument();
+});
