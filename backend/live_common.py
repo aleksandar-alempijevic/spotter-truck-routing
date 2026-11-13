@@ -2,7 +2,9 @@
 number of provider calls, a record of each call, and the output file.
 
 Not part of `make check` or pytest: the scripts that use it spend real provider calls. Nothing
-here prints or records a key or a request URL.
+here prints or records a key or a request URL. `record_calls` guards the number of GET calls (the
+keyed providers); `LocationMeter` guards the number of Open-Meteo locations, which is what its
+quota counts.
 """
 
 import json
@@ -72,3 +74,46 @@ def write_summary(output: str, summary: dict[str, Any]) -> None:
     with open(output, "w") as out:
         json.dump(summary, out, indent=1)
     print(json.dumps(summary, indent=1))
+
+
+class LocationMeter:
+    """Counts the locations of every Open-Meteo form POST, refuses one that would pass the budget
+    and records each request's status, timing and rate-limit headers. GET calls pass through."""
+
+    HEADERS = ("x-ratelimit-cost", "x-ratelimit-remaining", "x-ratelimit-reset", "retry-after")
+
+    def __init__(self, budget: int) -> None:
+        self.budget, self.spent, self.records = budget, 0, []
+        self.origin = time.monotonic()
+        self.phase = ""
+        real_send = Outbound._send
+        meter = self
+
+        async def metered(outbound, method, url, timeout, content):
+            if method != "POST":
+                return await real_send(outbound, method, url, timeout, content)
+            locations = len(content["data"]["latitude"].split(","))
+            if meter.spent + locations > meter.budget:
+                raise RuntimeError("location budget reached")
+            meter.spent += locations
+            record = {
+                "phase": meter.phase,
+                "locations": locations,
+                "at_s": round(time.monotonic() - meter.origin, 1),
+                "status": None,
+            }
+            meter.records.append(record)
+            started = time.monotonic()
+            try:
+                response = await real_send(outbound, method, url, timeout, content)
+            except Exception as error:
+                record["status"] = type(error).__name__
+                raise
+            finally:
+                record["seconds"] = round(time.monotonic() - started, 2)
+            record["status"] = response.status_code
+            record["bytes"] = len(response.content)
+            record.update({h: response.headers.get(h) for h in meter.HEADERS})
+            return response
+
+        Outbound._send = metered

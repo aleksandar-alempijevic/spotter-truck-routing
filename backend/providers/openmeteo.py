@@ -17,9 +17,9 @@ from .errors import MalformedResponse, ProviderUnavailable
 from .outbound import Outbound, UpstreamBadRequest
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
-CALL_TIMEOUT_S = 60.0
-"""A large call took 61 s once in the spike; calls of 150 locations are measured in
-`live_weather_check.py`."""
+CALL_TIMEOUT_S = 12.0
+"""A call of 150 locations takes about half a second (measured in `live_weather_check.py`), so a
+call still running after this is stuck; the weather request's own deadline bounds the rest."""
 MAX_LOCATIONS_PER_CALL = 150
 """Chunk size: calls of 100 to 300 locations were reliable, and one of 1,000 took 61 s."""
 FORECAST_HOURS = 96

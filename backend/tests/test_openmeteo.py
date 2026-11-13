@@ -65,7 +65,7 @@ async def test_the_request_is_a_form_post_of_the_chunk_in_mph_and_inches(provide
     assert form["forecast_hours"] == ["96"]
     assert form["models"] == ["best_match"]
     assert request.headers["user-agent"] == "truck-route-weather"
-    assert request.extensions["timeout"]["read"] == 60
+    assert request.extensions["timeout"]["read"] == 12
 
 
 async def test_a_series_comes_back_for_each_point_in_request_order(provider_mock):

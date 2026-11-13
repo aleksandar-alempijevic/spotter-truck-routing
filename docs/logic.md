@@ -81,7 +81,7 @@ A cap on how much extra time a safer route may cost is not part of the assessmen
 
 ## 4. What the callers must supply
 
-- Weather in the units above, with no forecast represented as an absent level.
-- Checkpoints with a mark at mile 0, ascending, inside the route. The routes endpoint produces them in this form, with a final checkpoint at the destination ([architecture.md](architecture.md)).
-- Unique route ids, two or three routes per ranking, and one checkpoint interval for the request.
+- Weather in the units above, with no forecast represented as an absent level. The weather endpoint builds each reading from Open-Meteo's series at the checkpoint's ETA ([architecture.md](architecture.md)), and leaves a checkpoint the forecast does not reach without a level.
+- Checkpoints with a mark at mile 0, ascending, inside the route. The routes endpoint produces them in this form, with a final checkpoint at the destination, and the weather endpoint rejects a body that breaks it before the rules see it.
+- Unique route ids, two or three routes per ranking, and one checkpoint interval for the request. A one-route plan is not ranked: the endpoint recommends the route unless it has No Travel miles, judged with the same `FLOAT_MARGIN` as `rank_routes`.
 - Travel time in seconds.

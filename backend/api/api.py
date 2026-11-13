@@ -21,7 +21,16 @@ from providers.errors import error_classes
 
 from .errors import API_ERRORS
 from .planner import plan_routes
-from .schemas import AddressSearchOut, ErrorCode, ErrorOut, RoutesIn, RoutesOut
+from .schemas import (
+    AddressSearchOut,
+    ErrorCode,
+    ErrorOut,
+    RoutesIn,
+    RoutesOut,
+    WeatherIn,
+    WeatherOut,
+)
+from .weather_report import MAX_LOCATIONS, WeatherRequestTooLarge, build_report
 
 api = NinjaAPI(title="Spotter truck routing API", version="0.1.0")
 
@@ -52,6 +61,15 @@ def validation_error(request: HttpRequest, exc: ValidationError) -> HttpResponse
 def body_too_big(request: HttpRequest, exc: RequestDataTooBig) -> HttpResponse:
     """A body over Django's upload limit is the client's fault, not a server error."""
     return error_response(request, "validation_error", "The request body is too large.", 422)
+
+
+@api.exception_handler(WeatherRequestTooLarge)
+def weather_request_too_large(request: HttpRequest, exc: WeatherRequestTooLarge) -> HttpResponse:
+    message = (
+        f"routes: these routes need more than {MAX_LOCATIONS} forecast locations; "
+        "use a larger checkpoint interval or shorter routes."
+    )
+    return error_response(request, "validation_error", message, 422)
 
 
 @api.exception_handler(HttpError)
@@ -106,6 +124,19 @@ async def routes(request: HttpRequest, payload: RoutesIn):
         "routes": plan.routes,
         "shortfall": plan.shortfall,
     }
+
+
+@api.post(
+    "/weather",
+    response={200: WeatherOut, **ERROR_RESPONSES},
+    summary="Forecast weather, risk levels and a ranking for routes, plus the corridor heatmap",
+)
+async def weather(request: HttpRequest, payload: WeatherIn):
+    return await build_report(
+        payload.routes,
+        load_lb=payload.load_lb,
+        spacing_miles=payload.checkpoint_interval_miles,
+    )
 
 
 SEARCH_MIN_CHARS = 3

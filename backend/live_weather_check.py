@@ -24,7 +24,7 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
-from live_common import write_summary
+from live_common import LocationMeter, write_summary
 from providers import MAX_LOCATIONS_PER_CALL, Outbound, fetch_forecasts
 from providers.errors import ProviderError
 from providers.openmeteo import FORECAST_HOURS
@@ -93,46 +93,6 @@ def offline(sets: dict[str, list]) -> tuple[list[dict[str, Any]], dict[int, list
     return rows, cells_by_spacing
 
 
-class Meter:
-    """Counts locations, enforces the budget and records each request's outcome and headers."""
-
-    HEADERS = ("x-ratelimit-cost", "x-ratelimit-remaining", "x-ratelimit-reset", "retry-after")
-
-    def __init__(self, budget: int) -> None:
-        self.budget, self.spent, self.records = budget, 0, []
-        self.origin = time.monotonic()
-        self.phase = ""
-        real_send = Outbound._send
-        meter = self
-
-        async def metered(outbound, method, url, timeout, content):
-            locations = len(content["data"]["latitude"].split(","))
-            if meter.spent + locations > meter.budget:
-                raise RuntimeError("location budget reached")
-            meter.spent += locations
-            record = {
-                "phase": meter.phase,
-                "locations": locations,
-                "at_s": round(time.monotonic() - meter.origin, 1),
-                "status": None,
-            }
-            meter.records.append(record)
-            started = time.monotonic()
-            try:
-                response = await real_send(outbound, method, url, timeout, content)
-            except Exception as error:
-                record["status"] = type(error).__name__
-                raise
-            finally:
-                record["seconds"] = round(time.monotonic() - started, 2)
-            record["status"] = response.status_code
-            record["bytes"] = len(response.content)
-            record.update({h: response.headers.get(h) for h in meter.HEADERS})
-            return response
-
-        Outbound._send = metered
-
-
 async def chunk(outbound: Outbound, cells: list) -> dict[str, Any]:
     started = time.monotonic()
     try:
@@ -153,7 +113,7 @@ async def chunk(outbound: Outbound, cells: list) -> dict[str, Any]:
 
 
 async def live(cells: list) -> dict[str, Any]:
-    meter = Meter(MAX_LOCATIONS)
+    meter = LocationMeter(MAX_LOCATIONS)
     size = MAX_LOCATIONS_PER_CALL
     chunks = [cells[i : i + size] for i in range(0, len(cells), size)]
     assert len(chunks) >= 9 and all(len(c) == size for c in chunks[:9]), "not enough cells"

@@ -6,6 +6,7 @@ of `risk_rules`. The providers return this package's `ForecastSeries`; the API l
 reached through its modules.
 """
 
+from .cache import ForecastCache
 from .grid import GridCell, LocationPlan, plan_locations
 from .lattice import Cell, cell_center, forecast_cell
 from .series import Conditions, ForecastSeries, conditions_at
@@ -13,6 +14,7 @@ from .series import Conditions, ForecastSeries, conditions_at
 __all__ = [
     "Cell",
     "Conditions",
+    "ForecastCache",
     "ForecastSeries",
     "GridCell",
     "LocationPlan",

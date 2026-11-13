@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/weather": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Forecast weather, risk levels and a ranking for routes, plus the corridor heatmap */
+        post: operations["api_api_weather"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/address-search": {
         parameters: {
             query?: never;
@@ -166,18 +183,215 @@ export interface components {
              */
             departure: string;
         };
-        /** AddressSearchOut */
-        AddressSearchOut: {
-            /** Suggestions */
-            suggestions: components["schemas"]["SuggestionOut"][];
-            attribution: components["schemas"]["AttributionOut"];
-        };
         /** AttributionOut */
         AttributionOut: {
             /** Text */
             text: string;
             /** Url */
             url: string;
+        };
+        /** ComparisonOut */
+        ComparisonOut: {
+            dropped_at: components["schemas"]["RankingStep"];
+            dropped_against: components["schemas"]["StepMeasureOut"];
+            /** Travel Time Seconds */
+            travel_time_seconds: number;
+            /** No Travel Miles */
+            no_travel_miles: number;
+            /** Severe Miles */
+            severe_miles: number;
+            /** High Miles */
+            high_miles: number;
+            /** Average Risk */
+            average_risk: number | null;
+        };
+        /**
+         * Condition
+         * @description The weather condition that decided a checkpoint's level.
+         * @enum {string}
+         */
+        Condition: "wind" | "rain" | "snow";
+        /**
+         * ConditionsOut
+         * @description Forecast weather at a checkpoint's ETA. Gusts are shown, never classified.
+         */
+        ConditionsOut: {
+            /** Wind Mph */
+            wind_mph: number;
+            /** Gust Mph */
+            gust_mph: number;
+            /** Rain In Per Hr */
+            rain_in_per_hr: number;
+            /** Snow In Per Hr */
+            snow_in_per_hr: number;
+        };
+        /** GridCellOut */
+        GridCellOut: {
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /** Levels */
+            levels: (number | null)[];
+        };
+        /** GridOut */
+        GridOut: {
+            /**
+             * Start
+             * Format: date-time
+             */
+            start: string;
+            /** Cell Degrees */
+            cell_degrees: number;
+            /** Level Codes */
+            level_codes: components["schemas"]["Level"][];
+            /** Cells */
+            cells: components["schemas"]["GridCellOut"][];
+        };
+        /**
+         * Level
+         * @description A weather risk level. Members order by severity; the values are the wire names.
+         * @enum {string}
+         */
+        Level: "low" | "moderate" | "high" | "severe" | "no_travel";
+        /**
+         * PlanParams
+         * @description What a plan was made for, and what the weather request sends back with the routes.
+         */
+        PlanParams: {
+            /** Load Lb */
+            load_lb: number;
+            /**
+             * Checkpoint Interval Miles
+             * @enum {integer}
+             */
+            checkpoint_interval_miles: 10 | 25 | 50;
+        };
+        /** RankedRouteOut */
+        RankedRouteOut: {
+            /** Id */
+            id: string;
+            /** Rank */
+            rank: number;
+            /** No Forecast Miles */
+            no_forecast_miles: number;
+            /** Average Risk Tolerance */
+            average_risk_tolerance: number | null;
+            vs_first: components["schemas"]["ComparisonOut"] | null;
+        };
+        /** RankingOut */
+        RankingOut: {
+            /** Recommended Id */
+            recommended_id: string | null;
+            decided_by: components["schemas"]["RankingStep"] | null;
+            /** Routes */
+            routes: components["schemas"]["RankedRouteOut"][];
+        };
+        /**
+         * RankingStep
+         * @description The steps a ranking applies, in order; the values are the wire names.
+         * @enum {string}
+         */
+        RankingStep: "no_travel" | "severe" | "high" | "average_risk" | "travel_time" | "miles" | "route_id";
+        /** RiskOut */
+        RiskOut: {
+            level: components["schemas"]["Level"];
+            condition: components["schemas"]["Condition"] | null;
+            /** Load Raised */
+            load_raised: boolean;
+        };
+        /** RouteSummaryOut */
+        RouteSummaryOut: {
+            /** Low Miles */
+            low_miles: number;
+            /** Moderate Miles */
+            moderate_miles: number;
+            /** High Miles */
+            high_miles: number;
+            /** Severe Miles */
+            severe_miles: number;
+            /** No Travel Miles */
+            no_travel_miles: number;
+            /** No Forecast Miles */
+            no_forecast_miles: number;
+            /** Average Risk */
+            average_risk: number | null;
+        };
+        /** StepMeasureOut */
+        StepMeasureOut: {
+            /** Best Route Id */
+            best_route_id: string;
+            /** Route Value */
+            route_value: number | null;
+            /** Best Value */
+            best_value: number | null;
+            /** Tolerance */
+            tolerance: number;
+        };
+        /** WeatherCheckpointOut */
+        WeatherCheckpointOut: {
+            /** Mile */
+            mile: number;
+            weather: components["schemas"]["ConditionsOut"] | null;
+            risk: components["schemas"]["RiskOut"] | null;
+        };
+        /** WeatherOut */
+        WeatherOut: {
+            plan: components["schemas"]["PlanParams"];
+            /**
+             * Departure
+             * Format: date-time
+             */
+            departure: string;
+            /** Routes */
+            routes: components["schemas"]["WeatherRouteOut"][];
+            ranking: components["schemas"]["RankingOut"];
+            grid: components["schemas"]["GridOut"];
+            attribution: components["schemas"]["AttributionOut"];
+        };
+        /** WeatherRouteOut */
+        WeatherRouteOut: {
+            /** Id */
+            id: string;
+            /** Checkpoints */
+            checkpoints: components["schemas"]["WeatherCheckpointOut"][];
+            summary: components["schemas"]["RouteSummaryOut"];
+        };
+        /**
+         * RouteCore
+         * @description The part of a route the weather request sends back; the line is never sent back.
+         */
+        RouteCore: {
+            /** Id */
+            id: string;
+            /** Travel Time Seconds */
+            travel_time_seconds: number;
+            /** Total Miles */
+            total_miles: number;
+            /** Checkpoints */
+            checkpoints: components["schemas"]["CheckpointOut"][];
+        };
+        /**
+         * WeatherIn
+         * @description The weather request: the routes response's send-back subset, flat. Extra fields (a
+         *     route's line, source and via, the shortfall) are ignored.
+         */
+        WeatherIn: {
+            /** Load Lb */
+            load_lb: number;
+            /**
+             * Checkpoint Interval Miles
+             * @enum {integer}
+             */
+            checkpoint_interval_miles: 10 | 25 | 50;
+            /** Routes */
+            routes: components["schemas"]["RouteCore"][];
+        };
+        /** AddressSearchOut */
+        AddressSearchOut: {
+            /** Suggestions */
+            suggestions: components["schemas"]["SuggestionOut"][];
+            attribution: components["schemas"]["AttributionOut"];
         };
         /** SuggestionOut */
         SuggestionOut: {
@@ -302,6 +516,93 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RoutesOut"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorOut"];
+                };
+            };
+        };
+    };
+    api_api_weather: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeatherIn"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeatherOut"];
                 };
             };
             /** @description Not Found */
