@@ -9,8 +9,11 @@ import { RouteCards } from './RouteCards';
 import { RouteChips } from './RouteChips';
 import { WhyThisRoute } from './WhyThisRoute';
 
-/** Which parts of the panel are shown: the sheet shows one tier at a time, the pane all. */
-export type PanelTier = 'peek' | 'half' | 'full' | 'all';
+/**
+ * Which parts of the panel are shown: the sheet shows one tier at a time, the pane all of them in
+ * one column, and `wide` all of them in two (the routes, then the checkpoints beside them).
+ */
+export type PanelTier = 'peek' | 'half' | 'full' | 'all' | 'wide';
 
 interface Props {
   tier: PanelTier;
@@ -25,7 +28,7 @@ interface Props {
 
 /** What the sheet or pane shows. It is indifferent to which of the two holds it. */
 export function PlanPanel({
-  tier,
+  tier: shown,
   state,
   submission,
   selectedRouteId,
@@ -34,6 +37,7 @@ export function PlanPanel({
   onSelectCheckpoint,
   onEditTrip,
 }: Props) {
+  const tier = shown === 'wide' ? 'all' : shown;
   const routes = state.view?.routes ?? [];
   const recommendedId = state.view?.ranking?.recommended_id ?? null;
   const selected = routes.find((r) => r.id === selectedRouteId) ?? null;
@@ -46,7 +50,17 @@ export function PlanPanel({
       : undefined;
   const showList = selected !== null && (tier === 'full' || tier === 'all');
 
-  return (
+  const list = showList && (
+    <CheckpointList
+      route={selected}
+      trip={submission.trip}
+      selected={selectedCheckpoint}
+      onSelect={onSelectCheckpoint}
+      weatherFailed={weatherFailed}
+    />
+  );
+
+  const routesColumn = (
     <Stack spacing={2}>
       <PlanHeadline state={state} submission={submission} onEditTrip={onEditTrip} />
       {state.view?.shortfall && (tier === 'half' || tier === 'all') && (
@@ -92,16 +106,10 @@ export function PlanPanel({
           />
         </Box>
       )}
-      {showList && (
+      {shown !== 'wide' && list && (
         <>
           <Divider />
-          <CheckpointList
-            route={selected}
-            trip={submission.trip}
-            selected={selectedCheckpoint}
-            onSelect={onSelectCheckpoint}
-            weatherFailed={weatherFailed}
-          />
+          {list}
         </>
       )}
       {(tier === 'half' || tier === 'full' || tier === 'all') && (
@@ -110,5 +118,15 @@ export function PlanPanel({
         </Box>
       )}
     </Stack>
+  );
+
+  if (shown !== 'wide') return routesColumn;
+  return (
+    <Box
+      sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 400px) minmax(0, 1fr)', columnGap: 3 }}
+    >
+      {routesColumn}
+      <Box>{list}</Box>
+    </Box>
   );
 }

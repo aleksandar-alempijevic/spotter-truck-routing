@@ -31,7 +31,7 @@ import {
   truckRadius,
 } from './layers';
 import type { CheckpointRef } from '../plan/view';
-import type { MapInsets } from './types';
+import type { CheckpointPopup, MapInsets } from './types';
 
 // Vite emits the worker as its own file; MapLibre cannot find it next to its module otherwise.
 maplibregl.setWorkerUrl(workerUrl);
@@ -41,11 +41,16 @@ export interface MapEvents {
   onSelectRoute(routeId: string): void;
   onSelectCheckpoint(ref: CheckpointRef): void;
   onBasemapUnavailable(): void;
+  /** The popup's words for a checkpoint; null when there is nothing to say. */
+  describeCheckpoint(ref: CheckpointRef): CheckpointPopup | null;
 }
 
 type GeoJsonSource = maplibregl.GeoJSONSource;
 const OUR_SOURCES: string[] = Object.values(SOURCE);
 const TAP_SLOP_PX = 14;
+// A popup on hover is for a mouse or a trackpad. A touch screen reports `hover: none`, and the
+// panel's list says all the popup does.
+const HOVER_QUERY = '(hover: hover) and (pointer: fine)';
 
 /**
  * The one map instance. It owns every call into MapLibre; React only hands it data. The slider
@@ -59,6 +64,8 @@ export class MapController {
   private fellBack = false;
   private basemapNoticed = false;
   private userMoved = false;
+  private popup: maplibregl.Popup | null = null;
+  private popupKey: string | null = null;
 
   private routes: readonly RouteView[] = [];
   private selectedRouteId: string | null = null;
@@ -94,18 +101,13 @@ export class MapController {
     this.map.on('style.load', () => this.installStyle());
     this.map.on('error', (event) => this.onError(event));
     this.map.on('click', (event) => this.onClick(event.point));
-    this.map.on('mousemove', (event) => {
-      this.map.getCanvas().style.cursor = this.hit(event.point, [
-        LAYER.checkpoints,
-        LAYER.routeLine,
-      ])
-        ? 'pointer'
-        : '';
-    });
+    this.map.on('mousemove', (event) => this.onHover(event.point));
+    this.map.on('mouseout', () => this.hidePopup());
     const moved = (event: { originalEvent?: unknown }) => {
       if (event.originalEvent) this.userMoved = true;
     };
     this.map.on('dragstart', moved);
+    this.map.on('dragstart', () => this.hidePopup());
     this.map.on('zoomstart', moved);
 
     this.resizeObserver = new ResizeObserver(() => {
@@ -119,6 +121,7 @@ export class MapController {
 
   setRoutes(routes: readonly RouteView[]): void {
     this.routes = routes;
+    this.hidePopup();
     if (this.styleReady) this.pushRoutes();
   }
 
@@ -190,6 +193,7 @@ export class MapController {
   }
 
   destroy(): void {
+    this.hidePopup();
     this.unsubscribeHour?.();
     this.resizeObserver.disconnect();
     this.map.remove();
@@ -376,6 +380,54 @@ export class MapController {
       ],
       { layers },
     );
+  }
+
+  /** The pointer cursor over anything clickable, and the popup over a checkpoint. */
+  private onHover(point: maplibregl.Point): void {
+    const checkpoint = this.hit(point, [LAYER.checkpoints])[0];
+    this.map.getCanvas().style.cursor =
+      checkpoint || this.hit(point, [LAYER.routeLine]).length > 0 ? 'pointer' : '';
+    if (!checkpoint || !window.matchMedia?.(HOVER_QUERY).matches) {
+      this.hidePopup();
+      return;
+    }
+    const { routeId, index } = checkpoint.properties as { routeId: string; index: number };
+    const key = `${routeId}:${index}`;
+    if (key === this.popupKey) return;
+    const words = this.events.describeCheckpoint({ routeId, index });
+    if (!words) {
+      this.hidePopup();
+      return;
+    }
+    const content = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = words.title;
+    content.append(title);
+    for (const line of words.lines) {
+      const row = document.createElement('div');
+      row.textContent = line;
+      content.append(row);
+    }
+    this.hidePopup();
+    this.popupKey = key;
+    this.popup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      closeOnMove: false,
+      focusAfterOpen: false,
+      offset: 16,
+      maxWidth: '280px',
+      className: 'checkpoint-popup',
+    })
+      .setLngLat((checkpoint.geometry as unknown as { coordinates: [number, number] }).coordinates)
+      .setDOMContent(content)
+      .addTo(this.map);
+  }
+
+  private hidePopup(): void {
+    this.popup?.remove();
+    this.popup = null;
+    this.popupKey = null;
   }
 
   private onClick(point: maplibregl.Point): void {

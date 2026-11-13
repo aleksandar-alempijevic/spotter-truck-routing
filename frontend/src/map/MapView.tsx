@@ -6,7 +6,7 @@ import type { GridModel } from '../timeline/grid';
 import type { HourHolder } from '../timeline/hourHolder';
 import { MapController } from './controller';
 import type { CheckpointRef } from '../plan/view';
-import type { MapInsets } from './types';
+import type { CheckpointPopup, MapInsets } from './types';
 
 export interface MapViewProps {
   routes: readonly RouteView[];
@@ -19,6 +19,8 @@ export interface MapViewProps {
   fitKey: number;
   onSelectRoute(routeId: string): void;
   onSelectCheckpoint(ref: CheckpointRef): void;
+  /** What the hover popup says about a checkpoint. */
+  describeCheckpoint(ref: CheckpointRef): CheckpointPopup | null;
   onReady(): void;
   onFailed(): void;
   onBasemapUnavailable(): void;
@@ -51,6 +53,7 @@ export default function MapView(props: MapViewProps) {
         onSelectRoute: (id) => latest.current.onSelectRoute(id),
         onSelectCheckpoint: (ref) => latest.current.onSelectCheckpoint(ref),
         onBasemapUnavailable: () => latest.current.onBasemapUnavailable(),
+        describeCheckpoint: (ref) => latest.current.describeCheckpoint(ref),
       });
     } catch {
       latest.current.onFailed();
@@ -100,6 +103,14 @@ export default function MapView(props: MapViewProps) {
       sx={{
         position: 'fixed',
         inset: 0,
+        // The popup only reads out; it never takes the pointer from the checkpoint beneath it.
+        '& .checkpoint-popup': { pointerEvents: 'none', zIndex: 2 },
+        '& .checkpoint-popup .maplibregl-popup-content': {
+          padding: '8px 12px',
+          fontSize: 14,
+          lineHeight: 1.4,
+          color: 'text.primary',
+        },
         // The map's own credit stays inside the part of the map the panels leave visible.
         '& .maplibregl-ctrl-bottom-right': {
           bottom: 'var(--inset-bottom)',

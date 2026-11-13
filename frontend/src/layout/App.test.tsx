@@ -15,9 +15,9 @@ vi.mock('../map/MapView', () => ({
   },
 }));
 
-function useViewport(mode: 'sheet' | 'pane') {
-  vi.stubGlobal('matchMedia', () => ({
-    matches: mode === 'sheet',
+function useViewport(mode: 'sheet' | 'pane' | 'wide') {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: mode === 'sheet' || (mode === 'wide' && query.includes('min-width: 1700px')),
     addEventListener: () => {},
     removeEventListener: () => {},
   }));
@@ -288,4 +288,46 @@ test('a routes failure shows the message in the panel and plans again only when 
   fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Edit trip' }));
   expect(screen.getByRole('button', { name: 'Plan routes' })).toBeInTheDocument();
   expect(calls('/api/routes')).toBe(1);
+});
+
+test('phone: Back collapses an expanded sheet and leaves the page alone', async () => {
+  useViewport('sheet');
+  renderApp();
+  await planTrip();
+  expect(await screen.findByText('Route 2 is recommended')).toBeInTheDocument();
+  const before = window.history.length;
+
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  expect(screen.getAllByText(/Arrives /)).toHaveLength(3);
+  expect(window.history.length).toBe(before + 1);
+
+  window.history.back();
+  await waitFor(() => expect(screen.queryByText(/Arrives /)).not.toBeInTheDocument());
+  expect(screen.getByText('Route 2 is recommended')).toBeInTheDocument();
+});
+
+test('phone: collapsing by a button gives the history entry back', async () => {
+  useViewport('sheet');
+  renderApp();
+  await planTrip();
+  expect(await screen.findByText('Route 2 is recommended')).toBeInTheDocument();
+
+  const prior = window.history.state;
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  expect(window.history.state?.sheet).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Less' }));
+  await waitFor(() => expect(window.history.state).toEqual(prior));
+  // The sheet is at peek, and the entry it pushed is gone.
+  expect(screen.queryByText(/Arrives /)).not.toBeInTheDocument();
+});
+
+test('widest screens: the cards and the checkpoints are both there, side by side in the pane', async () => {
+  useViewport('wide');
+  renderApp();
+  await planTrip();
+  expect(await screen.findByText('Route 2 is recommended')).toBeInTheDocument();
+  expect(screen.getAllByText(/Arrives /)).toHaveLength(3);
+  expect(screen.getByText('Route 2 checkpoints')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Edit trip' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'More' })).not.toBeInTheDocument();
 });

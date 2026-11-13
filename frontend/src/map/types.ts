@@ -5,3 +5,9 @@ export interface MapInsets {
   bottom: number;
   left: number;
 }
+
+/** What the hover popup on a checkpoint says: a heading and a few plain lines. */
+export interface CheckpointPopup {
+  title: string;
+  lines: string[];
+}
