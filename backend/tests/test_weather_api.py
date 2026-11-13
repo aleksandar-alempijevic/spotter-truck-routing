@@ -763,7 +763,10 @@ async def test_checkpoints_that_jump_across_the_antimeridian_are_a_422_before_an
     assert response.status_code == 422
     assert response.json()["code"] == "validation_error"
     # The service box rejects it first; the planning bound's message would read differently.
-    assert "North America" in response.json()["message"]
+    assert (
+        "the service area (latitude 15 to 72, longitude -170 to -50)"
+        in (response.json()["message"])
+    )
     assert calls == []
 
 

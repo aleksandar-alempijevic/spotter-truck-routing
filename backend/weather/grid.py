@@ -61,6 +61,9 @@ def plan_locations(
 ) -> LocationPlan:
     """The forecast locations for routes given as their checkpoint positions.
 
+    Precondition: every position is on the map (latitude within ±90, longitude within ±180). The
+    API's service box guarantees it for a weather request; a caller with other input must check it.
+
     With `max_locations`, `TooManyLocations` is raised when the plan's total (checkpoint cells
     plus grid-only cells) passes it. Two cheaper checks raise it earlier, as soon as the checkpoint
     cells or the corridor's display cells alone pass it. Both are lower bounds on the total: every

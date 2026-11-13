@@ -205,7 +205,7 @@ def _check_marks(route: RouteCore, interval_miles: float) -> None:
         for c in route.checkpoints
     ):
         raise ValueError(
-            f"{where}: checkpoints must lie in North America (latitude "
+            f"{where}: checkpoints must lie in the service area (latitude "
             f"{SERVICE_LATITUDES[0]:g} to {SERVICE_LATITUDES[1]:g}, longitude "
             f"{SERVICE_LONGITUDES[0]:g} to {SERVICE_LONGITUDES[1]:g})"
         )
