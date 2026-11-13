@@ -161,6 +161,7 @@ const events = () => ({
   onRecovered: vi.fn(),
   onSelectRoute: vi.fn(),
   onSelectCheckpoint: vi.fn(),
+  onSpot: vi.fn(),
   onBasemapUnavailable: vi.fn(),
   describeCheckpoint: vi.fn(() => ({ title: 'checkpoint', lines: [] as string[] })),
   describeCell: vi.fn((level: string, hour: number) => ({
@@ -445,7 +446,9 @@ test('a popup is capped to the room the open part leaves it, and scrolls', () =>
   const shown = popups.filter((p) => !p.removed)[0];
   expect(shown.anchor).toBe('top-left');
   expect(shown.contentStyle.maxHeight).toBe('172px'); // 600 - 400 - 28
-  expect(shown.contentStyle.overflowY).toBe('auto');
+  // The box is capped and does not scroll itself; the words inside it do.
+  expect(shown.contentStyle.overflowY).toBe('hidden');
+  expect(shown.content!.querySelector<HTMLElement>('.popup-scroll')!.style.overflowY).toBe('auto');
 });
 
 function bare() {
@@ -675,4 +678,197 @@ test('a readout is placed again when the panels change under it, and the map doe
   expect(shown[0].anchor).toBe('bottom-left');
   expect(frames.size).toBe(0); // no fit queued while a readout is being read
   expect(log.some((c) => c.method === 'fitBounds')).toBe(false);
+});
+
+test('where the page shows the reading, a tap opens no popup and says what it landed on', () => {
+  const { controller, ev, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setReadoutOnMap(false);
+  queried = [{ id: 2 }];
+
+  // On a cell: not selecting anything, and no popup.
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+  expect(ev.onSpot).toHaveBeenLastCalledWith({ cell: 2, checkpoint: null });
+
+  // On a route line: the route is selected and the cell is reported as well.
+  queriedLines = [{ properties: { id: 'route-2' } }];
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+  expect(ev.onSelectRoute).toHaveBeenCalledWith('route-2');
+  expect(ev.onSpot).toHaveBeenLastCalledWith({ cell: 2, checkpoint: null });
+
+  // On a checkpoint: the checkpoint and the cell under it.
+  checkpointUnder(controller);
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+  expect(ev.onSpot).toHaveBeenLastCalledWith({
+    cell: 2,
+    checkpoint: { routeId: 'route-1', index: 3 },
+  });
+
+  // On a checkpoint over no cell, the checkpoint alone.
+  queried = [];
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+  expect(ev.onSpot).toHaveBeenLastCalledWith({
+    cell: null,
+    checkpoint: { routeId: 'route-1', index: 3 },
+  });
+
+  expect(popups).toHaveLength(0);
+  expect(ev.describeCell).not.toHaveBeenCalled();
+});
+
+test('a tap on nothing reports no spot', () => {
+  const { controller, ev, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setReadoutOnMap(false);
+  queried = [];
+
+  handlers.get('click')!({ point: { x: 10, y: 10 } });
+
+  expect(ev.onSpot).toHaveBeenCalledWith(null);
+});
+
+test('where the readout is on the map, a tap opens it and also reports the spot', () => {
+  const { controller, ev, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  queried = [{ id: 0 }];
+
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+
+  expect(ev.onSpot).toHaveBeenCalledWith({ cell: 0, checkpoint: null });
+  expect(popups.filter((p) => !p.removed)).toHaveLength(1);
+});
+
+test('moving the readout off the map closes an open popup', () => {
+  const { controller, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  queried = [{ id: 0 }];
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+  expect(popups.filter((p) => !p.removed)).toHaveLength(1);
+
+  controller.setReadoutOnMap(false);
+
+  expect(popups.filter((p) => !p.removed)).toHaveLength(0);
+});
+
+test('a map that holds a spot for the page stays put when the panels move', () => {
+  const { controller, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  controller.setReadoutOnMap(false);
+  controller.setSpotOpen(true);
+
+  controller.setInsets({ top: 0, right: 0, bottom: 300, left: 0 });
+  expect(frames.size).toBe(0);
+
+  controller.setSpotOpen(false);
+  controller.setInsets({ top: 0, right: 0, bottom: 100, left: 0 });
+  expect(frames.size).toBe(1);
+});
+
+/** A ResizeObserver the test can fire. */
+function recordResizes() {
+  let fire = () => {};
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(callback: () => void) {
+        fire = callback;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  return () => fire();
+}
+
+test('an open readout is placed again when the map is resized, after the fit that follows', () => {
+  const resized = recordResizes();
+  const { controller, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  // Upright: the point is low on a tall map and the popup goes above it.
+  pointOnScreen = { x: 150, y: 600 };
+  placeAround({ bottom: [100, 500, 200, 570], top: [100, 630, 200, 700] });
+  queried = [{ id: 0 }];
+  handlers.get('click')!({ point: { x: 150, y: 600 } });
+  expect(popups.filter((p) => !p.removed)[0].anchor).toBe('bottom');
+
+  // On its side the map is short, so the point is no longer low and the old side is gone.
+  const container = (controller as unknown as { container: HTMLElement }).container;
+  container.getBoundingClientRect = () => ({ left: 0, top: 0, right: 844, bottom: 390 }) as DOMRect;
+  controller.setInsets({ top: 0, right: 0, bottom: 100, left: 0 });
+  pointOnScreen = { x: 150, y: 100 };
+  placeAround({ bottom: [100, -20, 200, 50], top: [100, 130, 200, 200] });
+  resized();
+
+  let shown = popups.filter((p) => !p.removed);
+  expect(shown).toHaveLength(1);
+  expect(shown[0].anchor).toBe('top');
+
+  // The fit that the resize queued moves the point; the readout follows it once more.
+  pointOnScreen = { x: 150, y: 250 };
+  placeAround({ bottom: [100, 150, 200, 220], top: [100, 280, 200, 350] });
+  flushFrames();
+  shown = popups.filter((p) => !p.removed);
+  expect(shown).toHaveLength(1);
+  expect(shown[0].anchor).toBe('bottom');
+});
+
+test('a readout that is closed is not opened again by a resize', () => {
+  const resized = recordResizes();
+  const { controller, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  queried = [{ id: 0 }];
+  handlers.get('click')!({ point: { x: 150, y: 600 } });
+  controller.setReadoutOnMap(false);
+  const before = popups.length;
+
+  resized();
+  flushFrames();
+
+  expect(popups).toHaveLength(before);
+});
+
+test('the readout box is capped and fixed, the words scroll inside it, and a cue says when there is more', () => {
+  const { controller, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  queried = [{ id: 0 }];
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+  const shown = popups.filter((p) => !p.removed)[0];
+
+  // The box that holds MapLibre's close button never scrolls, so the button stays in its corner.
+  expect(shown.contentStyle.overflowY).toBe('hidden');
+  const root = shown.content!;
+  const scroll = root.querySelector<HTMLElement>('.popup-scroll')!;
+  const cue = root.querySelector<HTMLElement>('.popup-more')!;
+  expect(scroll.textContent).toContain('low at 0');
+  expect(cue.style.display).toBe('none'); // all of it fits
+
+  const geometry = (height: number, client: number, top: number) => {
+    Object.defineProperty(scroll, 'scrollHeight', { value: height, configurable: true });
+    Object.defineProperty(scroll, 'clientHeight', { value: client, configurable: true });
+    Object.defineProperty(scroll, 'scrollTop', { value: top, configurable: true });
+    scroll.dispatchEvent(new Event('scroll'));
+  };
+  geometry(300, 100, 0);
+  expect(cue.style.display).toBe('flex');
+  geometry(300, 100, 200); // the end
+  expect(cue.style.display).toBe('none');
+});
+
+test('a readout whose words change with the hour keeps its cap', () => {
+  const { controller, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  queried = [{ id: 0 }];
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+  const shown = popups.filter((p) => !p.removed)[0];
+  const cap = shown.contentStyle.maxHeight;
+  expect(cap).toMatch(/px$/);
+  // MapLibre builds the box again when the words are set; the cap is set on the new one.
+  shown.contentStyle.maxHeight = '';
+  shown.contentStyle.overflowY = '';
+
+  holder.set(1);
+  flushFrames();
+
+  expect(shown.contentStyle.maxHeight).toBe(cap);
+  expect(shown.contentStyle.overflowY).toBe('hidden');
 });

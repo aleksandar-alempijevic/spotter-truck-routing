@@ -7,7 +7,7 @@ import type { HourHolder } from '../timeline/hourHolder';
 import { MapController } from './controller';
 import type { CheckpointRef } from '../plan/view';
 import type { RiskKey } from '../risk/levels';
-import type { CheckpointPopup, MapInsets } from './types';
+import type { CheckpointPopup, MapInsets, MapSpot } from './types';
 
 export interface MapViewProps {
   routes: readonly RouteView[];
@@ -24,6 +24,15 @@ export interface MapViewProps {
   describeCheckpoint(ref: CheckpointRef): CheckpointPopup | null;
   /** What the readout says about a heatmap cell at the slider's hour. */
   describeCell(level: RiskKey, hour: number): CheckpointPopup | null;
+  /**
+   * True: a tapped spot is read in a popup over the map. False: the page shows the reading, and a
+   * tap only reports what it landed on through `onSpot`.
+   */
+  readoutOnMap: boolean;
+  /** A tap landed on this, or on nothing readable (`null`). */
+  onSpot(spot: MapSpot | null): void;
+  /** The page is showing a spot's reading, so the map holds still when the panels move. */
+  spotOpen: boolean;
   /** Screen rectangles that lie over the map and that a readout must keep clear of. */
   coveredRects(): readonly DOMRect[];
   onReady(): void;
@@ -62,6 +71,7 @@ export default function MapView(props: MapViewProps) {
         onReady: () => latest.current.onReady(),
         onSelectRoute: (id) => latest.current.onSelectRoute(id),
         onSelectCheckpoint: (ref) => latest.current.onSelectCheckpoint(ref),
+        onSpot: (spot) => latest.current.onSpot(spot),
         onBasemapUnavailable: () => latest.current.onBasemapUnavailable(),
         onContextLost: () => latest.current.onContextLost(),
         onRecovered: () => latest.current.onRecovered(),
@@ -78,6 +88,7 @@ export default function MapView(props: MapViewProps) {
       latest.current.onFailed();
       return;
     }
+    controller.setReadoutOnMap(latest.current.readoutOnMap);
     controllerRef.current = controller;
     fittedFor.current = null;
     return () => {
@@ -87,7 +98,15 @@ export default function MapView(props: MapViewProps) {
   }, []);
 
   const { routes, selectedRouteId, selectedCheckpoint, grid, hour, insets, fitKey } = props;
+  const { readoutOnMap, spotOpen } = props;
   const { top, right, bottom, left } = insets;
+
+  // Before the insets: a spot's reading and the panel it asks for arrive together, and the map
+  // must already know to hold still when the panel's height comes in.
+  useEffect(() => {
+    controllerRef.current?.setReadoutOnMap(readoutOnMap);
+    controllerRef.current?.setSpotOpen(spotOpen);
+  }, [readoutOnMap, spotOpen]);
 
   useEffect(() => {
     controllerRef.current?.setInsets({ top, right, bottom, left });

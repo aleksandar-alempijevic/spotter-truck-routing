@@ -69,3 +69,27 @@ export function describeCheckpoint(cp: CheckpointView): CheckpointDescription {
       by && (risk.kind === 'level' && risk.loadRaised ? `${by}, raised a level by the load` : by),
   };
 }
+
+/** A heading and a few plain lines: what a readout says, wherever it is drawn. */
+export interface Reading {
+  title: string;
+  lines: string[];
+}
+
+/**
+ * A tapped checkpoint's two readings under one heading, each labelled with what it is: the
+ * checkpoint's weather at its arrival time, and the heatmap cell's level at the slider's hour.
+ * Without a checkpoint it is the heatmap's reading alone; without a heatmap, the checkpoint's.
+ */
+export function labelReadings(checkpoint: Reading | null, heat: Reading | null): Reading | null {
+  if (!checkpoint) return heat;
+  const [level, ...rest] = checkpoint.lines;
+  return {
+    title: checkpoint.title,
+    lines: [
+      `Checkpoint at arrival: ${level}`,
+      ...rest,
+      ...(heat ? [`Heatmap at slider hour: ${heat.title}`, ...heat.lines] : []),
+    ],
+  };
+}

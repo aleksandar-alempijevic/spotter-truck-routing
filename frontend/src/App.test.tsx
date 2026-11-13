@@ -560,3 +560,89 @@ test('a map that failed for good is not lifted by a ready or a restore', async (
   act(() => mapProps!.onRecovered());
   expect(screen.getByText(LOST)).toBeInTheDocument();
 });
+
+const spotHeading = () => screen.queryByRole('region', { name: 'Weather at the tapped spot' });
+
+test('phone: a tap on the map is read in the sheet, with both readings, and no popup is asked for', async () => {
+  useViewport('sheet');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  expect(mapProps?.readoutOnMap).toBe(false);
+  expect(spotHeading()).not.toBeInTheDocument();
+  expect(screen.queryByText(/Arrives /)).not.toBeInTheDocument(); // the sheet is at its smallest
+
+  act(() => mapProps!.onSpot({ cell: 0, checkpoint: { routeId: 'route-3', index: 2 } }));
+
+  const reading = within(spotHeading()!);
+  expect(reading.getByText(/^Checkpoint at arrival: /)).toBeInTheDocument();
+  expect(reading.getByText(/^Heatmap at slider hour: /)).toBeInTheDocument();
+  expect(mapProps?.spotOpen).toBe(true);
+  // The sheet has opened to show it.
+  expect(screen.getAllByText(/Arrives /)).toHaveLength(3);
+});
+
+test('phone: a tap on a cell alone reads the heatmap, and a tap elsewhere or the close button ends it', async () => {
+  useViewport('sheet');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+
+  act(() => mapProps!.onSpot({ cell: 0, checkpoint: null }));
+  expect(within(spotHeading()!).queryByText(/Checkpoint at arrival/)).not.toBeInTheDocument();
+  expect(within(spotHeading()!).getByText(/Forecast for|No forecast for/)).toBeInTheDocument();
+
+  act(() => mapProps!.onSpot(null));
+  expect(spotHeading()).not.toBeInTheDocument();
+  expect(mapProps?.spotOpen).toBe(false);
+
+  act(() => mapProps!.onSpot({ cell: 0, checkpoint: null }));
+  fireEvent.click(screen.getByRole('button', { name: 'Close the weather reading' }));
+  expect(spotHeading()).not.toBeInTheDocument();
+});
+
+test('phone: the heatmap line of the reading follows the slider hour, and nothing else on the page re-renders for it', async () => {
+  useViewport('sheet');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  act(() => mapProps!.onSpot({ cell: 0, checkpoint: { routeId: 'route-3', index: 2 } }));
+  const heatLine = () =>
+    within(spotHeading()!).getByText(/^Forecast for |^No forecast for /).textContent;
+  const checkpointLine = () =>
+    within(spotHeading()!).getByText(/^Checkpoint at arrival: /).textContent;
+  const before = heatLine();
+  const checkpointBefore = checkpointLine();
+
+  act(() => mapProps!.hour.set(mapProps!.hour.get() + 5));
+
+  expect(heatLine()).not.toBe(before);
+  expect(checkpointLine()).toBe(checkpointBefore);
+});
+
+test('phone: the reading belongs to its plan, and planning again leaves it behind', async () => {
+  useViewport('sheet');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  act(() => mapProps!.onSpot({ cell: 0, checkpoint: null }));
+  expect(spotHeading()).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: TRIP_BAR }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+  await screen.findByText('Route 2 is recommended');
+  expect(spotHeading()).not.toBeInTheDocument();
+});
+
+test('pane: the map keeps its popup, and the pane shows no reading of its own', async () => {
+  useViewport('pane');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  expect(mapProps?.readoutOnMap).toBe(true);
+
+  act(() => mapProps!.onSpot({ cell: 0, checkpoint: { routeId: 'route-3', index: 2 } }));
+
+  expect(spotHeading()).not.toBeInTheDocument();
+  expect(mapProps?.spotOpen).toBe(false);
+});

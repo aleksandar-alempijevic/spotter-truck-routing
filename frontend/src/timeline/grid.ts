@@ -62,6 +62,12 @@ export function levelAt(model: GridModel, cell: number, hour: number): number {
   return model.levels[cell * model.hourCount + hour];
 }
 
+/** The level a cell holds at an hour, by name: `none` where there is no forecast. */
+export function levelKeyAt(model: GridModel, cell: number, hour: number): Level | 'none' {
+  const index = levelAt(model, cell, hour);
+  return index < 0 ? 'none' : model.levelNames[index];
+}
+
 export const hourInstant = (model: GridModel, hour: number): number =>
   model.startMs + hour * HOUR_MS;
 

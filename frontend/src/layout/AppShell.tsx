@@ -15,9 +15,11 @@ import type { GridModel } from '../timeline/grid';
 import { HourSlider } from '../timeline/HourSlider';
 import { hourInstant } from '../timeline/grid';
 import { Legend } from './Legend';
+import type { MapSpot } from '../map/types';
 import { MapCorner } from './MapCorner';
 import { MapHost, type MapStatus } from './MapHost';
 import { Sheet, type SheetState } from './Sheet';
+import { SpotReading } from './SpotReading';
 import { useBackCollapse } from './useBackCollapse';
 import type { LayoutMode } from './useLayoutMode';
 import type { Session } from './useSession';
@@ -65,6 +67,13 @@ export function AppShell({
   const [formOpen, setFormOpen] = useState(true);
   const [sheet, setSheet] = useState<SheetState>('peek');
   const [dragging, setDragging] = useState(false);
+  // A tap on the map that the sheet reads out. It belongs to the plan and the grid it was read
+  // from, and to the sheet layout: another plan, another grid or another layout leaves it behind.
+  const [tapped, setTapped] = useState<{
+    spot: MapSpot;
+    grid: GridModel | null;
+    submissionId: number | null;
+  } | null>(null);
   const [mapStatus, setMapStatus] = useState<MapStatus>('loading');
   const cornerRef = useRef<HTMLDivElement>(null);
   // Where focus goes when the form closes: the results after a submit, "Edit trip" after "Back".
@@ -77,6 +86,11 @@ export function AppShell({
   const hasPlan = submission !== null;
   const showForm = formOpen || !hasPlan;
   const isSheet = mode === 'sheet';
+  if (tapped && !isSheet) setTapped(null);
+  const spot =
+    isSheet && tapped && tapped.grid === grid && tapped.submissionId === (submission?.id ?? null)
+      ? tapped.spot
+      : null;
   const paneWidth = mode === 'wide' ? WIDE_PANE_WIDTH : PANE_WIDTH;
 
   // Back closes an expanded sheet before it leaves the page.
@@ -127,6 +141,17 @@ export function AppShell({
     // A mark chosen on the map asks the sheet for enough room to show it.
     setSheet((state) => (state === 'peek' ? 'half' : state));
   };
+
+  // Where the map reports a tap: in the sheet the reading is shown there, and the sheet opens
+  // far enough to show it.
+  const onSpot = useCallback(
+    (next: MapSpot | null) => {
+      if (!isSheet) return;
+      setTapped(next && { spot: next, grid, submissionId: submission?.id ?? null });
+      if (next) setSheet((state) => (state === 'peek' ? 'half' : state));
+    },
+    [isSheet, grid, submission],
+  );
 
   const popupFor = useCallback(
     (ref: CheckpointRef) => {
@@ -224,6 +249,9 @@ export function AppShell({
           fitKey={submission?.id ?? 0}
           onSelectRoute={session.selectRoute}
           onSelectCheckpoint={selectCheckpoint}
+          readoutOnMap={!isSheet}
+          onSpot={onSpot}
+          spotOpen={spot !== null}
           describeCheckpoint={popupFor}
           describeCell={cellFor}
           coveredRects={coveredRects}
@@ -271,7 +299,22 @@ export function AppShell({
                   topClearance={tripBar.height}
                   onDragging={setDragging}
                 >
-                  {(tier) => panel(tier)}
+                  {(tier) => (
+                    <>
+                      {spot && (
+                        <SpotReading
+                          cell={spot.cell}
+                          checkpoint={spot.checkpoint}
+                          grid={grid}
+                          holder={session.holder}
+                          describeCheckpoint={popupFor}
+                          describeCell={cellFor}
+                          onClose={() => setTapped(null)}
+                        />
+                      )}
+                      {panel(tier)}
+                    </>
+                  )}
                 </Sheet>
               </Box>
             </>
