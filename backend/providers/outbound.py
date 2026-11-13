@@ -1,5 +1,5 @@
 """Shared outbound HTTP policy: one client per planning request, a concurrency cap, a timeout
-and one retry.
+and one retry, for GET and for form-encoded POST.
 
 The providers carry their keys in the query string, and httpx logs the full URL of every request
 at INFO level and puts it in its exception text. Every httpx failure is therefore turned into a
@@ -8,6 +8,7 @@ provider-neutral error without a URL or upstream body, and the project's `LOGGIN
 """
 
 import asyncio
+import math
 from types import TracebackType
 from typing import Any, Self
 
@@ -78,10 +79,28 @@ class Outbound:
         neutral errors from `providers.errors`. A 400 raises `UpstreamBadRequest` so the adapter
         can tell its provider's cases apart.
         """
+        return await self._call("GET", url, timeout, retry, params=params)
+
+    async def post_form(
+        self,
+        url: str,
+        data: dict[str, Any],
+        *,
+        timeout: float,
+        retry: bool = True,
+        headers: dict[str, str] | None = None,
+    ) -> Any:
+        """POST a form-encoded body and return the parsed JSON, under the same policy as
+        `get_json`. Used where a request would not fit in a URL."""
+        return await self._call("POST", url, timeout, retry, data=data, headers=headers)
+
+    async def _call(
+        self, method: str, url: str, timeout: float, retry: bool, **content: Any
+    ) -> Any:
         for _ in range(2 if retry else 1):
             try:
                 async with self._slots:
-                    response = await self._send(url, params, timeout)
+                    response = await self._send(method, url, timeout, content)
             except httpx.TimeoutException:
                 failure = ProviderTimeout
             except httpx.HTTPError:
@@ -92,10 +111,12 @@ class Outbound:
                 failure = ProviderUnavailable
         raise failure from None
 
-    async def _send(self, url: str, params: dict[str, Any], timeout: float) -> httpx.Response:
+    async def _send(
+        self, method: str, url: str, timeout: float, content: dict[str, Any]
+    ) -> httpx.Response:
         assert self._client is not None, "Outbound must be used as a context manager"
-        return await self._client.get(
-            url, params=params, timeout=httpx.Timeout(timeout, connect=10)
+        return await self._client.request(
+            method, url, timeout=httpx.Timeout(timeout, connect=10), **content
         )
 
 
@@ -103,7 +124,7 @@ def _decode(response: httpx.Response) -> Any:
     """The parsed JSON of an answer below 500, or the neutral error for its status."""
     status = response.status_code
     if status in RATE_LIMIT_STATUSES:
-        raise ProviderRateLimited
+        raise ProviderRateLimited(_retry_after_s(response))
     try:
         body = response.json()
     except ValueError:
@@ -115,3 +136,12 @@ def _decode(response: httpx.Response) -> Any:
     if body is None:
         raise MalformedResponse
     return body
+
+
+def _retry_after_s(response: httpx.Response) -> float | None:
+    """The `Retry-After` header as seconds; absent, a date or anything else unusable is None."""
+    try:
+        seconds = float(response.headers["Retry-After"])
+    except (KeyError, ValueError):
+        return None
+    return seconds if math.isfinite(seconds) and seconds >= 0 else None

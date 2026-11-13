@@ -175,3 +175,104 @@ async def test_a_call_made_without_retry_is_made_once(provider_mock, upstream):
             await outbound.get_json(URL, {}, timeout=5, retry=False)
 
     assert route.call_count == 1
+
+
+POST_URL = "https://api.open-meteo.com/v1/forecast"
+
+
+async def test_a_form_post_sends_the_fields_as_a_form_body_and_returns_the_json(provider_mock):
+    route = provider_mock.post(POST_URL).respond(json={"ok": True})
+
+    async with Outbound() as outbound:
+        result = await outbound.post_form(
+            POST_URL, {"latitude": "1,2", "n": 3}, timeout=5, headers={"User-Agent": "tester"}
+        )
+
+    request = route.calls.last.request
+    assert result == {"ok": True}
+    assert request.content == b"latitude=1%2C2&n=3"
+    assert request.headers["content-type"] == "application/x-www-form-urlencoded"
+    assert request.headers["user-agent"] == "tester"
+    assert request.extensions["timeout"]["read"] == 5
+
+
+async def test_a_form_post_shares_the_cap(provider_mock):
+    in_flight = peak = 0
+
+    async def slow(request):
+        nonlocal in_flight, peak
+        in_flight += 1
+        peak = max(peak, in_flight)
+        await asyncio.sleep(0.01)
+        in_flight -= 1
+        return httpx.Response(200, json={})
+
+    provider_mock.post(POST_URL).mock(side_effect=slow)
+
+    async with Outbound(max_concurrent=2) as outbound:
+        await asyncio.gather(*(outbound.post_form(POST_URL, {}, timeout=5) for _ in range(8)))
+
+    assert peak == 2
+
+
+@pytest.mark.parametrize(
+    ("upstream", "error", "calls"),
+    [
+        pytest.param(httpx.Response(429), ProviderRateLimited, 1, id="429"),
+        pytest.param(httpx.Response(404), ProviderUnavailable, 1, id="404"),
+        pytest.param(httpx.Response(500, text=KEY), ProviderUnavailable, 2, id="500"),
+        pytest.param(httpx.Response(200, text="<html>"), MalformedResponse, 1, id="not JSON"),
+        pytest.param(httpx.ReadTimeout(f"slow {KEY}"), ProviderTimeout, 2, id="timeout"),
+    ],
+)
+async def test_a_form_post_fails_as_a_get_does(provider_mock, upstream, error, calls):
+    route = provider_mock.post(POST_URL)
+    if isinstance(upstream, Exception):
+        route.mock(side_effect=upstream)
+    else:
+        route.mock(return_value=upstream)
+
+    async with Outbound() as outbound:
+        with pytest.raises(error) as caught:
+            await outbound.post_form(POST_URL, {}, timeout=5)
+
+    assert route.call_count == calls
+    assert KEY not in str(caught.value)
+
+
+async def test_a_form_post_400_is_handed_to_the_adapter_and_not_retried(provider_mock):
+    route = provider_mock.post(POST_URL).respond(400, json={"reason": "x"})
+
+    async with Outbound() as outbound:
+        with pytest.raises(UpstreamBadRequest) as caught:
+            await outbound.post_form(POST_URL, {}, timeout=5)
+
+    assert caught.value.body == {"reason": "x"}
+    assert route.call_count == 1
+
+
+@pytest.mark.parametrize(
+    ("header", "seconds"),
+    [
+        pytest.param("12", 12.0, id="seconds"),
+        pytest.param("0.5", 0.5, id="fraction"),
+        pytest.param("0", 0.0, id="zero"),
+        pytest.param("Wed, 21 Oct 2026 07:28:00 GMT", None, id="a date"),
+        pytest.param("-5", None, id="negative"),
+        pytest.param("nan", None, id="not finite"),
+        pytest.param("soon", None, id="text"),
+        pytest.param(None, None, id="absent"),
+    ],
+)
+async def test_a_rate_limit_carries_the_retry_delay_it_was_given_as_data(
+    provider_mock, header, seconds
+):
+    headers = {} if header is None else {"Retry-After": header}
+    provider_mock.get(URL).respond(429, headers=headers)
+
+    async with Outbound() as outbound:
+        with pytest.raises(ProviderRateLimited) as caught:
+            await outbound.get_json(URL, {}, timeout=5)
+
+    assert caught.value.retry_after_s == seconds
+    assert str(caught.value) == ProviderRateLimited.message

@@ -1,0 +1,23 @@
+"""Forecast series, sampling at an instant, and the corridor grid with its location plan.
+
+Pure computation on provider-neutral types: standard library and `routing` only, and independent
+of `risk_rules`. The providers return this package's `ForecastSeries`; the API layer turns
+`Conditions` into risk readings. The package exports what the other packages use; the rest is
+reached through its modules.
+"""
+
+from .grid import GridCell, LocationPlan, plan_locations
+from .lattice import Cell, cell_center, forecast_cell
+from .series import Conditions, ForecastSeries, conditions_at
+
+__all__ = [
+    "Cell",
+    "Conditions",
+    "ForecastSeries",
+    "GridCell",
+    "LocationPlan",
+    "cell_center",
+    "conditions_at",
+    "forecast_cell",
+    "plan_locations",
+]

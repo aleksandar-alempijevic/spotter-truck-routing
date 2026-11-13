@@ -35,6 +35,11 @@ class ProviderRateLimited(ProviderError):
         "A data provider is refusing requests (rate limit, quota or credentials). Try again later."
     )
 
+    def __init__(self, retry_after_s: float | None = None) -> None:
+        super().__init__()
+        self.retry_after_s = retry_after_s
+        """Seconds the provider asked to wait (`Retry-After`), when it said; data, never message."""
+
 
 class ProviderNotConfigured(ProviderError):
     code = "provider_not_configured"
