@@ -12,6 +12,7 @@ import respx
 from django.test import AsyncClient
 
 from api import api as api_module
+from api import schemas as schemas_module
 from api import weather_report
 from api.schemas import WeatherIn
 from providers import openmeteo
@@ -35,8 +36,7 @@ from tests.test_routes_api import payload as routes_payload
 from tests.test_routes_api import post as post_routes
 from weather import ForecastCache, cell_center, forecast_cell, plan_locations, utc_hour
 
-# Near the real present, because a stop outside the planning window is refused.
-NOW = (datetime.now(UTC) + timedelta(hours=1)).replace(minute=20, second=0, microsecond=0)
+NOW = datetime(2026, 11, 13, 14, 20, tzinfo=UTC)
 HOUR = utc_hour(NOW)
 
 
@@ -61,6 +61,9 @@ def runtime(monkeypatch, clock):
         time=lambda: clock[0],
     )
     monkeypatch.setattr(api_module, "WEATHER_RUNTIME", replacement)
+    # The planning-window checks read the same clock as the endpoint, so no test depends on the
+    # minute it runs; a test that moves `runtime.now` moves both.
+    monkeypatch.setattr(schemas_module, "utc_now", lambda: replacement.now())
     return replacement
 
 
@@ -224,8 +227,10 @@ async def test_series_are_matched_to_checkpoints_by_position_in_the_call(provide
 
 
 async def test_wind_is_interpolated_to_the_eta_and_an_early_eta_reads_the_first_stamp(
-    provider_mock,
+    provider_mock, monkeypatch
 ):
+    # The request is made at the moment of its first eta, half an hour before the first stamp.
+    monkeypatch.setattr(schemas_module, "utc_now", lambda: HOUR - timedelta(minutes=30))
     forecast(provider_mock, wind=lambda lat, lon, hour: float(hour))
     etas = [HOUR - timedelta(minutes=30), HOUR + timedelta(minutes=90)]
 
@@ -360,7 +365,8 @@ async def test_a_new_hour_fetches_again(provider_mock, runtime):
     fetched = len(calls)
 
     runtime.now = lambda: NOW + timedelta(hours=1)
-    await post(request(route()))
+    later = [NOW + timedelta(minutes=50 + 12 * i) for i in range(3)]  # the same trip, an hour on
+    await post(request(route(etas=later)))
 
     assert len(calls) == 2 * fetched
 

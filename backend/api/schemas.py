@@ -16,6 +16,12 @@ from weather import longitude_span_coverable
 
 from .planner import ShortfallReason
 
+
+def utc_now() -> datetime:
+    """The instant the planning-window checks compare against: one place, so a test can fix it."""
+    return datetime.now(UTC)
+
+
 DEPARTURE_GRACE = timedelta(minutes=15)
 """A departure typed as "now" arrives slightly in the past; this much is accepted as given."""
 DEPARTURE_HORIZON = timedelta(hours=48)
@@ -101,7 +107,7 @@ class RoutesIn(PlanParams):
     def _check_trip(self) -> Self:
         if self.origin == self.destination:
             raise ValueError("origin and destination must be different points")
-        now = datetime.now(UTC)
+        now = utc_now()
         if not now - DEPARTURE_GRACE <= self.departure <= now + DEPARTURE_HORIZON:
             raise ValueError("departure must be between now and 48 hours from now")
         return self
@@ -266,7 +272,7 @@ def _check_marks(route: RouteCore, interval_miles: float) -> None:
         raise ValueError(f"{where}: the first checkpoint must be at mile 0")
     if any(stop.mile > route.total_miles for stop in route.stops):
         raise ValueError(f"{where}: a stop lies beyond the end of the route")
-    now = datetime.now(UTC)
+    now = utc_now()
     window = (now - DEPARTURE_GRACE, now + STOP_HORIZON)
     if any(not window[0] <= c.eta <= window[1] for c in route.checkpoints):
         raise ValueError(f"{where}: a checkpoint's eta is outside the planning window")
