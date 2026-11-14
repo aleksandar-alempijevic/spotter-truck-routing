@@ -126,6 +126,10 @@ export interface components {
              */
             source: "provider" | "via_city";
             via: components["schemas"]["ViaOut"] | null;
+            /** Driving Seconds */
+            driving_seconds: number;
+            /** Stops */
+            stops: components["schemas"]["StopOut"][];
         };
         /** RoutesOut */
         RoutesOut: {
@@ -139,6 +143,8 @@ export interface components {
             /** Routes */
             routes: components["schemas"]["RouteOut"][];
             shortfall: components["schemas"]["ShortfallOut"] | null;
+            /** Breaks Applied */
+            breaks_applied: boolean;
         };
         /** ShortfallOut */
         ShortfallOut: {
@@ -149,6 +155,27 @@ export interface components {
             reason: "no_distinct_alternative" | "fill_incomplete";
             /** Message */
             message: string;
+        };
+        /** StopOut */
+        StopOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "break" | "rest" | "restart";
+            /** Mile */
+            mile: number;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /** Duration Seconds */
+            duration_seconds: number;
         };
         /** ViaOut */
         ViaOut: {
@@ -182,6 +209,11 @@ export interface components {
              * Format: date-time
              */
             departure: string;
+            /**
+             * Rest Breaks
+             * @default false
+             */
+            rest_breaks: boolean;
         };
         /** AttributionOut */
         AttributionOut: {

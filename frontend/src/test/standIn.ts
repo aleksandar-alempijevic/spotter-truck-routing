@@ -31,7 +31,7 @@ function scenarioFor(destination: { lat: number; lon: number }): ScenarioKey {
  * departure, so the stand-in remembers the routes request the weather answer belongs to.
  */
 export function createStandIn(options: { cellDegrees?: number } = {}) {
-  let last: { scenario: ScenarioKey; departure: string } | null = null;
+  let last: { scenario: ScenarioKey; departure: string; breaks: boolean } | null = null;
 
   return function answer(method: string, url: string, bodyText: string): StandInReply {
     const { pathname, searchParams } = new URL(url, 'http://stand-in.invalid');
@@ -46,11 +46,16 @@ export function createStandIn(options: { cellDegrees?: number } = {}) {
     }
     if (method === 'POST' && pathname === '/api/routes') {
       const body = JSON.parse(bodyText) as RoutesIn;
-      last = { scenario: scenarioFor(body.destination), departure: body.departure };
+      last = {
+        scenario: scenarioFor(body.destination),
+        departure: body.departure,
+        breaks: body.rest_breaks ?? false,
+      };
       return {
         status: 200,
         body: buildRoutes(last.scenario, {
           departure: body.departure,
+          breaks: last.breaks,
           spacing: body.checkpoint_interval_miles,
           loadLb: body.load_lb,
         }),
@@ -62,6 +67,7 @@ export function createStandIn(options: { cellDegrees?: number } = {}) {
         status: 200,
         body: buildWeather(last.scenario, {
           departure: last.departure,
+          breaks: last.breaks,
           spacing: body.checkpoint_interval_miles,
           loadLb: body.load_lb,
           cellDegrees: options.cellDegrees,

@@ -36,6 +36,51 @@ def test_seconds_clamp_at_both_ends():
     assert route.seconds_at(route.length_m * 2) == 1000.0
 
 
+def test_meters_at_inverts_seconds_at_between_knots():
+    route = make_route()
+
+    for meters in (0.0, 1000.0, route.length_m / 2, route.length_m * 0.8, route.length_m):
+        assert route.meters_at(route.seconds_at(meters)) == pytest.approx(meters)
+
+
+def test_meters_at_clamps_at_both_ends():
+    route = make_route()
+
+    assert route.meters_at(-5) == 0
+    assert route.meters_at(0) == 0
+    assert route.meters_at(1000.0) == pytest.approx(route.length_m)
+    assert route.meters_at(5000.0) == route.length_m
+
+
+def test_meters_at_holds_still_where_time_passes_without_distance():
+    # A standstill from 400 s to 700 s at the halfway point.
+    length = haversine_m(START, END)
+    route = make_route(
+        knots=((0.0, 0.0), (length / 2, 400.0), (length / 2, 700.0), (length, 1000.0))
+    )
+
+    assert route.meters_at(500.0) == pytest.approx(length / 2)
+    assert route.meters_at(700.0) == pytest.approx(length / 2)
+    assert route.meters_at(850.0) == pytest.approx(length * 0.75)
+
+
+def test_meters_at_takes_the_start_of_a_jump_where_distance_is_covered_without_time():
+    length = haversine_m(START, END)
+    route = make_route(
+        knots=((0.0, 0.0), (length / 4, 400.0), (length / 2, 400.0), (length, 1000.0))
+    )
+
+    assert route.meters_at(400.0) == pytest.approx(length / 4)
+    assert route.meters_at(700.0) == pytest.approx(length * 0.75)
+
+
+def test_meters_at_before_a_first_knot_that_starts_late_is_the_start():
+    length = haversine_m(START, END)
+    route = make_route(knots=((0.0, 50.0), (length, 1000.0)))
+
+    assert route.meters_at(30.0) == 0
+
+
 def test_position_follows_the_polyline_on_the_routes_own_length_scale():
     # The route's length is declared 10% longer than the polyline measures: distances scale to it.
     route = make_route(length_m=haversine_m(START, END) * 1.1, travel_time_s=1000.0)

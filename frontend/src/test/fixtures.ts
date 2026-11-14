@@ -12,6 +12,7 @@ import type {
   RouteSummaryOut,
   RoutesOut,
   Spacing,
+  StopOut,
   SuggestionOut,
   WeatherCheckpointOut,
   WeatherOut,
@@ -287,11 +288,58 @@ function pointAt(points: LatLon[], mile: number[], target: number): LatLon {
 
 const round = (n: number, places = 2) => Number(n.toFixed(places));
 
+// ---------- rest stops ----------
+
+const HOUR_S = 3600;
+
+/** A stop a builder places: it begins after `drivingS` seconds at the wheel. */
+export interface FixtureStop {
+  kind: StopOut['kind'];
+  drivingS: number;
+  durationS: number;
+}
+
+/**
+ * Where the federal rest breaks fall for a drive of `drivingS` seconds: a 30-minute break after
+ * 8 hours without one and 10 hours off after 11 hours of driving, none at or after the end. This is
+ * test data standing in for the server's rule, and it leaves the 60-hour cycle out because no
+ * scenario drives that long (a test holds it to that). App code never computes a break.
+ */
+export function fixtureStops(drivingS: number): FixtureStop[] {
+  const stops: FixtureStop[] = [];
+  let at = 0;
+  let sinceBreak = 0;
+  let shift = 0;
+  for (;;) {
+    const step = Math.min(8 * HOUR_S - sinceBreak, 11 * HOUR_S - shift);
+    if (at + step >= drivingS) return stops;
+    at += step;
+    if (shift + step >= 11 * HOUR_S) {
+      stops.push({ kind: 'rest', drivingS: at, durationS: 10 * HOUR_S });
+      sinceBreak = 0;
+      shift = 0;
+    } else {
+      stops.push({ kind: 'break', drivingS: at, durationS: 30 * 60 });
+      sinceBreak = 0;
+      shift += step;
+    }
+  }
+}
+
+/** Seconds from departure at a point of the drive; a point at a stop's start comes before it. */
+export function fixtureElapsed(stops: FixtureStop[], drivingS: number): number {
+  return (
+    drivingS +
+    stops.filter((stop) => stop.drivingS < drivingS).reduce((sum, stop) => sum + stop.durationS, 0)
+  );
+}
+
 function buildRoute(
   spec: ScenarioSpec,
   index: number,
   spacing: Spacing,
   departureMs: number,
+  breaks: boolean,
 ): { route: RouteOut; points: LatLon[] } {
   const { points, mile } = densify(spec.paths[index]);
   const total = mile[mile.length - 1];
@@ -299,21 +347,40 @@ function buildRoute(
   for (let m = 0; m < total; m += spacing) marks.push(m);
   marks.push(total);
   const speed = spec.mph[index];
+  const drivingS = Math.round((total / speed) * HOUR_S);
+  const planned = breaks ? fixtureStops(drivingS) : [];
   const checkpoints: CheckpointOut[] = marks.map((m) => {
     const [lat, lon] = pointAt(points, mile, m);
+    const elapsedS = fixtureElapsed(planned, (m / speed) * HOUR_S);
     return {
       mile: round(m),
       lat: round(lat, 5),
       lon: round(lon, 5),
-      eta: new Date(departureMs + (m / speed) * 3_600_000).toISOString(),
+      eta: new Date(departureMs + elapsedS * 1000).toISOString(),
     };
   });
+  const stops: StopOut[] = planned.map((stop) => {
+    const [lat, lon] = pointAt(points, mile, (stop.drivingS / HOUR_S) * speed);
+    return {
+      kind: stop.kind,
+      mile: round((stop.drivingS / HOUR_S) * speed),
+      lat: round(lat, 5),
+      lon: round(lon, 5),
+      starts_at: new Date(
+        departureMs + fixtureElapsed(planned, stop.drivingS) * 1000,
+      ).toISOString(),
+      duration_seconds: stop.durationS,
+    };
+  });
+  const stoppedS = planned.reduce((sum, stop) => sum + stop.durationS, 0);
   const via = spec.via?.[index] ?? null;
   return {
     points,
     route: {
       id: `route-${index + 1}`,
-      travel_time_seconds: Math.round((total / speed) * 3600),
+      travel_time_seconds: drivingS + stoppedS,
+      driving_seconds: drivingS,
+      stops,
       total_miles: round(total),
       checkpoints,
       line: points.map(([lat, lon]) => [round(lon, 5), round(lat, 5)] as [number, number]),
@@ -326,7 +393,7 @@ function buildRoute(
 /** The routes answer for a scenario, as the server would return it for this trip. */
 export function buildRoutes(
   key: ScenarioKey,
-  options: { departure: string; spacing?: Spacing; loadLb?: number },
+  options: { departure: string; breaks?: boolean; spacing?: Spacing; loadLb?: number },
 ): RoutesOut {
   const spec = SPECS[key];
   const spacing = options.spacing ?? 25;
@@ -334,8 +401,11 @@ export function buildRoutes(
   return {
     load_lb: options.loadLb ?? 36_000,
     checkpoint_interval_miles: spacing,
-    routes: spec.paths.map((_, i) => buildRoute(spec, i, spacing, departureMs).route),
+    routes: spec.paths.map(
+      (_, i) => buildRoute(spec, i, spacing, departureMs, options.breaks ?? false).route,
+    ),
     shortfall: spec.shortfall,
+    breaks_applied: options.breaks ?? false,
   };
 }
 
@@ -498,6 +568,7 @@ export function buildWeather(
   key: ScenarioKey,
   options: {
     departure: string;
+    breaks?: boolean;
     spacing?: Spacing;
     loadLb?: number;
     levelCodes?: Level[];
@@ -508,7 +579,9 @@ export function buildWeather(
   const spec = SPECS[key];
   const spacing = options.spacing ?? 25;
   const departureMs = Date.parse(options.departure);
-  const built = spec.paths.map((_, i) => buildRoute(spec, i, spacing, departureMs));
+  const built = spec.paths.map((_, i) =>
+    buildRoute(spec, i, spacing, departureMs, options.breaks ?? false),
+  );
   const summaries = new Map<string, RouteSummaryOut>();
   const routes: WeatherRouteOut[] = built.map(({ route }, r) => {
     const count = route.checkpoints.length;

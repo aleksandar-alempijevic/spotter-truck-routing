@@ -10,6 +10,7 @@ from pydantic_core import PydanticCustomError
 from risk_rules import Condition, Level, RankingStep
 from routing.checkpoints import MARK_EPSILON_MILES
 from routing.geo import METERS_PER_MILE, haversine_m
+from routing.rest_breaks import StopKind
 from routing.route import RouteSource
 from weather import longitude_span_coverable
 
@@ -85,6 +86,8 @@ class RoutesIn(PlanParams):
     destination: PointIn
     departure: AwareDatetime
     """When the truck leaves, with a UTC offset; from 15 minutes ago to 48 hours ahead."""
+    rest_breaks: bool = False
+    """Add the federal rest breaks to the ETAs and the trip's duration. Omitted means off."""
 
     @model_validator(mode="after")
     def _check_trip(self) -> Self:
@@ -101,7 +104,8 @@ class CheckpointOut(Schema):
     lat: Latitude
     lon: Longitude
     eta: AwareDatetime
-    """UTC instant the truck reaches this mark, with no rest breaks."""
+    """UTC instant the truck reaches this mark. With rest breaks on it includes the stops before
+    the mark; with them off it is driving time only."""
 
 
 class RouteCore(Schema):
@@ -109,6 +113,8 @@ class RouteCore(Schema):
 
     id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
     travel_time_seconds: int = Field(ge=0)
+    """Departure to arrival. With rest breaks on it includes the stops; with them off it is the
+    driving time."""
     total_miles: float = Field(ge=0, allow_inf_nan=False)
     checkpoints: list[CheckpointOut] = Field(min_length=1, max_length=MAX_CHECKPOINTS_PER_ROUTE)
 
@@ -119,6 +125,20 @@ class ViaOut(Schema):
     lon: float
 
 
+class StopOut(Schema):
+    kind: StopKind
+    """A 30-minute break, a 10-hour rest or a 34-hour restart."""
+    mile: float
+    lat: Latitude
+    lon: Longitude
+    starts_at: AwareDatetime
+    duration_seconds: int
+
+    @staticmethod
+    def resolve_duration_seconds(obj) -> int:
+        return round(obj.duration_s)
+
+
 class RouteOut(RouteCore):
     # Built from the planner's `PlannedRoute`; the resolvers below read what its route holds. A
     # docstring would end up in the OpenAPI schema and the generated types.
@@ -126,9 +146,16 @@ class RouteOut(RouteCore):
     """The route's line for the map as [lon, lat] pairs, reduced on the server."""
     source: RouteSource
     via: ViaOut | None
+    driving_seconds: int
+    stops: list[StopOut]
+    """The required stops in order; empty with rest breaks off, and for a trip under 8 hours."""
 
     @staticmethod
     def resolve_travel_time_seconds(obj) -> int:
+        return round(obj.route.travel_time_s + sum(stop.duration_s for stop in obj.stops))
+
+    @staticmethod
+    def resolve_driving_seconds(obj) -> int:
         return round(obj.route.travel_time_s)
 
     @staticmethod
@@ -158,6 +185,9 @@ class RoutesOut(PlanParams):
     """One to three routes, fastest first; ids are numbered from that order."""
     shortfall: ShortfallOut | None
     """Set when fewer than three routes came back, with the reason."""
+    breaks_applied: bool
+    """Whether the ETAs include the federal rest breaks: the request's choice, echoed. A trip under
+    8 hours has no stops either way, so empty `stops` cannot say which."""
 
 
 class SuggestionOut(Schema):

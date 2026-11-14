@@ -5,10 +5,12 @@ first mark is at mile 0, marks strictly ascend, and the last mark is the route's
 destination). This package and `risk_rules` never import each other.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from .geo import METERS_PER_MILE
+from .rest_breaks import RestStop, elapsed_at
 from .route import Route
 
 MARK_EPSILON_MILES = 1e-6
@@ -20,7 +22,7 @@ class RouteCheckpoint:
     lat: float
     lon: float
     eta: datetime
-    """UTC instant of arrival at this mark, with no rest breaks."""
+    """UTC instant of arrival at this mark, including the stops before it."""
 
 
 def checkpoint_marks(total_miles: float, spacing_miles: float) -> list[float]:
@@ -41,14 +43,19 @@ def checkpoint_marks(total_miles: float, spacing_miles: float) -> list[float]:
 
 
 def build_checkpoints(
-    route: Route, spacing_miles: float, departure: datetime
+    route: Route, spacing_miles: float, departure: datetime, stops: Sequence[RestStop] = ()
 ) -> list[RouteCheckpoint]:
-    """Checkpoints at the spacing, from the full-resolution geometry and the time knots."""
+    """Checkpoints at the spacing, from the full-resolution geometry and the time knots.
+
+    The route's knots give driving time; `stops` (none by default, so ETAs are driving time only)
+    add the time spent stopped before each mark.
+    """
     start = departure.astimezone(UTC)
     result = []
     for mile in checkpoint_marks(route.total_miles, spacing_miles):
         meters = min(mile * METERS_PER_MILE, route.length_m)
         lat, lon = route.position_at(meters)
         seconds = route.travel_time_s if mile >= route.total_miles else route.seconds_at(meters)
-        result.append(RouteCheckpoint(mile, lat, lon, start + timedelta(seconds=seconds)))
+        eta = start + timedelta(seconds=elapsed_at(stops, seconds))
+        result.append(RouteCheckpoint(mile, lat, lon, eta))
     return result

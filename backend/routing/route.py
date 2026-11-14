@@ -112,6 +112,24 @@ class Route:
         t0, t1 = self._knot_seconds[j], self._knot_seconds[j + 1]
         return t0 + (t1 - t0) * fraction
 
+    def meters_at(self, seconds: float) -> float:
+        """Distance along the route after a driving time: the inverse of `seconds_at`.
+
+        Where time passes with no distance the answer is that standstill's distance; where
+        distance is covered with no time passing, the nearest end of the jump to the start, the
+        point the truck reaches first at that time. Past the travel time it is the route's end.
+        """
+        if seconds <= 0:
+            return 0.0
+        j = bisect.bisect_left(self._knot_seconds, seconds)
+        if j >= len(self._knot_seconds):
+            return self.length_m
+        if j == 0:
+            return 0.0
+        t0, t1 = self._knot_seconds[j - 1], self._knot_seconds[j]
+        x0, x1 = self._knot_meters[j - 1], self._knot_meters[j]
+        return min(x0 + (x1 - x0) * (seconds - t0) / (t1 - t0), self.length_m)
+
     def position_at(self, meters: float) -> Point:
         """The point on the polyline at a distance along the route, interpolated between points."""
         if meters <= 0:

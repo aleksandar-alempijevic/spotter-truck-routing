@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from risk_rules import Checkpoint, Level, summarize_route
-from routing import build_checkpoints
+from routing import build_checkpoints, plan_stops
 from routing.checkpoints import checkpoint_marks
 from tests.route_fixtures import route_from
 
@@ -85,3 +85,36 @@ def test_checkpoints_are_accepted_by_the_risk_rules_summary(spacing, waypoints):
     )
 
     assert summary.low_miles == pytest.approx(route.total_miles)
+
+
+LONG_ORIGIN, LONG_DESTINATION = (41.0, -120.0), (41.0, -85.0)
+
+
+def test_with_stops_the_etas_include_the_time_stopped_before_each_mark():
+    # 25 m/s over about 2,950 km is about 33 h at the wheel: a break, a rest and a second break.
+    route = route_from([LONG_ORIGIN, LONG_DESTINATION], speed_mps=25.0)
+    stops = plan_stops(route.travel_time_s)
+
+    plain = build_checkpoints(route, 50, DEPARTURE)
+    broken = build_checkpoints(route, 50, DEPARTURE, stops)
+
+    assert [c.mile for c in broken] == [c.mile for c in plain]
+    assert [(c.lat, c.lon) for c in broken] == [(c.lat, c.lon) for c in plain]
+    assert broken[0].eta == DEPARTURE
+    stopped = sum(stop.duration_s for stop in stops)
+    assert stopped > 0
+    assert (broken[-1].eta - plain[-1].eta).total_seconds() == pytest.approx(stopped)
+    assert all(b.eta >= p.eta for b, p in zip(broken, plain, strict=True))
+
+
+def test_checkpoint_etas_with_stops_never_go_backwards_and_jump_across_each_stop():
+    route = route_from([LONG_ORIGIN, LONG_DESTINATION], speed_mps=25.0)
+    stops = plan_stops(route.travel_time_s)
+
+    checkpoints = build_checkpoints(route, 10, DEPARTURE, stops)
+
+    etas = [c.eta for c in checkpoints]
+    assert etas == sorted(etas)
+    gaps = [(b - a).total_seconds() for a, b in zip(etas, etas[1:], strict=False)]
+    assert sum(gap > 24 * 3600 for gap in gaps) == 0
+    assert sum(gap > 10 * 3600 for gap in gaps) == sum(s.kind == "rest" for s in stops)

@@ -995,7 +995,9 @@
         [-111.89099, 40.7608]
       ],
       "source": "provider",
-      "via": null
+      "via": null,
+      "driving_seconds": 69611,
+      "stops": []
     },
     {
       "id": "route-2",
@@ -2261,7 +2263,9 @@
         [-111.89099, 40.7608]
       ],
       "source": "provider",
-      "via": null
+      "via": null,
+      "driving_seconds": 82054,
+      "stops": []
     },
     {
       "id": "route-3",
@@ -3690,8 +3694,11 @@
         [-111.89099, 40.7608]
       ],
       "source": "provider",
-      "via": null
+      "via": null,
+      "driving_seconds": 91397,
+      "stops": []
     }
   ],
-  "shortfall": null
+  "shortfall": null,
+  "breaks_applied": false
 }

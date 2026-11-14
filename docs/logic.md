@@ -84,4 +84,18 @@ A cap on how much extra time a safer route may cost is not part of the assessmen
 - Weather in the units above, with no forecast represented as an absent level. The weather endpoint builds each reading from Open-Meteo's series at the checkpoint's ETA ([architecture.md](architecture.md)), and leaves a checkpoint the forecast does not reach without a level.
 - Checkpoints with a mark at mile 0, ascending, inside the route. The routes endpoint produces them in this form, with a final checkpoint at the destination, and the weather endpoint rejects a body that breaks it before the rules see it.
 - Unique route ids, one to three routes per ranking, and one checkpoint interval for the request.
-- Travel time in seconds.
+- Travel time in seconds: driving time, or door-to-door time when the routes request turned rest breaks on ([section 5](#5-rest-breaks-when-they-are-on)).
+
+## 5. Rest breaks (when they are on)
+
+The routes request can add the federal hours-of-service stops to the ETAs ([assumptions.md](assumptions.md#when-rest-breaks-are-on) for the readings it rests on). The rule is the one function `plan_stops` in [backend/routing/rest_breaks.py](../backend/routing/rest_breaks.py), from a route's driving time to its list of stops; the clock times, the stop positions and the trip's duration are all derived from that list. The rule follows 49 CFR 395.3 for one property-carrying driver:
+
+| Driving counter reaches | Stop | Resets |
+|---|---|---|
+| 60 hours in the cycle | 34 hours (restart) | all counters |
+| 11 hours since the last rest | 10 hours (rest) | the 8-hour and 11-hour counts |
+| 8 hours since the last break | 30 minutes (break) | the 8-hour count |
+
+When limits are reached together the longest stop wins and ends the counts the shorter would have. No stop is taken at or after the destination, so a trip that ends exactly at a limit has none. A checkpoint reached exactly where a stop begins gets its arrival time, before the stop. Elapsed time is strictly increasing in driving time. The cycle step matters only for a trip of more than 60 hours at the wheel, which the app can be asked for (a trip to Alaska through Canada, or the longest cross-country runs).
+
+The ranking is unchanged in outcome: every route in a plan has the same schedule, so less driving is always an earlier arrival, and step 5 (travel time) has no tolerance. What changes is the size of the time difference it reports, which is door-to-door time. A few minutes of TomTom's estimate either side of a limit moves an arrival by 10 hours (the step is real under the rule and sharp under the model), and it only decides between routes already tied on safety. A test pins the equivalence.

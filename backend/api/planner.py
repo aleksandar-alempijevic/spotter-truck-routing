@@ -21,11 +21,14 @@ from routing import (
     Point,
     Route,
     RouteCheckpoint,
+    RouteStop,
     Via,
     build_checkpoints,
+    locate_stops,
     measure_overlap,
     near_cells,
     order_routes,
+    plan_stops,
     simplify_line,
     via_candidates,
 )
@@ -56,12 +59,16 @@ class PlannedRoute:
     checkpoints: list[RouteCheckpoint]
     line: list[Point]
     """Reduced geometry in (lat, lon) order."""
+    stops: list[RouteStop]
+    """The required stops, empty when rest breaks are off."""
 
 
 @dataclass(frozen=True, slots=True)
 class Plan:
     routes: list[PlannedRoute]
     shortfall: Shortfall | None
+    rest_breaks: bool
+    """Whether the ETAs include the federal rest breaks."""
 
 
 async def plan_routes(
@@ -72,9 +79,13 @@ async def plan_routes(
     departure: datetime,
     load_lb: float,
     spacing_miles: float,
+    rest_breaks: bool = False,
 ) -> Plan:
     """Up to three distinct truck routes with checkpoints; fewer, with the reason, when none more
-    can be built. Raises a `ProviderError` when no route could be found at all."""
+    can be built. Raises a `ProviderError` when no route could be found at all.
+
+    With `rest_breaks` the checkpoint ETAs include the federal rest stops and each route lists
+    them; without, ETAs are driving time only and no route has a stop."""
     deadline = asyncio.get_running_loop().time() + PLANNING_BUDGET_S
 
     async with Outbound() as outbound:
@@ -101,8 +112,8 @@ async def plan_routes(
         if len(routes) < WANTED_ROUTES:
             routes, shortfall = await _fill(routes, route_call, origin, destination, deadline)
 
-    planned = await asyncio.to_thread(_finish, routes, spacing_miles, departure)
-    return Plan(planned, shortfall)
+    planned = await asyncio.to_thread(_finish, routes, spacing_miles, departure, rest_breaks)
+    return Plan(planned, shortfall, rest_breaks)
 
 
 async def _fill(
@@ -210,13 +221,24 @@ def _shortfall(count: int, incomplete: bool, tried: list[str]) -> Shortfall:
     )
 
 
-def _finish(routes: list[Route], spacing_miles: float, departure: datetime) -> list[PlannedRoute]:
-    return [
-        PlannedRoute(
-            route_id,
-            route,
-            build_checkpoints(route, spacing_miles, departure),
-            simplify_line(route.points),
+def _finish(
+    routes: list[Route], spacing_miles: float, departure: datetime, rest_breaks: bool
+) -> list[PlannedRoute]:
+    """Order the routes and give each its checkpoints, line and stops.
+
+    The one schedule per route is made here, so the ETAs, the stops and the trip's duration all
+    come from the same result.
+    """
+    planned = []
+    for route_id, route in order_routes(routes):
+        stops = plan_stops(route.travel_time_s) if rest_breaks else ()
+        planned.append(
+            PlannedRoute(
+                route_id,
+                route,
+                build_checkpoints(route, spacing_miles, departure, stops),
+                simplify_line(route.points),
+                locate_stops(route, stops, departure),
+            )
         )
-        for route_id, route in order_routes(routes)
-    ]
+    return planned

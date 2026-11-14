@@ -882,3 +882,33 @@ async def test_what_the_routes_endpoint_returns_is_accepted_as_it_is(
     assert len(response.json()["routes"]) == 3
     assert KEY not in response.content.decode()
     assert locations(calls)
+
+
+@pytest.mark.parametrize("spacing", [10, 25, 50])
+async def test_a_routes_answer_with_rest_breaks_on_is_accepted_and_reported_as_it_is(
+    provider_mock, runtime, spacing
+):
+    # The send-back subset carries door-to-door travel times and ETAs that include the stops; the
+    # weather endpoint reads them as given. Three routes, long enough to have stops.
+    runtime.now = lambda: datetime.now(UTC)
+    mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
+    routes_response = await post_routes(
+        routes_payload(checkpoint_interval_miles=spacing, rest_breaks=True)
+    )
+    sent_back = routes_response.json()
+    assert sent_back["breaks_applied"] is True
+    assert all(r["stops"] for r in sent_back["routes"])
+    forecast(provider_mock)
+
+    response = await post(sent_back)
+
+    assert response.status_code == 200, response.content[:300]
+    body = response.json()
+    assert [r["id"] for r in body["routes"]] == [r["id"] for r in sent_back["routes"]]
+    # Each route's ranking time is its door-to-door time, so the ranking reads the stops.
+    first, second = sent_back["routes"][:2]
+    lost = body["ranking"]["routes"][1]["vs_first"]
+    assert lost["travel_time_seconds"] == (
+        second["travel_time_seconds"] - first["travel_time_seconds"]
+    )
+    assert second["travel_time_seconds"] - second["driving_seconds"] > 0

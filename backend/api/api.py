@@ -112,12 +112,14 @@ async def routes(request: HttpRequest, payload: RoutesIn):
         departure=payload.departure,
         load_lb=payload.load_lb,
         spacing_miles=payload.checkpoint_interval_miles,
+        rest_breaks=payload.rest_breaks,
     )
     return {
         "load_lb": payload.load_lb,
         "checkpoint_interval_miles": payload.checkpoint_interval_miles,
         "routes": plan.routes,
         "shortfall": plan.shortfall,
+        "breaks_applied": plan.rest_breaks,
     }
 
 

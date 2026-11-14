@@ -53,5 +53,7 @@ export function buildRoutesBody(trip: Trip): RoutesIn {
     origin: { lat: trip.origin.lat, lon: trip.origin.lon },
     destination: { lat: trip.destination.lat, lon: trip.destination.lon },
     departure: new Date(trip.departureMs).toISOString(),
+    // The trip form has no rest-break switch yet, so every plan is made without breaks.
+    rest_breaks: false,
   };
 }

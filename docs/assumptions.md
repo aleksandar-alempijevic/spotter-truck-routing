@@ -13,9 +13,26 @@ Readings and limits the app applies where the assessment is silent. The rules fo
 ## Routes and checkpoints
 
 - **Every route ends with a checkpoint at the destination,** so the arrival ETA is shown. The risk rules accept a final checkpoint that stands for no miles ([logic.md](logic.md#2-route-summary)).
-- **ETAs are driving time only.** The request asks TomTom for traffic (`traffic=true`) at the departure time, so the times are TomTom's time-of-day prediction for that departure, not a fixed typical speed. Rest breaks are not included. How much traffic changed the ETAs has not been measured separately.
+- **ETAs are driving time only, unless the request turns rest breaks on** ([below](#when-rest-breaks-are-on)); the switch is off by default. The request asks TomTom for traffic (`traffic=true`) at the departure time, so the times are TomTom's time-of-day prediction for that departure, not a fixed typical speed. With breaks off no rest time is included. How much traffic changed the ETAs has not been measured separately.
 - **Routes the provider returns are shown as given.** Only a route made by sending the truck through a via-city must overlap every other route by less than half; the provider's own alternatives skip that check.
 - **A via-city comes from a fixed list of 45 US hubs,** chosen by geometry alone, so a via route can include a local detour into the city. Up to six cities are tried, so "no distinct third route" means those six did not work, not that no third route exists.
+
+## When rest breaks are on
+
+A request with `rest_breaks` true adds the federal rest breaks to the ETAs and the trip's duration. The rule is in [logic.md](logic.md#5-rest-breaks-when-they-are-on). These readings apply only then.
+
+- **A1. The driver starts rested,** with 10 hours off behind them and no hours used in the current 7 or 8 days. There is no input for hours already driven.
+- **A2. The driver only drives.** There is no inspection, loading, fuelling or waiting time, so the times are the earliest legal arrival, not a typical one. Under A2 every hour on duty is an hour driven.
+- **A3. The 14-hour on-duty window is not modelled.** Under A2 a shift is 11 hours of driving plus a 30-minute break, 11.5 hours, so the window cannot bind.
+- **A4. The cycle limit is 60 hours in 7 days,** the stricter of the 60-hour and 70-hour limits, because the carrier's operating schedule is not known. After 60 hours of driving the model takes a 34-hour restart. Alaska follows different limits (49 CFR 395.1(h)), which are not modelled, so a trip there is timed by the lower-48 rule.
+- **A5. Each stop is taken exactly when its limit is reached,** at that point on the road. The map position can be open highway, not a truck stop or a town; the app has no places data. A break taken earlier would give the same total delay.
+- **A6. One driver and a property-carrying truck,** with no sleeper-berth split, no short-haul exemption and no adverse-driving-conditions extension. The extension covers conditions not known before the trip, which a forecast made before departure arguably is.
+- **A7. The 30-minute break resets the 8-hour count, and the 10-hour rest resets the 8-hour and 11-hour counts.** The break does not reset the 11-hour count.
+- **A8. Speeds after a stop are TomTom's non-stop predictions.** After a 10-hour rest the truck is on later segments about 10.5 hours after the time of day TomTom assumed for them; re-routing each leg from its restart time would multiply the routing calls.
+- **Weather is not sampled while parked.** A stop has no risk level; the next checkpoint reads the conditions after the truck moves again.
+- **Ranking uses door-to-door time.** The rule is applied the same way to every route, so the route with the least driving time is always the one that arrives first and the order does not change; only the size of the time differences does, and it is step-shaped: a few minutes of TomTom's estimate either side of a limit can move an arrival by 10 hours.
+- **Long trips more often end past the forecast.** With breaks on, a trip of more than about a day at the wheel can end after the 96-hour forecast; those miles are counted as no forecast, never as Low.
+- **No trip with breaks on has been run against TomTom yet:** the rule is tested on synthetic and mocked routes, and the recorded live answer was made with breaks off.
 
 ## Address search
 
