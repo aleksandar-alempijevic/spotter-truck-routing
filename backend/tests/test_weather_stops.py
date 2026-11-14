@@ -268,6 +268,7 @@ async def test_a_malformed_stop_is_a_422_before_any_forecast_call(provider_mock,
     response = await post(request(with_stops(bad)))
 
     assert response.status_code == 422
+    assert set(response.json()) == {"code", "message"}
     assert calls == []
 
 
@@ -279,4 +280,24 @@ async def test_stops_out_of_time_order_are_a_422(provider_mock):
 
     assert response.status_code == 422
     assert "time order" in response.json()["message"]
+    assert calls == []
+
+
+@pytest.mark.parametrize(
+    "when",
+    [datetime(9999, 12, 31, tzinfo=UTC), datetime(1, 1, 2, tzinfo=UTC), NOW - timedelta(days=2)],
+    ids=["year 9999", "year 1", "in the past"],
+)
+async def test_a_checkpoint_eta_outside_the_planning_window_is_a_422_with_the_error_body(
+    provider_mock, when
+):
+    calls = forecast(provider_mock)
+    bad = route(etas=[when, when, when])
+
+    response = await post(request(bad))
+
+    assert response.status_code == 422
+    assert set(response.json()) == {"code", "message"}
+    assert response.json()["code"] == "validation_error"
+    assert "planning window" in response.json()["message"]
     assert calls == []

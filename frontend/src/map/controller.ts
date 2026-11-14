@@ -170,6 +170,8 @@ export class MapController {
   private readonly map: maplibregl.Map;
   private readonly resizeObserver: ResizeObserver;
   private styleReady = false;
+  /** The trucks layer's WebGL program has been drawn once in this style. */
+  private trucksWarm = false;
   private announcedReady = false;
   private fellBack = false;
   private basemapNoticed = false;
@@ -596,6 +598,7 @@ export class MapController {
     });
 
     this.styleReady = true;
+    this.trucksWarm = false;
     this.pushRouteData();
     this.pushRouteStyle();
     this.pushSelection();
@@ -634,6 +637,7 @@ export class MapController {
   private onContextRestored(): void {
     const recover = () => {
       this.contextLost = false;
+      this.trucksWarm = false;
       // Before the first style install there is nothing to redraw; the install says ready.
       if (this.styleReady) {
         this.pushRouteData();
@@ -741,7 +745,31 @@ export class MapController {
     if (!source) return;
     const grid = this.grid;
     const trucks = grid ? trucksAt(this.routes, hourInstant(grid, this.shownHour)) : [];
-    source.setData(truckPoints(trucks));
+    const points = truckPoints(trucks);
+    if (points.features.length > 0) this.trucksWarm = true;
+    else if (grid && this.warmTrucks(source)) return;
+    source.setData(points);
+  }
+
+  /**
+   * Draws the trucks layer once, when the slider first has nothing to show on it, so MapLibre
+   * builds its WebGL program then and not on the first slider step. That program has a constant
+   * colour with a per-feature radius, which no other layer has, and a software-GL browser blocks
+   * about 120 ms compiling it. With the slider at hour 0 no truck is driving yet, so the layer
+   * would stay empty until the drag. One truck stands at the first route's start for a single
+   * frame, under the endpoint marks; the next idle replaces it with what the hour says.
+   */
+  private warmTrucks(source: GeoJsonSource): boolean {
+    const start = this.routes[0]?.line[0];
+    if (this.trucksWarm || !start) return false;
+    this.trucksWarm = true;
+    source.setData(
+      truckPoints([{ routeId: '', name: '', status: 'driving', mile: 0, position: [...start] }]),
+    );
+    this.map.once('idle', () => {
+      if (this.live) this.pushTrucks();
+    });
+    return true;
   }
 
   // ---------- events ----------

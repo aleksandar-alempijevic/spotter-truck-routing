@@ -13,6 +13,7 @@ interface Call {
 }
 const log: Call[] = [];
 const handlers = new Map<string, (event: unknown) => void>();
+type FeatureLike = { features: unknown[] };
 const sources = new Map<string, { setData: (data: unknown) => void }>();
 const popups: StubPopup[] = [];
 let styleLayers: { id: string; type: string; layout?: Record<string, unknown> }[] = [];
@@ -359,6 +360,41 @@ test('the stops are pushed when the plan or the selected route changes, not on a
 
   controller.setSelection('route-2', null);
   expect(stopPushes()).toBe(1);
+});
+
+test('with no truck driving yet the trucks layer is drawn once, so its program is not built mid-drag', () => {
+  const { controller, holder } = setup();
+  // The trip leaves two hours after the grid starts, so at hour 0 no truck is on the road.
+  const later = new Date(Date.parse(GRID.start) + 2 * 3_600_000).toISOString();
+  const view = buildPlanView(buildRoutes('mixed', { departure: later }));
+  const pushed = () =>
+    log
+      .filter((c) => c.method === 'setData:trucks')
+      .map((c) => (c.args[0] as FeatureLike).features.length);
+  controller.setRoutes(view.routes);
+  log.length = 0;
+
+  controller.setGrid(model(GRID), holder);
+
+  expect(pushed()).toEqual([1]); // one truck at the start, for one frame
+  onceHandlers.get('idle')!({});
+  expect(pushed()).toEqual([1, 0]); // then what the hour says: nothing
+  controller.setGrid(model(GRID), holder);
+  expect(pushed()).toEqual([1, 0, 0]); // not drawn again
+});
+
+test('trucks already on the road need no warm-up draw', () => {
+  const { controller, holder } = setup();
+  const view = buildPlanView(buildRoutes('mixed', { departure: GRID.start }));
+  controller.setRoutes(view.routes);
+  log.length = 0;
+
+  controller.setGrid(model(GRID), holder);
+
+  const counts = log
+    .filter((c) => c.method === 'setData:trucks')
+    .map((c) => (c.args[0] as FeatureLike).features.length);
+  expect(counts).toEqual([view.routes.length]);
 });
 
 test('a tap on a checkpoint selects it and opens one readout that labels both readings', () => {

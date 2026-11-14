@@ -46,15 +46,29 @@ With rest breaks on (the switch is off by default), stops add forecast locations
 | `pointermove` events over 16 ms | 0 |
 | Requests during the drag | 0 (API or other) |
 | Frame gap, median and 95th percentile | 16.7 ms and 16.7 to 16.8 ms |
-| Frames over 50 ms | 0 in this run; see below, it did not reproduce on the current build |
+| Frames over 50 ms | 0 in this run, at a departure whose minute was not pinned; see the slow-frame section below |
 
-The slider recolours only the heatmap cells whose level changed and makes no request, which is what these numbers show.
+The slider recolours only the heatmap cells whose level changed and makes no request, which is what these numbers show. Whether the drag is free of slow frames depends on the departure minute; see the section below.
 
 These runs predate the rest-break and stop-weather UI (the stop rows, the stop marks and the stopped trucks). The build sizes below are those of the current build.
 
-**The slow frame on the current build.** A repeat of the drag on the current build showed, in each drag, one isolated frame of 100 to 217 ms, with rest breaks on and off alike. The "0 frames over 50 ms" above came from the earlier run and did not reproduce, so this document does not claim it. Whether the frame is the app or the headless drag turning around at the far end is open: a trace taken before the hosted test (S6) decides it, and the slider is measured again then.
+**The slow frame, its cause and its fix.** On a build before the fix, each drag showed one isolated frame of 100 to 217 ms, with rest breaks on or off alike. A trace (the probe and the traces were kept outside the repository) found the cause in the app: the first time the map draws a moving truck, MapLibre compiles a WebGL program for the trucks circle layer, a constant colour with a per-feature radius that no other layer uses, and under headless software GL that compile blocks the GPU process for about 117 ms. The layer is empty while the slider sits at hour 0, because no truck is driving yet (`truckPoints`). The slider opens at hour 0 only for a departure under 30 minutes past the hour (`initialHour` in `timeline/grid.ts`), so the first draw landed on the first step of the drag, and the result of a run depended on the minute it was made. That is why the earlier runs disagreed.
 
-**Limits.** The browser drew with software WebGL, so a real phone and a real GPU are unmeasured. The first paint of the map and the time to draw a plan were not measured. The grid sizes come from the stand-in's cell-size setting and were not recounted in the final run. An earlier run of the same script, on a different Chromium build, saw one or two isolated frames of 50 to 133 ms per drag, at the press and at the far-end turn-around; they did not appear in that run, and the two builds differ, so the run did not show whether the app or the browser removed them; the current build shows one again (above). The drag was measured at commit `de0ce4b`; the rest-break and stop-weather screens added since were not measured again.
+The fix: when the slider first has no truck to show, the controller draws one truck at the first route's start for a single frame, under the endpoint marks, so the program is built when the plan appears; the next idle replaces it with what the hour says (`warmTrucks` in `map/controller.ts`). It does nothing when a truck is already on the road, so a departure at :45 is unchanged.
+
+Measured after the fix (the drag of `scripts/measure-slider.mjs`' probe, 390 by 844 with touch, software WebGL, no warm-up pass, one drag per run):
+
+| Departure | CPU | Runs | Frames over 50 ms | Largest gap |
+|---|---|---|---|---|
+| :10 (slider opens at hour 0) | 1x | 6, breaks off | 0 | 17 to 25 ms |
+| :10 | 4x | 6, breaks off | 0 | 26 to 34 ms |
+| :10 | 1x | 4, breaks on | 0 | 17 to 25 ms |
+| :45 | 1x | 6, breaks off | 0 | 17 to 25 ms |
+| :45 | 4x | 12, breaks off | 2 (one of 76 ms, one of 82 ms) | 25 to 82 ms |
+
+Before the fix, the same probe at :10 gave one gap of 100 to 133 ms in every run (1x and 4x, breaks on and off), and at :45 none in 16 runs. The two gaps at :45 under 4x slowdown are not the fix's doing: at :45 a truck is already on the road, so the warm-up never runs, and no WebGL program was linked during those drags; the machine was loaded (load average about 7). They are reported as measured. The real-GPU cost of the program compile is not measured. `measure-slider.mjs` takes `DEP_MINUTE` to pin the departure minute; measure at both a minute under 30 and one over 30, because the two open the slider differently.
+
+**Limits.** The browser drew with software WebGL, so a real phone and a real GPU are unmeasured. The first paint of the map and the time to draw a plan were not measured. The grid sizes come from the stand-in's cell-size setting and were not recounted in the final run. An earlier run of the same script, on a different Chromium build, saw one or two isolated frames of 50 to 133 ms per drag, at the press and at the far-end turn-around; they did not appear in that run, and the two builds differ, so the run did not show whether the app or the browser removed them; the cause is found below. The drag was measured at commit `de0ce4b`; the rest-break and stop-weather screens added since were not measured again.
 
 ## Build size
 

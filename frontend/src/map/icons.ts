@@ -1,4 +1,5 @@
 import { CIRCLE_PATH, GLYPH_STROKE, HATCH, RISK_STYLE, type RiskKey } from '../risk/levels';
+import { octagonPoints, STOP_MARK } from '../risk/stopGeometry';
 
 const SIZE = 24;
 const RATIO = 2;
@@ -35,51 +36,40 @@ export function glyphImage(key: RiskKey): ImageData {
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-const STOP_SIZE = 44;
-const STOP_INK = '#37474f';
-
 /**
  * The mark for a required stop and the weather it sits in: a dark octagon with a pause sign, a
  * shape and a colour that no risk glyph uses, with the level's own glyph on a white badge at its
- * corner. The level never rides on colour alone.
+ * corner. The level never rides on colour alone. Its geometry is `STOP_MARK`, which the key draws
+ * too.
  */
 export function stopImage(key: RiskKey): ImageData {
+  const { size, ink, paper, octagon, bars, badge, glyphScale } = STOP_MARK;
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = STOP_SIZE * RATIO;
+  canvas.width = canvas.height = size * RATIO;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(RATIO, RATIO);
   ctx.lineJoin = 'round';
   ctx.beginPath();
-  for (let i = 0; i < 8; i++) {
-    const angle = (Math.PI / 4) * i + Math.PI / 8;
-    const x = 17 + Math.cos(angle) * 14;
-    const y = 27 + Math.sin(angle) * 14;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
+  octagonPoints().forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
   ctx.closePath();
-  ctx.fillStyle = STOP_INK;
+  ctx.fillStyle = ink;
   ctx.fill();
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = paper;
+  ctx.lineWidth = octagon.rim;
   ctx.stroke();
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(12.2, 20.6, 3.6, 12.7);
-  ctx.fillRect(18.3, 20.6, 3.6, 12.7);
+  ctx.fillStyle = paper;
+  for (const bar of bars) ctx.fillRect(bar.x, bar.y, bar.width, bar.height);
   // The badge: a white disc with the level's glyph inside it.
   ctx.beginPath();
-  ctx.arc(32, 12, 12, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff';
+  ctx.arc(badge.cx, badge.cy, badge.r, 0, Math.PI * 2);
+  ctx.fillStyle = paper;
   ctx.fill();
-  ctx.strokeStyle = STOP_INK;
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = ink;
+  ctx.lineWidth = badge.rim;
   ctx.stroke();
-  // The glyph is drawn at 0.8 of its 24-unit box and the layer shows the mark at 0.85, so it
-  // reads at about 16 CSS px.
-  const scale = 0.8;
   ctx.save();
-  ctx.translate(32 - 12 * scale, 12 - 12 * scale);
-  ctx.scale(scale, scale);
+  ctx.translate(badge.cx - 12 * glyphScale, badge.cy - 12 * glyphScale);
+  ctx.scale(glyphScale, glyphScale);
   drawGlyph(ctx, key);
   ctx.restore();
   return ctx.getImageData(0, 0, canvas.width, canvas.height);

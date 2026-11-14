@@ -689,6 +689,7 @@ const routesBodies = () =>
     .map(([, init]) => JSON.parse(String((init as RequestInit).body)) as { rest_breaks: boolean });
 
 const BREAKS_NOTE = /Times include the federal rest breaks/;
+const STOP_KEY_ROW = /Required stop; the corner badge/;
 
 test('the rest-break switch is on the form, off at the start, and says what it adds and assumes', () => {
   useViewport('sheet');
@@ -746,6 +747,8 @@ test('with the switch off there is no stop UI: no note, no stop rows, no stop on
   expect(screen.queryByText(/driving \+/)).toBeNull();
   expect(screen.getByRole('button', { name: TRIP_BAR })).not.toHaveTextContent('rest breaks');
   expect(mapProps!.routes.every((r) => r.stops.length === 0)).toBe(true);
+  await screen.findByRole('button', { name: 'Hide key' });
+  expect(screen.queryByText(STOP_KEY_ROW)).toBeNull();
 });
 
 test('with the switch on the pane shows the note, the split, the stop rows and the trip bar says so', async () => {
@@ -759,6 +762,8 @@ test('with the switch on the pane shows the note, the split, the stop rows and t
 
   expect(await screen.findByText(BREAKS_NOTE)).toBeInTheDocument();
   expect(await screen.findByText('Route 2 is recommended')).toBeInTheDocument();
+  await screen.findByRole('button', { name: 'Hide key' });
+  expect(screen.getByText(STOP_KEY_ROW)).toBeInTheDocument();
   expect(
     screen.getAllByText(
       (_, el) =>
@@ -770,6 +775,13 @@ test('with the switch on the pane shows the note, the split, the stop rows and t
   expect(screen.getAllByText(/^Break · mile \d+$/)).toHaveLength(1);
   expect(screen.getAllByText(/^Rest · mile \d+$/)).toHaveLength(1);
   expect(screen.getByRole('button', { name: TRIP_BAR })).toHaveTextContent('with rest breaks');
+  // The trip bar's details wrap, so no separator can start a line.
+  expect(screen.getByRole('button', { name: TRIP_BAR })).not.toHaveTextContent('·');
+  // The note is one line; the rule and its assumptions sit behind a disclosure that holds them.
+  expect(screen.getByText('The rule and its assumptions')).toBeInTheDocument();
+  expect(
+    screen.getByText(/34 hours off after 60 hours of driving.*rested start/),
+  ).toBeInTheDocument();
 });
 
 test('the caption follows the answer, not the form: breaks asked for but not applied show none', async () => {

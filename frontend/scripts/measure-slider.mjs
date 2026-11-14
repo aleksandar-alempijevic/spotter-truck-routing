@@ -10,6 +10,11 @@
 //   4. PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs [CHROMIUM=/path/to/chrome] \
 //        node scripts/measure-slider.mjs http://127.0.0.1:4180/ [runs] [cpuRate]
 //
+// DEP_MINUTE=<0-59> pins the departure to that minute past the hour (the form's default is one
+// hour ahead). It matters: a departure under 30 minutes past the hour opens the slider at hour 0,
+// where no truck is driving, which is the case the trucks-layer warm-up exists for. Measure both,
+// for example DEP_MINUTE=10 and DEP_MINUTE=45.
+//
 // Playwright is not a dependency of the app. Prints one JSON document.
 const playwright = await import(process.env.PLAYWRIGHT_MODULE ?? 'playwright');
 const { chromium } = playwright;
@@ -44,6 +49,12 @@ async function plan(page) {
   await page.getByLabel('Destination').fill('Seattle');
   await page.getByRole('option', { name: 'Seattle, WA, United States' }).click();
   await page.getByLabel('Cargo weight (lb)').fill('36000');
+  if (process.env.DEP_MINUTE) {
+    await page.getByRole('button', { name: 'Pick a time' }).click();
+    const field = page.getByLabel('Departure date and time');
+    const value = await field.inputValue();
+    await field.fill(value.slice(0, 14) + process.env.DEP_MINUTE.padStart(2, '0'));
+  }
   await page.getByRole('button', { name: 'Plan routes' }).click();
   await page.getByRole('slider', { name: 'Forecast hour' }).waitFor();
   await page.waitForFunction(

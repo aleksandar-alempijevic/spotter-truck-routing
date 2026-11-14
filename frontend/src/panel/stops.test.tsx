@@ -4,6 +4,7 @@ import { stopEndMs } from '../plan/schedule';
 import type { Trip } from '../plan/trip';
 import { buildPlanView } from '../plan/view';
 import { buildRoutes, buildWeather, DALLAS, scenarioDestination } from '../test/fixtures';
+import { formatMiles } from '../plan/format';
 import { formatDuration } from '../time/zone';
 import { CheckpointList } from './CheckpointList';
 import { Quantities } from './Quantities';
@@ -265,4 +266,13 @@ test('a duration wraps between its quantities, never inside one', () => {
 
   const kept = [...document.querySelectorAll('span')].map((s) => s.textContent);
   expect(kept).toEqual(['3 d', '23 h', '06 min', '2,048 mi']);
+});
+
+test('what the formatters really print is kept in quantities', () => {
+  const text = `${formatDuration(3 * 86_400 + 23 * 3600 + 360)} · ${formatMiles(2630)} · ${formatDuration(1800)}`;
+
+  render(<Quantities text={text} />);
+
+  const kept = [...document.querySelectorAll('span')].map((s) => s.textContent);
+  expect(kept).toEqual(['3 d', '23 h', '06 min', '2,630 mi', '30 min']);
 });

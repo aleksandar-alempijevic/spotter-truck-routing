@@ -20,14 +20,14 @@ const cue = () =>
   [...document.querySelectorAll('[aria-hidden="true"]')].find((e) => e.textContent === 'More ▾');
 
 test('a key whose rows do not all fit shows a cue at its foot, and is a tab stop', () => {
-  render(<Legend open onToggle={() => {}} />);
+  render(<Legend open hasStops={false} onToggle={() => {}} />);
   expect(cue()).toBeTruthy();
   expect(list()).toHaveAttribute('tabindex', '0');
   expect(list()).toHaveAccessibleName('Map key, scrolls');
 });
 
 test('scrolled to the end the cue goes, and the list stays a tab stop', () => {
-  render(<Legend open onToggle={() => {}} />);
+  render(<Legend open hasStops={false} onToggle={() => {}} />);
   scrollTop = 200;
   act(() => void fireEvent.scroll(list()));
   expect(cue()).toBeFalsy();
@@ -36,19 +36,19 @@ test('scrolled to the end the cue goes, and the list stays a tab stop', () => {
 
 test('a key that fits has no cue and is not a tab stop', () => {
   vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(100);
-  render(<Legend open onToggle={() => {}} />);
+  render(<Legend open hasStops={false} onToggle={() => {}} />);
   expect(cue()).toBeFalsy();
   expect(list()).not.toHaveAttribute('tabindex');
 });
 
 test('a closed key has no list and no cue', () => {
-  render(<Legend open={false} onToggle={() => {}} />);
+  render(<Legend open={false} hasStops={false} onToggle={() => {}} />);
   expect(document.getElementById('map-legend')).toBeNull();
   expect(cue()).toBeFalsy();
 });
 
 test('the key explains the stop mark only when the plan has stops', () => {
-  const { rerender } = render(<Legend open onToggle={() => {}} />);
+  const { rerender } = render(<Legend open hasStops={false} onToggle={() => {}} />);
   expect(document.body.textContent).not.toContain('Required stop');
 
   rerender(<Legend open hasStops onToggle={() => {}} />);

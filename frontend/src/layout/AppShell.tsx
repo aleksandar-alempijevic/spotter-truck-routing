@@ -84,6 +84,8 @@ export function AppShell({
   const [legendChoice, setLegendChoice] = useState<boolean | null>(null);
   const viewportHeight = useViewportHeight();
   const hasPlan = submission !== null;
+  // No answer yet means no stops yet.
+  const planHasStops = plan.view?.routes.some((r) => r.stops.length > 0) ?? false;
   const showForm = formOpen || !hasPlan;
   const isSheet = mode === 'sheet';
   if (tapped && !isSheet) setTapped(null);
@@ -287,7 +289,7 @@ export function AppShell({
           {grid && hasPlan && !showForm && mapStatus !== 'failed' && (
             <Legend
               open={keyOpen}
-              hasStops={plan.view?.routes.some((r) => r.stops.length > 0)}
+              hasStops={planHasStops}
               onToggle={() => setLegendChoice(!keyOpen)}
             />
           )}

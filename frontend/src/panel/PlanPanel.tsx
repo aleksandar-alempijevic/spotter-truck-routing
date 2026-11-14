@@ -92,7 +92,7 @@ export function PlanPanel({
   );
 
   const routesColumn = (
-    <Stack spacing={2}>
+    <Stack spacing={tier === 'peek' ? 1 : 2}>
       {/* The panel's title, and where focus lands after "Plan routes": visible, so is its ring. */}
       <Typography
         ref={headingRef}
@@ -114,7 +114,9 @@ export function PlanPanel({
         {placeName(submission.trip.destination.label)}
       </Typography>
       <PlanHeadline state={state} submission={submission} onEditTrip={onEditTrip} />
-      {breaksApplied && routes.length > 0 && (
+      {/* Not at peek: the sheet is short there, the trip bar already says "with rest breaks", and the
+          route chips need the room. */}
+      {breaksApplied && routes.length > 0 && tier !== 'peek' && (
         <Box>
           <Typography variant="body2" color="text.secondary">
             {BREAKS_NOTE}
