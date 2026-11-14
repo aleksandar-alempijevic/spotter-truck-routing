@@ -58,6 +58,6 @@ test.each([
   fireEvent.mouseDown(screen.getByRole('combobox')); // opens the list
   await act(async () => void vi.advanceTimersByTime(500)); // past the debounce: the search starts
   expect(screen.queryByText(`Still searching. ${NOTICE}`) !== null).toBe(shown);
-  expect(asked.calls.at(-1)).toEqual([true, 6000]);
+  expect(asked.calls.at(-1)).toEqual([true, 10_000]);
   vi.useRealTimers();
 });

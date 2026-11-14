@@ -113,7 +113,9 @@ Settings come from environment variables, optionally from a git-ignored `.env` i
 
 ## Hosting
 
-The app is set up to run as one container on [Render's](https://render.com/) free plan, described by [render.yaml](render.yaml): the image above, a health check on `/api/health`, and auto-deploy expected to be off (the blueprint key and value are not yet verified against Render). Provider keys and the allowed-hosts list are set in the host's dashboard, never in the repository or the image. On Render the allowed hosts are the service's hostname and `localhost`: Render's port and health checker calls with Host `localhost`, and with the hostname alone two deploys failed with "Port scan timeout reached" (observed on 2026-11-14; the exact Host the checker sends is inferred from that fix and a [Render community report](https://community.render.com/t/health-check-invalid-http-host-header-localhost-10000/4438)).
+**Live app: <https://spotter-truck-routing-kxsl.onrender.com>.** It runs on Render's free plan, which puts a service to sleep after 15 minutes without requests, so the first visit may take about a minute.
+
+The app is set up to run as one container on [Render's](https://render.com/) free plan, described by [render.yaml](render.yaml): the image above, a health check on `/api/health`, and auto-deploy expected to be off (the blueprint key and value are not yet verified against Render). Provider keys and the allowed-hosts list are set in the host's dashboard, never in the repository or the image. On Render the allowed hosts are the service's hostname and `localhost`. Inferred from that fix and a [Render community report](https://community.render.com/t/health-check-invalid-http-host-header-localhost-10000/4438), not seen in our logs: Render's port and health checker calls with Host `localhost`. What was observed on 2026-11-14 is that with the hostname alone two deploys failed with "Port scan timeout reached".
 
 **The first load can take about a minute.** Render documents that a free service sleeps after 15 minutes without requests and takes about a minute to wake, and the first request after that waits for it; one idle check on 2026-11-14 measured it once: after 16 min 32 s with no requests, an address search got its 200 answer after 13.2 s, with the edge holding the request and no gateway page (that the instance had slept is inferred from the timing). Once the page has loaded, a slow address search or routes request says that the server may be waking up; the copy is present in the served bundle of the first deploy (observed 2026-11-14), which suggests Render passed `VITE_HOST_SLEEPS` to the image build.
 
@@ -122,10 +124,16 @@ The app is set up to run as one container on [Render's](https://render.com/) fre
 The hosted numbers below are from the Render free plan on 2026-11-14 and are labelled as hosted. They come from one run each, through the page, so treat them as examples, not as a distribution.
 
 - **Routes, warm host:** Dallas to Houston 2.4 s; Seattle to Miami (25 mi) 16.0 s; Los Angeles to Miami (10 mi) 13.6 s; Dallas to Seattle with rest breaks 10.9 s.
-- **Weather:** 1.0 to 3.3 s at 25 mi; 26.1 s for the 10-mile Los Angeles to Miami trip (926 forecast locations, including one wait of a rate-limit minute window that completed through the edge). Results were on screen 19.7 s and 40.5 s after the click for the two long trips.
+- **Weather:** 1.0 to 3.3 s for the three other trips (Dallas to Houston, Seattle to Miami at 25 mi, Dallas to Seattle); 26.1 s for the 10-mile Los Angeles to Miami trip (926 forecast locations, including one wait of a rate-limit minute window that completed through the edge). Results were on screen 19.7 s and 40.5 s after the click for the two long trips.
 - **Rest breaks on (Dallas to Seattle):** 17 stops, each with its own weather, and the stop marks and their key on the map.
-- **Slider, hosted, one drag per rate on the final build** (phone size, departure at :11): no frame over 50 ms at 1x or 4x slowdown; largest gap 41.8 ms and 23.8 ms.
+- **Slider, hosted, one drag per rate on the build deployed for the S6 rerun** (phone size, departure at :11): no frame over 50 ms at 1x or 4x slowdown; largest gap 41.8 ms and 23.8 ms.
 - **Wake:** see the first-load paragraph above.
+
+**Decisions the hosted run settled (2026-11-14).**
+- **Open-Meteo stays on the free plan, no paid key.** The runs showed no 503, though only at one time of day (the evidence leans to the free tier; it is not a guarantee). Decided by the owner.
+- **No compression in the app.** Cloudflare's edge already compresses: a weather answer of 164,882 B was 7,463 B with brotli, and the entry and map chunk are 203,813 B and 292,291 B as gzip. Decided by the owner.
+- **The Positron basemap stays.** The plan drew on it on the hosted service with no failures; every cell was Low, so the colour ramp was not judged against it.
+- **Switching the basemap is a build-time setting.** Set `VITE_BASEMAP_STYLE` to another style URL and redeploy; a Carto style is the named alternative and its URL is untested here. A style other than Positron needs the heatmap ramp and the halos re-measured first ([docs/architecture.md](docs/architecture.md#hosting)).
 
 More hosted detail is in [docs/performance.md](docs/performance.md#hosted-render-free-plan-2026-11-14).
 

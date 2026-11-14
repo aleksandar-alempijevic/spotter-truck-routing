@@ -22,19 +22,25 @@ const REFOCUS_GRACE_MS = 300;
 const query = (text: string) =>
   typeof window.matchMedia === 'function' ? window.matchMedia(text) : null;
 
+// The inputs a keyboard types into. A slider thumb, a checkbox or a button is not one.
+const TEXT_ENTRY = ['text', 'search', 'email', 'tel', 'url', 'password', 'number'];
+
 function textFieldFocused(): boolean {
   const el = document.activeElement;
   if (el instanceof HTMLTextAreaElement) return true;
-  return el instanceof HTMLInputElement && !['checkbox', 'radio', 'button'].includes(el.type);
+  return el instanceof HTMLInputElement && TEXT_ENTRY.includes(el.type);
 }
 
 let focusHeldUntil = 0;
 let current: LayoutMode | null = null;
+/** The page width the sheet was last chosen at: a keyboard does not change it, a turn does. */
+let sheetWidth = 0;
 
 /** For tests: forget the last layout and any held focus. */
 export function resetLayoutModeForTest(): void {
   focusHeldUntil = 0;
   current = null;
+  sheetWidth = 0;
 }
 
 function subscribe(onChange: () => void): () => void {
@@ -66,10 +72,18 @@ function read(): LayoutMode {
   // the keyboard closes (Chrome on iOS). So a sheet stays a sheet, by width alone, while a text
   // field is focused.
   const typing = textFieldFocused() || Date.now() < focusHeldUntil;
-  if (current === 'sheet' && mode !== 'sheet' && typing && query(PHONE_WIDTH_QUERY)?.matches) {
+  // The hold ends if the width changes: that is a turn of the phone, not a keyboard.
+  if (
+    current === 'sheet' &&
+    mode !== 'sheet' &&
+    typing &&
+    window.innerWidth === sheetWidth &&
+    query(PHONE_WIDTH_QUERY)?.matches
+  ) {
     return 'sheet';
   }
   current = mode;
+  if (mode === 'sheet') sheetWidth = window.innerWidth;
   return mode;
 }
 

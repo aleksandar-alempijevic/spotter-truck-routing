@@ -12,10 +12,11 @@ import { useDebouncedValue } from './useDebouncedValue';
 
 const SEARCH_DEBOUNCE_MS = 350;
 /**
- * Warm hosted searches took 1.0 to 4.45 s on 2026-11-14 and a wake about 13 s, so the copy waits
- * past the slowest warm search, with a margin.
+ * Warm hosted searches took up to 7.1 s on 2026-11-14 (a large city), a number-first search with no
+ * place named has taken 7 to 9 s, and a wake about 13 s. The copy waits past the slowest warm
+ * search, with a margin, and still shows for the last few seconds of a wake.
  */
-const WAKE_NOTICE_AFTER_MS = 6000;
+const WAKE_NOTICE_AFTER_MS = 10_000;
 const TOO_SHORT_HINT = `Type at least ${SEARCH_MIN_CHARS} characters`;
 
 /** A search that starts with a number and names no place is slow on the server. */

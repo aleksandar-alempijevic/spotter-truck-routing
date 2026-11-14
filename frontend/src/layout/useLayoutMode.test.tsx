@@ -16,6 +16,7 @@ function matches(text: string): boolean {
 function resize(w: number, h: number) {
   width = w;
   height = h;
+  vi.stubGlobal('innerWidth', w);
   act(() => listeners.forEach((listener) => listener()));
 }
 
@@ -24,6 +25,7 @@ beforeEach(() => {
   resetLayoutModeForTest();
   width = 390;
   height = 664;
+  vi.stubGlobal('innerWidth', 390);
   listeners.clear();
   vi.stubGlobal('matchMedia', (text: string) => ({
     get matches() {
@@ -126,4 +128,68 @@ test('a phone on its side with a short screen and no focused field gets the pane
   height = 320;
   const { result } = renderHook(() => useLayoutMode());
   expect(result.current).toBe('pane');
+});
+
+test('a control that is not a text field does not hold the layout', () => {
+  const { result } = renderHook(() => useLayoutMode());
+  for (const type of ['range', 'checkbox', 'radio', 'button']) {
+    const control = document.createElement('input');
+    control.type = type;
+    document.body.append(control);
+    act(() => control.focus());
+    act(() => void vi.advanceTimersByTime(400)); // past the grace after the last field
+
+    resize(390, 340);
+    expect(result.current, type).toBe('pane');
+    resize(390, 664);
+    expect(result.current, type).toBe('sheet');
+  }
+});
+
+test('turning a phone to landscape while a field is focused releases the hold', () => {
+  const { result } = renderHook(() => useLayoutMode());
+  act(() => field().focus());
+  resize(390, 340);
+  expect(result.current).toBe('sheet');
+
+  resize(844, 390); // a turn: the width changes, which a keyboard never does
+
+  expect(result.current).toBe('pane');
+});
+
+test('a phone under 600 px wide turned to landscape with a field focused gets the pane', () => {
+  width = 320;
+  height = 568;
+  vi.stubGlobal('innerWidth', 320);
+  const { result } = renderHook(() => useLayoutMode());
+  expect(result.current).toBe('sheet');
+  act(() => field().focus());
+
+  resize(568, 320); // still under 600 px wide, but a short screen now
+
+  expect(result.current).toBe('pane');
+});
+
+test('the listeners and the timer are removed on unmount', () => {
+  const add = vi.spyOn(document, 'addEventListener');
+  const remove = vi.spyOn(document, 'removeEventListener');
+  const { unmount } = renderHook(() => useLayoutMode());
+  const input = field();
+  act(() => input.focus());
+  act(() => void vi.advanceTimersByTime(400));
+  const before = vi.getTimerCount();
+  act(() => input.blur()); // starts the grace timer
+  expect(vi.getTimerCount()).toBeGreaterThan(before);
+  expect(listeners.size).toBeGreaterThan(0);
+
+  unmount();
+
+  for (const event of ['focusin', 'focusout']) {
+    const added = add.mock.calls.filter(([name]) => name === event).map(([, fn]) => fn);
+    const removed = remove.mock.calls.filter(([name]) => name === event).map(([, fn]) => fn);
+    expect(added.length).toBeGreaterThan(0);
+    for (const fn of added) expect(removed).toContain(fn);
+  }
+  expect(listeners.size).toBe(0);
+  expect(vi.getTimerCount()).toBe(before);
 });
