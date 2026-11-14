@@ -17,6 +17,8 @@ interface Props {
   nowMs?: number;
   /** The weather request failed, so the bar says so instead of waiting for the forecast. */
   weatherFailed?: boolean;
+  /** The routes request failed, so no weather will be asked for. */
+  routesFailed?: boolean;
 }
 
 const STEP_SX = { minWidth: 44, minHeight: 44, px: 0, fontWeight: 700, flexShrink: 0 } as const;
@@ -32,6 +34,7 @@ export function HourSlider({
   routes = [],
   nowMs = 0,
   weatherFailed = false,
+  routesFailed = false,
 }: Props) {
   const hour = useHour(holder);
   const last = model ? model.hourCount - 1 : 0;
@@ -62,9 +65,11 @@ export function HourSlider({
         <Typography variant="body2" component="span" noWrap sx={{ minWidth: 0 }}>
           {model
             ? `${label} · +${hour} h${atDeparture ? ' · departure' : ''}`
-            : weatherFailed
-              ? RISK_STYLE.unavailable.label
-              : 'Waiting for the forecast'}
+            : routesFailed
+              ? 'No routes, so no forecast'
+              : weatherFailed
+                ? RISK_STYLE.unavailable.label
+                : 'Waiting for the forecast'}
         </Typography>
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

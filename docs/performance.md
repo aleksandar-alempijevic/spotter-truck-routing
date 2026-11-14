@@ -77,6 +77,25 @@ Before the fix, the same probe at :10 gave one gap of 100 to 133 ms in every run
 - **Only the trucks program.** The fix removes the trucks layer's program from the drag, and the measurement no longer depends on the departure minute for that program only. In 3 of about 26 loaded runs a program for a line layer linked mid-drag instead, a late first compile of another layer; it is not covered by the fix and has not been traced.
 - **Noise.** Under the 4x slowdown at :45, two of 12 drags showed one 76 to 82 ms gap with no program built during the drag, on a loaded machine. They are reported, not explained.
 
+## Hosted (Render free plan, 2026-11-14)
+
+All figures here are from the hosted service, on 2026-11-14, one run each through the page, with the live providers. They show what a trip costs on the small free instance; they are not a distribution.
+
+| Trip | Routes | Weather | Forecast locations | Results on screen |
+|---|---|---|---|---|
+| Dallas to Houston, short | 2.38 s | 0.96 s | not recorded | not recorded |
+| Seattle to Miami, 25 mi | 16.03 s | 3.27 s | 517 | 19.7 s after the click |
+| Los Angeles to Miami, 10 mi | 13.61 s | 26.07 s | 926, with one minute-window wait completed through the edge | 40.5 s after the click |
+| Dallas to Seattle, rest breaks on | 10.88 s | 1.96 s | 410 | not recorded |
+
+- **Planning waits.** Warm routes took 2.4 to 16.0 s, against a laptop's worst of 14.7 s, so the wake copy on the routes wait appears only after 20 s. The wait across a rate-limit minute window completed through the edge.
+- **Rest breaks.** The Dallas to Seattle trip had 17 stops, each with its weather, and its stop marks and their key showed on the map.
+- **Idle wake.** After 16 min 32 s with no requests, an address search showed the wake copy at 4.6 s and got its 200 JSON answer after 13.2 s, with the edge holding the request and no gateway page. That the instance slept is inferred from the timing. The copy now waits 6 s for a search, because warm hosted searches took 1.0 to 4.45 s.
+- **Address search.** "New York, NY", "Boston, MA" and "Atlanta, GA" timed out at the 5 s limit then in force, every attempt; the limit is now 10 s.
+- **Compression and caching.** The edge compresses: the entry is 203,813 B and the map chunk 292,291 B as gzip, the API answers with brotli, and a weather answer was 164,882 B uncompressed and 7,463 B with brotli. Assets are not cached at the edge (`DYNAMIC`).
+- **Hosted slider.** One drag per rate on the final build, at phone size, with a departure at :11: no frame over 50 ms at 1x or 4x slowdown, and the largest gap 41.8 ms at 1x and 23.8 ms at 4x. That is a single drag at each rate, and still software rendering in the measuring browser, so a real phone is unmeasured.
+- **Open-Meteo.** No 503 in the runs, at one time of day only.
+
 ## Build size
 
 Sizes of the frontend build at commit `57091ed`, built from a `git archive` of that commit and reported by Vite (the worker's gzip size is `gzip -c`, because the build prints no figure for it):

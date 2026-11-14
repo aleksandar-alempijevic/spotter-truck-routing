@@ -294,6 +294,8 @@ test('a routes failure shows the message in the panel and plans again only when 
 
   expect(await screen.findByText('No truck route found')).toBeInTheDocument();
   expect(calls('/api/routes')).toBe(1);
+  // Nothing will ask for a forecast, so the slider does not say it is waiting for one.
+  expect(screen.queryByText('Waiting for the forecast')).not.toBeInTheDocument();
   fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Edit trip' }));
   expect(screen.getByRole('button', { name: 'Plan routes' })).toBeInTheDocument();
   expect(calls('/api/routes')).toBe(1);

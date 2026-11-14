@@ -11,8 +11,11 @@ import { canSearch, tooShortToSearch } from './validation';
 import { useDebouncedValue } from './useDebouncedValue';
 
 const SEARCH_DEBOUNCE_MS = 350;
-/** A search normally answers well within this; a longer wait is when the host may be waking. */
-const WAKE_NOTICE_AFTER_MS = 4000;
+/**
+ * Warm hosted searches took 1.0 to 4.45 s on 2026-11-14 and a wake about 13 s, so the copy waits
+ * past the slowest warm search, with a margin.
+ */
+const WAKE_NOTICE_AFTER_MS = 6000;
 const TOO_SHORT_HINT = `Type at least ${SEARCH_MIN_CHARS} characters`;
 
 /** A search that starts with a number and names no place is slow on the server. */

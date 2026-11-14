@@ -59,7 +59,7 @@ async def test_suggestions_carry_label_coordinates_zone_and_the_attribution(prov
     assert params["filter"] == "countrycode:us"
     assert params["text"] == "Spring"
     assert params["type"] == "city"
-    assert route.calls.last.request.extensions["timeout"]["read"] == 5
+    assert route.calls.last.request.extensions["timeout"]["read"] == 10
 
 
 async def test_a_timezone_given_as_a_plain_name_is_accepted(provider_mock):
@@ -234,7 +234,7 @@ async def test_an_empty_city_search_falls_back_once_to_the_untyped_search(provid
     assert first["type"] == "city"
     assert "type" not in second
     assert second["filter"] == "countrycode:us"
-    assert route.calls.last.request.extensions["timeout"]["read"] == 5
+    assert route.calls.last.request.extensions["timeout"]["read"] == 10
 
 
 async def test_a_city_search_that_finds_something_makes_no_second_call(provider_mock):
@@ -278,7 +278,7 @@ async def test_a_failed_city_search_is_an_error_and_is_not_retried_untyped(provi
     assert route.call_count == 1
 
 
-async def test_text_that_starts_with_a_number_keeps_the_untyped_search_and_waits_longer(
+async def test_text_that_starts_with_a_number_keeps_the_untyped_search(
     provider_mock,
 ):
     route = respond(provider_mock, place(formatted="1600 Pennsylvania Ave NW, Washington, DC"))
@@ -299,14 +299,14 @@ async def test_a_numeric_search_that_finds_nothing_is_not_repeated(provider_mock
     assert route.call_count == 1
 
 
-async def test_a_digit_later_in_the_text_is_untyped_with_the_ordinary_deadline(provider_mock):
+async def test_a_digit_later_in_the_text_is_untyped_with_the_same_deadline(provider_mock):
     route = respond(provider_mock, place())
 
     await search("Route 66, Tulsa")
 
     (only,) = sent(route)
     assert "type" not in only
-    assert route.calls.last.request.extensions["timeout"]["read"] == 5
+    assert route.calls.last.request.extensions["timeout"]["read"] == 10
 
 
 async def test_a_numeric_search_that_times_out_is_a_gateway_timeout(provider_mock):

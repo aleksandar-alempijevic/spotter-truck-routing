@@ -22,10 +22,10 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-test('the routes wait shows the notice after 15 s of waiting', () => {
+test('the routes wait shows the notice after 20 s of waiting', () => {
   render(<WaitStatus stage="routes" sinceMs={Date.now()} />);
   expect(screen.getByText(NOTICE)).toBeInTheDocument();
-  expect(asked.calls.at(-1)).toEqual([true, 15_000]);
+  expect(asked.calls.at(-1)).toEqual([true, 20_000]);
 });
 
 test('the weather wait never asks for it', () => {
@@ -58,6 +58,6 @@ test.each([
   fireEvent.mouseDown(screen.getByRole('combobox')); // opens the list
   await act(async () => void vi.advanceTimersByTime(500)); // past the debounce: the search starts
   expect(screen.queryByText(`Still searching. ${NOTICE}`) !== null).toBe(shown);
-  expect(asked.calls.at(-1)).toEqual([true, 4000]);
+  expect(asked.calls.at(-1)).toEqual([true, 6000]);
   vi.useRealTimers();
 });

@@ -115,11 +115,19 @@ Settings come from environment variables, optionally from a git-ignored `.env` i
 
 The app is set up to run as one container on [Render's](https://render.com/) free plan, described by [render.yaml](render.yaml): the image above, a health check on `/api/health`, and auto-deploy expected to be off (the blueprint key and value are not yet verified against Render). Provider keys and the allowed-hosts list are set in the host's dashboard, never in the repository or the image. On Render the allowed hosts are the service's hostname and `localhost`: Render's port and health checker calls with Host `localhost`, and with the hostname alone two deploys failed with "Port scan timeout reached" (observed on 2026-11-14; the exact Host the checker sends is inferred from that fix and a [Render community report](https://community.render.com/t/health-check-invalid-http-host-header-localhost-10000/4438)).
 
-**The first load can take about a minute.** Render documents that a free service sleeps after 15 minutes without requests and takes about a minute to wake, and the first request after that waits for it; the sleep and wake timing has not been measured here yet. Once the page has loaded, a slow address search or routes request says that the server may be waking up; the copy is present in the served bundle of the first deploy (observed 2026-11-14), which suggests Render passed `VITE_HOST_SLEEPS` to the image build.
+**The first load can take about a minute.** Render documents that a free service sleeps after 15 minutes without requests and takes about a minute to wake, and the first request after that waits for it; one idle check on 2026-11-14 measured it once: after 16 min 32 s with no requests, an address search got its 200 answer after 13.2 s, with the edge holding the request and no gateway page (that the instance had slept is inferred from the timing). Once the page has loaded, a slow address search or routes request says that the server may be waking up; the copy is present in the served bundle of the first deploy (observed 2026-11-14), which suggests Render passed `VITE_HOST_SLEEPS` to the image build.
 
 **What the hosted checks showed (2026-11-14).** The hashed assets are served with script and CSS types and `immutable`, the page is never cached, and the JSON 404 and 405 and the keyless 503 bodies come through the edge. A response held for 100, 130 and 160 s arrived intact, and origin 502, 503 and 504 answers kept the API's JSON body, so the edge cut seen in some reports was not observed. A request for the page with a foreign Host is refused at Cloudflare's edge with a 403.
 
-The hosted address and measurements of the hosted app will be added to this section when the service is running.
+The hosted numbers below are from the Render free plan on 2026-11-14 and are labelled as hosted. They come from one run each, through the page, so treat them as examples, not as a distribution.
+
+- **Routes, warm host:** Dallas to Houston 2.4 s; Seattle to Miami (25 mi) 16.0 s; Los Angeles to Miami (10 mi) 13.6 s; Dallas to Seattle with rest breaks 10.9 s.
+- **Weather:** 1.0 to 3.3 s at 25 mi; 26.1 s for the 10-mile Los Angeles to Miami trip (926 forecast locations, including one wait of a rate-limit minute window that completed through the edge). Results were on screen 19.7 s and 40.5 s after the click for the two long trips.
+- **Rest breaks on (Dallas to Seattle):** 17 stops, each with its own weather, and the stop marks and their key on the map.
+- **Slider, hosted, one drag per rate on the final build** (phone size, departure at :11): no frame over 50 ms at 1x or 4x slowdown; largest gap 41.8 ms and 23.8 ms.
+- **Wake:** see the first-load paragraph above.
+
+More hosted detail is in [docs/performance.md](docs/performance.md#hosted-render-free-plan-2026-11-14).
 
 ## Future work
 

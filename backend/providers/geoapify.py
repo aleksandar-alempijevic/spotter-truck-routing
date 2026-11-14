@@ -7,10 +7,13 @@ from .errors import MalformedResponse, ProviderNotConfigured, ProviderUnavailabl
 from .outbound import Outbound, UpstreamBadRequest
 
 AUTOCOMPLETE_URL = "https://api.geoapify.com/v1/geocode/autocomplete"
-CALL_TIMEOUT_S = 5.0
-NUMBER_FIRST_TIMEOUT_S = 10.0
-"""A search that starts with a house number and names no place is slow (7 to 9 s measured), and no
-filter or type speeds it up, so it gets a longer deadline."""
+CALL_TIMEOUT_S = 10.0
+"""The deadline of every Geoapify call. A search that starts with a house number and names no
+place is slow (7 to 9 s measured), and no filter or type speeds it up. On the hosted service
+(2026-11-14) a city search took 1.0 to 4.45 s, and "New York, NY", "Boston, MA" and "Atlanta, GA"
+timed out at the earlier 5 s every time. A city search that fails ends the request; only one that
+answers with nothing is followed by a second call, so the worst wait is two answers each just under
+this deadline, 20 s, and a failure is a 504 within 10 s."""
 SUGGESTION_LIMIT = 5
 
 ATTRIBUTION_TEXT = "Powered by Geoapify"
@@ -34,8 +37,7 @@ async def autocomplete(outbound: Outbound, api_key: str, text: str) -> list[Plac
     Text with no digit is a city or a place name, so it is searched as `type=city` first, which
     keeps "Salt Lake" from answering with a town in New Mexico; if that finds nothing, one more
     search runs without a type, so a depot name stays findable. Text with a digit keeps the
-    untyped search, since it can be an address, and one that starts with a number gets the longer
-    deadline.
+    untyped search, since it can be an address.
 
     A suggestion without a label, coordinates or time zone is dropped, because the UI could not
     place it or convert a departure time for it. An empty list is a normal answer. A call is
@@ -44,8 +46,7 @@ async def autocomplete(outbound: Outbound, api_key: str, text: str) -> list[Plac
     if not api_key:
         raise ProviderNotConfigured
     if any(char.isdigit() for char in text):
-        timeout = NUMBER_FIRST_TIMEOUT_S if text.lstrip()[:1].isdigit() else CALL_TIMEOUT_S
-        return await _search(outbound, api_key, text, place_type=None, timeout=timeout)
+        return await _search(outbound, api_key, text, place_type=None, timeout=CALL_TIMEOUT_S)
     cities = await _search(outbound, api_key, text, place_type="city", timeout=CALL_TIMEOUT_S)
     if cities:
         return cities

@@ -41,6 +41,14 @@ test('without a grid the slider is disabled and says what it waits for', () => {
   expect(screen.getByText('Waiting for the forecast')).toBeInTheDocument();
 });
 
+test('when the routes request has failed the slider says there is no forecast to wait for', () => {
+  render(
+    <HourSlider holder={createHourHolder()} model={null} zone="America/Chicago" routesFailed />,
+  );
+  expect(screen.getByText('No routes, so no forecast')).toBeInTheDocument();
+  expect(screen.queryByText('Waiting for the forecast')).not.toBeInTheDocument();
+});
+
 test('a slider change goes to the holder and nowhere else', () => {
   const holder = createHourHolder();
   const fetchMock = vi.fn();

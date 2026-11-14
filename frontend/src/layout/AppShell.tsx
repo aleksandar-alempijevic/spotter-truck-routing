@@ -244,6 +244,7 @@ export function AppShell({
         routes={plan.view?.routes}
         nowMs={submission?.startedAt}
         weatherFailed={plan.view?.weather === 'failed'}
+        routesFailed={plan.phase === 'routes_error'}
       />
     </Paper>
   );
