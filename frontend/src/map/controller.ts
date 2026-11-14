@@ -1000,7 +1000,7 @@ export class MapController {
     this.hideReadout();
     const stop = this.hit(point, [LAYER.stops])[0];
     if (stop) {
-      // A stop sits on the route like a checkpoint but has no reading: the list shows it.
+      // A stop sits on the route like a checkpoint but has no map popup: its weather is in the list.
       this.events.onSelectStop(stop.properties as unknown as StopRef);
       this.hidePopup();
       this.events.onSpot(null);

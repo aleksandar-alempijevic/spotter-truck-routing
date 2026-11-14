@@ -63,13 +63,13 @@ MAX_CHECKPOINTS_PER_ROUTE = 600
 room for a route of about 6,000 miles."""
 MAX_STOPS_PER_ROUTE = 100
 MAX_STOP_SECONDS = 48 * 3600
+"""The most stops a weather request may carry per route, and the longest one. A planned trip has
+about 2 stops per 11 hours of driving, and the longest stop is a 34-hour restart."""
 MAX_ROUTE_SECONDS = 30 * 24 * 3600
 """No trip here lasts 30 days: the bound keeps a number a hand-built body can make huge out of
 the ranking's arithmetic, where it would overflow into a 500."""
 MAX_ROUTE_MILES = 30_000.0
 """Most that the schema's own limits can describe: 600 checkpoints at the widest spacing, 50 mi."""
-"""The most stops a weather request may carry per route, and the longest one. A planned trip has
-about 2 stops per 11 hours of driving, and the longest stop is a 34-hour restart."""
 MAX_ID_LENGTH = 64
 MAX_WEATHER_ROUTES = 3
 SERVICE_LATITUDES = (15.0, 72.0)

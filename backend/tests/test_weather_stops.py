@@ -325,4 +325,5 @@ async def test_a_stop_mile_no_real_trip_reaches_is_a_422(provider_mock):
 
     assert response.status_code == 422
     assert set(response.json()) == {"code", "message"}
+    assert "less than or equal to" in response.json()["message"]  # its own field's bound
     assert calls == []
