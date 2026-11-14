@@ -31,7 +31,7 @@ MAX_TOMTOM_CALLS = 5
 MAX_LOCATIONS = 1500
 ORIGIN, DESTINATION = "Seattle", "Miami"
 SPACING_MILES = 25
-LOAD_LB = 80_000
+LOAD_LB = 47_000
 
 
 async def post(client: AsyncClient, path: str, body: dict) -> tuple[dict, float, int, int]:

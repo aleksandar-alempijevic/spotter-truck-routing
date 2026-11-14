@@ -5,7 +5,7 @@ Readings and limits the app applies where the assessment is silent. The rules fo
 ## Trip request
 
 - **Departure** is accepted from 15 minutes ago up to 48 hours ahead. A departure typed as "now" arrives slightly in the past, so the 15 minutes are accepted as given; anything earlier is rejected. The 48 hours match the longest forecast the heatmap slider shows. The departure carries a UTC offset, and every ETA the API returns is a UTC instant.
-- **Load weight** must be more than 0 and at most 80,000 lb, the US federal gross vehicle weight limit. The driver enters the cargo only. The routing provider is sent the cargo plus an assumed 33,000 lb for the empty tractor and trailer, in kilograms (the provider reads the number as kilograms without checking it), because it checks road weight limits against the gross weight. The 33,000 lb is a typical figure, not the weight of the driver's rig.
+- **Load weight** must be more than 0 and at most 47,000 lb: with the assumed 33,000 lb rig below, that keeps the gross weight within the 80,000 lb US federal limit. The driver enters the cargo only. The routing provider is sent the cargo plus an assumed 33,000 lb for the empty tractor and trailer, in kilograms (the provider reads the number as kilograms without checking it), because it checks road weight limits against the gross weight. The 33,000 lb is a typical figure, not the weight of the driver's rig.
 - **Origin and destination** must be valid coordinates and different points.
 - **Checkpoint spacing** is 10, 25 or 50 miles.
 - **Every time on screen is read in the origin's time zone,** labelled with it, because the driver sets the departure there; the arrival is also shown in the destination's zone when that differs. A departure typed as a clock time is read in the origin's zone, and "leave now" is the current instant.
@@ -34,7 +34,7 @@ A request with `rest_breaks` true adds the federal rest breaks to the ETAs and t
 - **A stop shows the worst weather over the stop.** The truck is parked through all of it, so a 10-hour rest is read at its start, at each top of the hour inside it and at its end, and the highest level is shown with the hour it was read for; a stop's start alone would miss a storm that arrives while the driver sleeps. A reading is classified exactly like a checkpoint's (same bands, load rules and no-forecast handling), and an hour the forecast does not reach is left out. Stops are not counted in a route's risk summary or in the ranking: the route is compared on the miles it drives.
 - **Ranking uses door-to-door time.** The rule is applied the same way to every route, so the route with the least driving time is always the one that arrives first and the order does not change; only the size of the time differences does, and it is step-shaped: a few minutes of TomTom's estimate either side of a limit can move an arrival by 10 hours.
 - **Long trips more often end past the forecast.** With breaks on, a trip of more than about a day at the wheel can end after the 96-hour forecast; those miles are counted as no forecast, never as Low.
-- **No trip with breaks on has been run against TomTom yet:** the rule is tested on synthetic and mocked routes, and the recorded live answer was made with breaks off.
+- **One trip with breaks on has been run against TomTom,** on the hosted app on 2026-11-14: Dallas to Seattle, 17 stops, each with its own weather. The rule is otherwise tested on synthetic and mocked routes, and the other recorded live answers were made with breaks off.
 
 ## Address search
 

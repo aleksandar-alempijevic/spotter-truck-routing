@@ -39,7 +39,7 @@ def test_a_valid_send_back_route_is_accepted():
     [
         pytest.param(0, id="zero"),
         pytest.param(-1, id="negative"),
-        pytest.param(80_001, id="over the limit"),
+        pytest.param(47_001, id="over the limit"),
         pytest.param(float("nan"), id="NaN"),
         pytest.param(float("inf"), id="infinite"),
     ],
@@ -50,7 +50,7 @@ def test_the_load_bounds_hold_on_the_shared_plan_parameters(load):
 
 
 def test_the_load_limit_itself_is_accepted():
-    assert PlanParams(load_lb=80_000, checkpoint_interval_miles=25).load_lb == 80_000
+    assert PlanParams(load_lb=47_000, checkpoint_interval_miles=25).load_lb == 47_000
 
 
 def test_the_routes_request_reuses_the_shared_definitions_of_its_two_fields():

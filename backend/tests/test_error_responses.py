@@ -12,7 +12,7 @@ ROUTES_BODY = {
     "origin": {"lat": 34.05, "lon": -118.24},
     "destination": {"lat": 40.71, "lon": -74.0},
     "departure": (datetime.now(UTC) + timedelta(hours=2)).isoformat(),
-    "load_lb": 60_000,
+    "load_lb": 45_000,
     "checkpoint_interval_miles": 50,
 }
 

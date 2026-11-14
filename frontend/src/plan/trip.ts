@@ -3,7 +3,7 @@ import type { AttributionOut, RoutesIn, Spacing, SuggestionOut } from '../api/ty
 export const SPACINGS: readonly Spacing[] = [10, 25, 50];
 export const DEFAULT_SPACING: Spacing = 25;
 /** The backend's bounds on the cargo weight; the form mirrors them. */
-export const MAX_LOAD_LB = 80_000;
+export const MAX_LOAD_LB = 47_000;
 /** Address search is sent only between these lengths; the backend refuses anything outside. */
 export const SEARCH_MIN_CHARS = 3;
 export const SEARCH_MAX_CHARS = 100;

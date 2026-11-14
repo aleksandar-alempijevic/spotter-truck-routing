@@ -33,7 +33,7 @@ It exists only to keep a time near year 9999 or year 1 from reaching the forecas
 adding a length or reading a stamp would overflow. It is wide on the past side on purpose: the
 weather request is resent as it was for a retry, hours after the plan was made, and a plan that
 is still open must not become an error. A time already past just has no forecast."""
-MAX_LOAD_LB = 80_000
+MAX_LOAD_LB = 47_000
 
 
 ErrorCode = Literal[
@@ -118,7 +118,7 @@ class RoutesIn(PlanParams):
             raise ValueError("origin and destination must be different points")
         now = utc_now()
         if not now - DEPARTURE_GRACE <= self.departure <= now + DEPARTURE_HORIZON:
-            raise ValueError("departure must be between now and 48 hours from now")
+            raise ValueError("departure must be from 15 minutes ago to 48 hours from now")
         return self
 
 

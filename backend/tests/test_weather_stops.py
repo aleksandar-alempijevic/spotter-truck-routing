@@ -62,7 +62,7 @@ async def test_a_request_without_stops_gets_an_empty_list_for_every_route(provid
     assert [r["stops"] for r in body["routes"]] == [[], []]
 
 
-@pytest.mark.parametrize("load", [20_000, 35_000, 80_000])
+@pytest.mark.parametrize("load", [20_000, 35_000, 47_000])
 @pytest.mark.parametrize(
     "wind", [10.0, 28.0, 38.0, 48.0, 60.0], ids=["low", "moderate", "high", "severe", "no travel"]
 )
@@ -88,7 +88,7 @@ async def test_the_load_rules_apply_to_a_stop_like_to_a_checkpoint(provider_mock
     # 38 mph is High; with more than 40,000 lb the load raises it to Severe.
     heavy = await read(
         provider_mock,
-        request(with_stops(stop()), load=60_000),
+        request(with_stops(stop()), load=45_000),
         wind=lambda lat, lon, hour: 38.0,
     )
 

@@ -1,6 +1,6 @@
 # Performance
 
-What was measured, on which build and how, and what was not measured. Every figure here comes from a recorded run; the scripts that make the runs are in the repository, so each can be repeated, except the WebGL program-link probe and the traces behind the slow-frame diagnosis, which are outside it. None of these numbers is from the hosted app.
+What was measured, on which build and how, and what was not measured. Every figure here comes from a recorded run; the scripts that make the runs are in the repository, so each can be repeated, except the WebGL program-link probe and the traces behind the slow-frame diagnosis, which are outside it. Only the "Hosted" section below is from the deployed app.
 
 ## Planning a trip (backend)
 

@@ -95,7 +95,7 @@ def route(route_id="route-1", *, lat=40.0, lon=-100.0, marks=(0, 10, 20), total=
     }
 
 
-def request(*routes, load=60_000, spacing=10):
+def request(*routes, load=45_000, spacing=10):
     return {"load_lb": load, "checkpoint_interval_miles": spacing, "routes": list(routes)}
 
 
@@ -162,7 +162,7 @@ async def test_the_response_has_every_part_the_ui_needs(provider_mock):
     body = response.json()
 
     assert response.status_code == 200
-    assert body["plan"] == {"load_lb": 60_000, "checkpoint_interval_miles": 10}
+    assert body["plan"] == {"load_lb": 45_000, "checkpoint_interval_miles": 10}
     assert body["departure"] == (NOW - timedelta(minutes=10)).isoformat().replace("+00:00", "Z")
     assert [r["id"] for r in body["routes"]] == ["route-1", "route-2"]
     first = body["routes"][0]

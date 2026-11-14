@@ -59,12 +59,12 @@ def test_snow_bands(snow, expected):
 
 def test_wind_55_is_no_travel_for_any_load():
     assert level_of(wind=55, load=0) is N
-    assert level_of(wind=55, load=80_000) is N
+    assert level_of(wind=55, load=47_000) is N
 
 
 @pytest.mark.parametrize(
     ("load", "expected"),
-    [(30_000, S), (30_000.1, N), (80_000, N)],
+    [(30_000, S), (30_000.1, N), (47_000, N)],
 )
 def test_wind_45_to_54_above_30000_lb_is_no_travel(load, expected):
     assert level_of(wind=45, load=load) is expected
@@ -73,7 +73,7 @@ def test_wind_45_to_54_above_30000_lb_is_no_travel(load, expected):
 
 @pytest.mark.parametrize(
     ("load", "expected"),
-    [(40_000, H), (40_000.1, S), (80_000, S)],
+    [(40_000, H), (40_000.1, S), (47_000, S)],
 )
 def test_wind_35_to_44_above_40000_lb_is_severe(load, expected):
     assert level_of(wind=35, load=load) is expected
@@ -81,13 +81,13 @@ def test_wind_35_to_44_above_40000_lb_is_severe(load, expected):
 
 
 def test_load_rules_do_not_apply_below_their_wind_bands():
-    assert level_of(wind=34.9, load=80_000) is M
-    assert level_of(wind=24.9, load=80_000) is L
+    assert level_of(wind=34.9, load=47_000) is M
+    assert level_of(wind=24.9, load=47_000) is L
 
 
 def test_load_does_not_change_rain_or_snow():
-    assert level_of(rain=0.25, load=80_000) is H
-    assert level_of(snow=1.0, load=80_000) is H
+    assert level_of(rain=0.25, load=47_000) is H
+    assert level_of(snow=1.0, load=47_000) is H
 
 
 def test_level_is_the_worst_of_the_three_conditions():
@@ -122,7 +122,7 @@ def test_load_raised_is_reported_only_when_a_load_rule_changed_the_deciding_wind
     assert classify_weather(WeatherReading(50, 0, 0), 35_000).load_raised is True
     assert classify_weather(WeatherReading(40, 0, 0), LIGHT).load_raised is False
     # Wind 55 is No Travel without any load rule.
-    assert classify_weather(WeatherReading(60, 0, 0), 80_000).load_raised is False
+    assert classify_weather(WeatherReading(60, 0, 0), 47_000).load_raised is False
     # Rain is already Severe, so the load rule changed nothing and rain is named.
     rainy = classify_weather(WeatherReading(40, 0.8, 0), 45_000)
     assert (rainy.level, rainy.condition, rainy.load_raised) == (S, Condition.RAIN, False)

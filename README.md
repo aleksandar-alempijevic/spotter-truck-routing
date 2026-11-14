@@ -29,7 +29,7 @@ The rules are in [docs/logic.md](docs/logic.md); this is the summary.
 
 [docs/assumptions.md](docs/assumptions.md) lists them all with their reasons. The ones that shape what a reviewer sees:
 
-- **Departure** is accepted from 15 minutes ago up to 48 hours ahead, the span of the heatmap slider. Load is more than 0 and at most 80,000 lb. Every time on screen is in the origin's time zone.
+- **Departure** is accepted from 15 minutes ago up to 48 hours ahead, the span of the heatmap slider. Load is more than 0 and at most 47,000 lb. Every time on screen is in the origin's time zone.
 - **Routes stay inside the US.** No route, alternative or via-city route passes through Canada, so a trip between the lower 48 and Alaska gets a "no route" message instead. See [docs/assumptions.md](docs/assumptions.md#routes-and-checkpoints).
 - **The truck weighs the cargo plus 33,000 lb.** The driver enters the cargo only; TomTom is sent the gross weight, using an assumed empty tractor-and-trailer weight ([docs/assumptions.md](docs/assumptions.md#trip-request)).
 - **Rest breaks are off by default.** The assessment does not ask for them, so by default an ETA is driving time only. A form switch adds the federal hours-of-service stops (49 CFR 395.3) and the trip's door-to-door duration: a 30-minute break after 8 hours of driving, a 10-hour rest after 11, and a 34-hour restart after 60 hours of driving in the cycle. The rule is one function, [backend/routing/rest_breaks.py](backend/routing/rest_breaks.py).

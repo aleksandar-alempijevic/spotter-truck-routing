@@ -25,7 +25,7 @@ async def call(**overrides):
         "origin": ORIGIN,
         "destination": DESTINATION,
         "departure": DEPARTURE,
-        "load_lb": 80_000,
+        "load_lb": 47_000,
         "alternatives": 2,
     }
     async with Outbound() as outbound:
@@ -33,13 +33,13 @@ async def call(**overrides):
 
 
 def test_pounds_convert_to_kilograms():
-    assert pounds_to_kilograms(80_000) == 36_287
+    assert pounds_to_kilograms(47_000) == 21_319
     assert pounds_to_kilograms(2.2046) == 1
 
 
 def test_gross_weight_adds_the_empty_rig_to_the_cargo():
     assert gross_weight_kilograms(0) == 14_969
-    assert gross_weight_kilograms(80_000) == 51_256
+    assert gross_weight_kilograms(47_000) == 36_287
 
 
 async def test_request_carries_kilograms_truck_mode_and_coded_instructions(provider_mock):
@@ -52,7 +52,7 @@ async def test_request_carries_kilograms_truck_mode_and_coded_instructions(provi
     request = route.calls.last.request
     params = request.url.params
     assert request.url.path.endswith("/41.00000,-100.00000:41.00000,-85.00000/json")
-    assert params["vehicleWeight"] == "51256"  # 80,000 lb + 33,000 lb rig
+    assert params["vehicleWeight"] == "36287"  # 47,000 lb + 33,000 lb rig
     assert params["travelMode"] == "truck"
     assert params["avoid"] == "borderCrossings"
     assert params["sectionType"] == "country"

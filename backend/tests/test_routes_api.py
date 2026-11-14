@@ -28,7 +28,7 @@ def payload(**overrides) -> dict:
         "origin": {"lat": LA[0], "lon": LA[1]},
         "destination": {"lat": NY[0], "lon": NY[1]},
         "departure": (datetime.now(UTC) + timedelta(hours=2)).isoformat(),
-        "load_lb": 60_000,
+        "load_lb": 45_000,
         "checkpoint_interval_miles": 50,
     }
     return {**body, **overrides}
@@ -88,7 +88,7 @@ async def test_three_provider_routes_need_no_fill(provider_mock, caplog):
     assert len(calls) == 1
     assert [r["id"] for r in body["routes"]] == ["route-1", "route-2", "route-3"]
     assert body["shortfall"] is None
-    assert body["load_lb"] == 60_000 and body["checkpoint_interval_miles"] == 50
+    assert body["load_lb"] == 45_000 and body["checkpoint_interval_miles"] == 50
     assert all(r["source"] == "provider" and r["via"] is None for r in body["routes"])
     times = [r["travel_time_seconds"] for r in body["routes"]]
     assert times == sorted(times)
@@ -130,7 +130,7 @@ async def test_the_request_reaches_tomtom_and_the_checkpoints_as_given(provider_
     ).json()
 
     request = calls[0]
-    assert request.url.params["vehicleWeight"] == "42184"  # 60,000 lb + 33,000 lb rig
+    assert request.url.params["vehicleWeight"] == "35380"  # 45,000 lb + 33,000 lb rig
     assert request.url.params["departAt"] == departure.isoformat()
     assert request.url.path.split("/")[-2] == (
         f"{LA[0]:.5f},{LA[1]:.5f}:{NY[0]:.5f},{NY[1]:.5f}"  # origin first, then destination
@@ -403,7 +403,7 @@ async def test_a_missing_key_is_a_clear_error_not_a_crash(settings):
     [
         pytest.param({"load_lb": 0}, id="zero load"),
         pytest.param({"load_lb": -5}, id="negative load"),
-        pytest.param({"load_lb": 80_001}, id="load over the limit"),
+        pytest.param({"load_lb": 47_001}, id="load over the limit"),
         pytest.param({"load_lb": "heavy"}, id="load not a number"),
         pytest.param({"checkpoint_interval_miles": 30}, id="interval not offered"),
         pytest.param({"origin": {"lat": 91, "lon": 0}}, id="latitude out of range"),
@@ -435,10 +435,20 @@ async def test_a_missing_field_is_a_validation_error():
 async def test_the_largest_load_and_the_smallest_whole_kilogram_are_accepted(provider_mock):
     calls = mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
 
-    assert (await post(payload(load_lb=80_000))).status_code == 200
+    assert (await post(payload(load_lb=47_000))).status_code == 200
     assert (await post(payload(load_lb=2.2046))).status_code == 200  # the smallest whole kilogram
 
-    assert [c.url.params["vehicleWeight"] for c in calls] == ["51256", "14970"]
+    assert [c.url.params["vehicleWeight"] for c in calls] == ["36287", "14970"]
+
+
+async def test_a_load_over_the_cap_is_a_validation_error(provider_mock):
+    calls = mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
+
+    response = await post(payload(load_lb=47_001))
+
+    assert response.status_code == 422
+    assert "load_lb" in response.json()["message"]
+    assert calls == []
 
 
 async def test_the_smallest_checkpoint_interval_is_accepted(provider_mock):

@@ -78,7 +78,7 @@ async def run_trip(client: AsyncClient, calls: list, origin: tuple, destination:
         "origin": {"lat": origin[0], "lon": origin[1]},
         "destination": {"lat": destination[0], "lon": destination[1]},
         "departure": departure.isoformat(),
-        "load_lb": 80_000,
+        "load_lb": 47_000,
         "checkpoint_interval_miles": 25,
     }
     first_call = len(calls)

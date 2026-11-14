@@ -37,7 +37,7 @@ test.each([
   ['-5', 'Use numbers only.'],
   ['0', 'The weight must be more than 0 lb.'],
   ['0.0', 'The weight must be more than 0 lb.'],
-  ['80,001', 'The weight can be at most 80,000 lb.'],
+  ['47,001', 'The weight can be at most 47,000 lb.'],
 ])('the load %j is refused with its reason', (text, error) => {
   expect(parseLoad(text)).toEqual({ error });
 });
