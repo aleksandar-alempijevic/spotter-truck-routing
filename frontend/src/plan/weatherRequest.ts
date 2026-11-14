@@ -10,6 +10,7 @@ export function buildWeatherBody(routes: RoutesOut): WeatherIn {
       travel_time_seconds: route.travel_time_seconds,
       total_miles: route.total_miles,
       checkpoints: route.checkpoints,
+      stops: route.stops,
     })),
   };
 }

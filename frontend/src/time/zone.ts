@@ -94,14 +94,21 @@ export function zoneName(ms: number, zone: string): string {
   return parts(ms, zone, { timeZoneName: 'long' }).timeZoneName ?? zone;
 }
 
-/** "4 h 05 min", "1 d 3 h", "35 min". */
+/**
+ * "35 min", "4 h 05 min", "1 d 3 h", "1 d 1 h 04 min": days, hours and minutes, each part that is
+ * not zero, so a day or more keeps its minutes like a shorter time does. Minutes after hours are
+ * two digits, and a zero hour between days and minutes is spelled out ("1 d 0 h 05 min").
+ */
 export function formatDuration(seconds: number): string {
   const totalMinutes = Math.round(Math.abs(seconds) / 60);
   const days = Math.floor(totalMinutes / 1440);
   const hours = Math.floor((totalMinutes % 1440) / 60);
   const minutes = totalMinutes % 60;
-  if (days > 0) return hours > 0 ? `${days} d ${hours} h` : `${days} d`;
-  if (hours > 0)
-    return minutes > 0 ? `${hours} h ${String(minutes).padStart(2, '0')} min` : `${hours} h`;
-  return `${minutes} min`;
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} d`);
+  if (hours > 0 || (days > 0 && minutes > 0)) parts.push(`${hours} h`);
+  if (minutes > 0 || parts.length === 0) {
+    parts.push(parts.length > 0 ? `${String(minutes).padStart(2, '0')} min` : `${minutes} min`);
+  }
+  return parts.join(' ');
 }

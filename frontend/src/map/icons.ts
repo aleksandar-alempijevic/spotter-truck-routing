@@ -3,12 +3,8 @@ import { CIRCLE_PATH, GLYPH_STROKE, HATCH, RISK_STYLE, type RiskKey } from '../r
 const SIZE = 24;
 const RATIO = 2;
 
-/** The glyph for a level or non-level as pixels, drawn from the same path the lists use. */
-export function glyphImage(key: RiskKey): ImageData {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = SIZE * RATIO;
-  const ctx = canvas.getContext('2d')!;
-  ctx.scale(RATIO, RATIO);
+/** Draws a level's glyph in the 24-unit box at the context's current origin and scale. */
+function drawGlyph(ctx: CanvasRenderingContext2D, key: RiskKey): void {
   const style = RISK_STYLE[key];
   const path = new Path2D(style.path);
   ctx.lineJoin = 'round';
@@ -19,6 +15,7 @@ export function glyphImage(key: RiskKey): ImageData {
     ctx.lineWidth = GLYPH_STROKE.outlineWidth;
     if (style.dashed) ctx.setLineDash([...GLYPH_STROKE.pendingDash]);
     ctx.stroke(path);
+    ctx.setLineDash([]);
   } else {
     ctx.fillStyle = style.color;
     ctx.fill(path);
@@ -26,25 +23,36 @@ export function glyphImage(key: RiskKey): ImageData {
     ctx.lineWidth = GLYPH_STROKE.solidWidth;
     ctx.stroke(path);
   }
-  return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-/**
- * The mark for a required stop: a dark octagon with a pause sign, a shape and a colour that no
- * risk glyph uses.
- */
-export function stopImage(): ImageData {
+/** The glyph for a level or non-level as pixels, drawn from the same path the lists use. */
+export function glyphImage(key: RiskKey): ImageData {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = SIZE * RATIO;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(RATIO, RATIO);
+  drawGlyph(ctx, key);
+  return ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+const STOP_SIZE = 34;
+
+/**
+ * The mark for a required stop and the weather it sits in: a dark octagon with a pause sign, a
+ * shape and a colour that no risk glyph uses, with the level's own glyph on a white badge at its
+ * corner. The level never rides on colour alone.
+ */
+export function stopImage(key: RiskKey): ImageData {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = STOP_SIZE * RATIO;
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(RATIO, RATIO);
   ctx.lineJoin = 'round';
   ctx.beginPath();
-  const centre = SIZE / 2;
   for (let i = 0; i < 8; i++) {
     const angle = (Math.PI / 4) * i + Math.PI / 8;
-    const x = centre + Math.cos(angle) * 10.5;
-    const y = centre + Math.sin(angle) * 10.5;
+    const x = 14 + Math.cos(angle) * 11;
+    const y = 20 + Math.sin(angle) * 11;
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
@@ -55,8 +63,22 @@ export function stopImage(): ImageData {
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(8.5, 7.5, 2.6, 9);
-  ctx.fillRect(12.9, 7.5, 2.6, 9);
+  ctx.fillRect(10.2, 15, 2.8, 10);
+  ctx.fillRect(15, 15, 2.8, 10);
+  // The badge: a white disc with the level's glyph inside it.
+  ctx.beginPath();
+  ctx.arc(25, 9, 8.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.strokeStyle = '#37474f';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  const scale = 0.62;
+  ctx.save();
+  ctx.translate(25 - 12 * scale, 9 - 12 * scale);
+  ctx.scale(scale, scale);
+  drawGlyph(ctx, key);
+  ctx.restore();
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 

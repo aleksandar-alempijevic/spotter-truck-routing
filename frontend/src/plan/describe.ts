@@ -21,7 +21,9 @@ const round = (n: number, places: number) => String(Math.round(n * 10 ** places)
  * What a checkpoint says about itself, in words. The list row and the hover popup both read from
  * here, so the two cannot disagree about a state.
  */
-export function describeCheckpoint(cp: CheckpointView): CheckpointDescription {
+export function describeCheckpoint(
+  cp: Pick<CheckpointView, 'risk' | 'conditions'>,
+): CheckpointDescription {
   const { risk, conditions: c } = cp;
   const level = riskLabel(risk);
   if (risk.kind === 'pending') {

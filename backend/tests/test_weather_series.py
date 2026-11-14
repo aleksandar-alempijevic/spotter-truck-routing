@@ -2,7 +2,14 @@ from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
-from weather import Conditions, ForecastSeries, conditions_at, conditions_by_hour, utc_hour
+from weather import (
+    Conditions,
+    ForecastSeries,
+    conditions_at,
+    conditions_by_hour,
+    instants_during,
+    utc_hour,
+)
 
 START = datetime(2026, 11, 13, 14, 0, tzinfo=UTC)
 
@@ -137,3 +144,38 @@ def test_the_utc_hour_is_the_top_of_the_hour_in_utc():
     belgrade = timezone(timedelta(hours=1))
 
     assert utc_hour(datetime(2026, 11, 13, 15, 59, 59, 5, tzinfo=belgrade)) == START
+
+
+def test_a_stop_is_read_at_its_start_every_top_of_the_hour_inside_it_and_its_end():
+    start = START + timedelta(minutes=20)
+
+    instants = instants_during(start, timedelta(hours=2, minutes=10))
+
+    assert instants == [
+        start,
+        START + timedelta(hours=1),
+        START + timedelta(hours=2),
+        start + timedelta(hours=2, minutes=10),
+    ]
+
+
+def test_a_stop_inside_one_hour_is_read_at_its_start_and_end():
+    start = START + timedelta(minutes=10)
+
+    assert instants_during(start, timedelta(minutes=30)) == [start, start + timedelta(minutes=30)]
+
+
+def test_a_stop_that_ends_on_the_hour_is_read_once_there_and_one_starting_on_it_is_not_doubled():
+    assert instants_during(START, timedelta(hours=2)) == [
+        START,
+        START + timedelta(hours=1),
+        START + timedelta(hours=2),
+    ]
+
+
+def test_hours_are_the_utc_hours_whatever_the_offset_of_the_instant_given():
+    start = datetime(2026, 11, 13, 9, 20, tzinfo=timezone(timedelta(hours=-5)))
+
+    instants = instants_during(start, timedelta(hours=2))
+
+    assert [i.astimezone(UTC).minute for i in instants] == [20, 0, 0, 20]

@@ -149,7 +149,7 @@ async def test_the_response_has_exactly_the_documented_fields(provider_mock):
 
     body = (await post(payload())).json()
 
-    send_back = {"id", "travel_time_seconds", "total_miles", "checkpoints"}
+    send_back = {"id", "travel_time_seconds", "total_miles", "checkpoints", "stops"}
     assert set(body) == {
         "load_lb",
         "checkpoint_interval_miles",
@@ -160,7 +160,7 @@ async def test_the_response_has_exactly_the_documented_fields(provider_mock):
     assert set(RouteCore.model_fields) == send_back
     assert set(PlanParams.model_fields) == {"load_lb", "checkpoint_interval_miles"}
     for route in body["routes"]:
-        assert set(route) == send_back | {"line", "source", "via", "driving_seconds", "stops"}
+        assert set(route) == send_back | {"line", "source", "via", "driving_seconds"}
         assert set(route["checkpoints"][0]) == {"mile", "lat", "lon", "eta"}
 
 

@@ -15,7 +15,14 @@ from .grid import (
     plan_locations,
 )
 from .lattice import Cell, cell_center, forecast_cell
-from .series import Conditions, ForecastSeries, conditions_at, conditions_by_hour, utc_hour
+from .series import (
+    Conditions,
+    ForecastSeries,
+    conditions_at,
+    conditions_by_hour,
+    instants_during,
+    utc_hour,
+)
 
 __all__ = [
     "Cell",
@@ -29,6 +36,7 @@ __all__ = [
     "conditions_at",
     "conditions_by_hour",
     "forecast_cell",
+    "instants_during",
     "longitude_span_coverable",
     "plan_locations",
     "utc_hour",

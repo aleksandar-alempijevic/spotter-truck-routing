@@ -27,7 +27,7 @@ export const LAYER = {
 
 export const ICON_PREFIX = 'risk-';
 export const HATCH_IMAGE = 'no-forecast-hatch';
-export const STOP_IMAGE = 'stop-mark';
+export const STOP_ICON_PREFIX = 'stop-';
 
 /** The level a cell shows: the hour's diff as feature state, else the level it was built with. */
 const cellLevel: ExpressionSpecification = ['coalesce', ['feature-state', 'level'], ['get', 'l']];

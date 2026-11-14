@@ -576,6 +576,7 @@
           "risk": { "level": "low", "condition": null, "load_raised": false }
         }
       ],
+      "stops": [],
       "summary": {
         "low_miles": 1398.3815765926986,
         "moderate_miles": 0.0,
@@ -1270,6 +1271,7 @@
           "risk": { "level": "low", "condition": null, "load_raised": false }
         }
       ],
+      "stops": [],
       "summary": {
         "low_miles": 1627.8374294122325,
         "moderate_miles": 25.0,
@@ -2004,6 +2006,7 @@
           "risk": { "level": "low", "condition": null, "load_raised": false }
         }
       ],
+      "stops": [],
       "summary": {
         "low_miles": 1740.9860166626897,
         "moderate_miles": 25.0,

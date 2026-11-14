@@ -17,6 +17,7 @@ import type {
   WeatherCheckpointOut,
   WeatherOut,
   WeatherRouteOut,
+  WeatherStopOut,
 } from '../api/types';
 
 type LatLon = readonly [number, number];
@@ -443,6 +444,22 @@ function weatherCheckpoint(
   };
 }
 
+/**
+ * A stop's weather in the scenario: the level of the checkpoint nearest to it on the route, read
+ * at the stop's start. (The server reads the worst hour the stop spans; the stand-in need not.)
+ */
+function weatherStop(
+  route: RouteOut,
+  stop: StopOut,
+  levelOfCheckpoint: (index: number) => Level | null,
+): WeatherStopOut {
+  const last = route.checkpoints.length - 1;
+  const nearest = Math.min(last, Math.max(0, Math.round((stop.mile / route.total_miles) * last)));
+  const level = levelOfCheckpoint(nearest);
+  const { weather, risk } = weatherCheckpoint(stop.mile, level, false);
+  return { mile: stop.mile, at: level === null ? null : stop.starts_at, weather, risk };
+}
+
 function summarize(route: RouteOut, checkpoints: WeatherCheckpointOut[]): RouteSummaryOut {
   const miles: Record<Level | 'none', number> = {
     low: 0,
@@ -593,7 +610,10 @@ export function buildWeather(
     });
     const summary = summarize(route, checkpoints);
     summaries.set(route.id, summary);
-    return { id: route.id, checkpoints, summary };
+    const stops = route.stops.map((stop) =>
+      weatherStop(route, stop, (i) => checkpoints[i].risk?.level ?? null),
+    );
+    return { id: route.id, checkpoints, stops, summary };
   });
   return {
     plan: { load_lb: options.loadLb ?? 36_000, checkpoint_interval_miles: spacing },

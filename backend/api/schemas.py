@@ -47,6 +47,10 @@ different advice from the person who sent the request (see `api/errors.py`)."""
 MAX_CHECKPOINTS_PER_ROUTE = 600
 """The longest test route (about 3,560 miles) has 357 checkpoints at 10-mile spacing; this leaves
 room for a route of about 6,000 miles."""
+MAX_STOPS_PER_ROUTE = 100
+MAX_STOP_SECONDS = 48 * 3600
+"""The most stops a weather request may carry per route, and the longest one. A planned trip has
+about 2 stops per 11 hours of driving, and the longest stop is a 34-hour restart."""
 MAX_ID_LENGTH = 64
 MAX_WEATHER_ROUTES = 3
 SERVICE_LATITUDES = (15.0, 72.0)
@@ -108,6 +112,18 @@ class CheckpointOut(Schema):
     the mark; with them off it is driving time only."""
 
 
+class StopCore(Schema):
+    """A required stop as the weather request sends it back: where and when, to read its weather."""
+
+    kind: StopKind
+    """A 30-minute break, a 10-hour rest or a 34-hour restart."""
+    mile: float = Field(ge=0, allow_inf_nan=False)
+    lat: Latitude
+    lon: Longitude
+    starts_at: AwareDatetime
+    duration_seconds: int = Field(gt=0, le=MAX_STOP_SECONDS)
+
+
 class RouteCore(Schema):
     """The part of a route the weather request sends back; the line is never sent back."""
 
@@ -117,6 +133,9 @@ class RouteCore(Schema):
     driving time."""
     total_miles: float = Field(ge=0, allow_inf_nan=False)
     checkpoints: list[CheckpointOut] = Field(min_length=1, max_length=MAX_CHECKPOINTS_PER_ROUTE)
+    stops: list[StopCore] = Field(default_factory=list, max_length=MAX_STOPS_PER_ROUTE)
+    """The required stops in time order; empty with rest breaks off. Their weather is read, and
+    they take no part in the route summary or the ranking."""
 
 
 class ViaOut(Schema):
@@ -125,13 +144,8 @@ class ViaOut(Schema):
     lon: float
 
 
-class StopOut(Schema):
-    kind: StopKind
-    """A 30-minute break, a 10-hour rest or a 34-hour restart."""
-    mile: float
-    lat: Latitude
-    lon: Longitude
-    starts_at: AwareDatetime
+class StopOut(StopCore):
+    # Built from the planner's `RouteStop`, whose duration is a float of seconds.
     duration_seconds: int
 
     @staticmethod
@@ -248,8 +262,24 @@ def _check_marks(route: RouteCore, interval_miles: float) -> None:
             f"{SERVICE_LATITUDES[0]:g} to {SERVICE_LATITUDES[1]:g}, longitude "
             f"{SERVICE_LONGITUDES[0]:g} to {SERVICE_LONGITUDES[1]:g})",
         )
+    if not all(
+        SERVICE_LATITUDES[0] <= s.lat <= SERVICE_LATITUDES[1]
+        and SERVICE_LONGITUDES[0] <= s.lon <= SERVICE_LONGITUDES[1]
+        for s in route.stops
+    ):
+        raise PydanticCustomError(
+            OUTSIDE_SERVICE_AREA,
+            f"{where}: stops must lie in the service area (latitude "
+            f"{SERVICE_LATITUDES[0]:g} to {SERVICE_LATITUDES[1]:g}, longitude "
+            f"{SERVICE_LONGITUDES[0]:g} to {SERVICE_LONGITUDES[1]:g})",
+        )
     if marks[0] != 0:
         raise ValueError(f"{where}: the first checkpoint must be at mile 0")
+    if any(stop.mile > route.total_miles for stop in route.stops):
+        raise ValueError(f"{where}: a stop lies beyond the end of the route")
+    starts = [stop.starts_at for stop in route.stops]
+    if starts != sorted(starts):
+        raise ValueError(f"{where}: stops must be in time order")
     if marks[-1] > route.total_miles:
         raise ValueError(f"{where}: a checkpoint lies beyond the end of the route")
     for earlier, later in zip(route.checkpoints, route.checkpoints[1:], strict=False):
@@ -290,6 +320,18 @@ class WeatherCheckpointOut(Schema):
     risk: RiskOut | None
 
 
+class WeatherStopOut(Schema):
+    """The weather a parked truck sits in: the worst the forecast gives over the stop, classified
+    exactly as a checkpoint's is."""
+
+    mile: float
+    at: AwareDatetime | None
+    """The instant within the stop whose conditions are shown; null when no forecast reaches it."""
+    weather: ConditionsOut | None
+    """Null when the forecast does not reach the stop; then `risk` is null too."""
+    risk: RiskOut | None
+
+
 class RouteSummaryOut(Schema):
     low_miles: float
     moderate_miles: float
@@ -306,6 +348,8 @@ class WeatherRouteOut(Schema):
     id: str
     checkpoints: list[WeatherCheckpointOut]
     """In the request's order."""
+    stops: list[WeatherStopOut]
+    """One per stop of the request, in its order. Not part of the summary or the ranking."""
     summary: RouteSummaryOut
 
 

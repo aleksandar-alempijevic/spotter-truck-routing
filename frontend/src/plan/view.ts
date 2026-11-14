@@ -3,6 +3,7 @@ import type {
   ConditionsOut,
   StopOut,
   RankingOut,
+  RiskOut,
   RouteSummaryOut,
   RoutesOut,
   WeatherOut,
@@ -39,6 +40,14 @@ export interface StopView {
   startMs: number;
   endMs: number;
   durationSeconds: number;
+  /**
+   * The weather a parked truck sits in: the worst the forecast gives over the stop. Read exactly
+   * as a checkpoint's is, and kept out of the route's risk and summary.
+   */
+  risk: RiskState;
+  conditions: ConditionsOut | null;
+  /** The instant within the stop that the reading is for; null without a forecast. */
+  readAtMs: number | null;
 }
 
 /** One stop of one route, by route id and index in its stop list. */
@@ -97,12 +106,29 @@ export function checkAligned(routes: RoutesOut, weather: WeatherOut): void {
     const w = byId.get(route.id);
     if (!w) bad(`missing ${route.id}`);
     else if (w.checkpoints.length !== route.checkpoints.length) bad(`${route.id} checkpoint count`);
+    else if (w.stops.length !== route.stops.length) bad(`${route.id} stop count`);
   }
   const known = new Set(routes.routes.map((r) => r.id));
   if (weather.ranking.recommended_id !== null && !known.has(weather.ranking.recommended_id)) {
     bad('recommended route');
   }
   if (weather.ranking.routes.some((r) => !known.has(r.id))) bad('ranked route');
+}
+
+/** A reading's risk: not in yet, unavailable after a failure, none without a forecast, or a level. */
+function riskOf(
+  risk: RiskOut | null | undefined,
+  missing: boolean,
+  weatherFailed: boolean,
+): RiskState {
+  if (missing) return { kind: weatherFailed ? 'unavailable' : 'pending' };
+  if (!risk) return { kind: 'none' };
+  return {
+    kind: 'level',
+    level: risk.level,
+    condition: risk.condition,
+    loadRaised: risk.load_raised,
+  };
 }
 
 /** Joins the routes answer with the weather answer, by route id and checkpoint index. */
@@ -125,16 +151,7 @@ export function buildPlanView(
       const w = weatherById.get(route.id);
       const checkpoints: CheckpointView[] = route.checkpoints.map((cp, index) => {
         const wc = w?.checkpoints[index];
-        const risk: RiskState = !wc
-          ? { kind: weatherFailed ? 'unavailable' : 'pending' }
-          : wc.risk
-            ? {
-                kind: 'level',
-                level: wc.risk.level,
-                condition: wc.risk.condition,
-                loadRaised: wc.risk.load_raised,
-              }
-            : { kind: 'none' };
+        const risk = riskOf(wc?.risk, !wc, weatherFailed);
         return {
           index,
           mile: cp.mile,
@@ -151,16 +168,22 @@ export function buildPlanView(
         via: route.via?.name ?? null,
         travelSeconds: route.travel_time_seconds,
         drivingSeconds: route.driving_seconds,
-        stops: route.stops.map((stop, index) => ({
-          index,
-          kind: stop.kind,
-          mile: stop.mile,
-          lat: stop.lat,
-          lon: stop.lon,
-          startMs: Date.parse(stop.starts_at),
-          endMs: Date.parse(stop.starts_at) + stop.duration_seconds * 1000,
-          durationSeconds: stop.duration_seconds,
-        })),
+        stops: route.stops.map((stop, index) => {
+          const ws = w?.stops[index];
+          return {
+            index,
+            kind: stop.kind,
+            mile: stop.mile,
+            lat: stop.lat,
+            lon: stop.lon,
+            startMs: Date.parse(stop.starts_at),
+            endMs: Date.parse(stop.starts_at) + stop.duration_seconds * 1000,
+            durationSeconds: stop.duration_seconds,
+            risk: riskOf(ws?.risk, !ws, weatherFailed),
+            conditions: ws?.weather ?? null,
+            readAtMs: ws?.at ? Date.parse(ws.at) : null,
+          };
+        }),
         miles: route.total_miles,
         line: route.line,
         checkpoints,

@@ -12,6 +12,7 @@ import {
   stopPoints,
   truckPoints,
 } from './features';
+import { riskKey } from '../risk/levels';
 import { gridFillColor } from './layers';
 
 const departure = '2026-11-20T14:00:00Z';
@@ -117,7 +118,11 @@ test('stops are marks for the selected route only, one per stop, none when break
 
   expect(marks.features).toHaveLength(selected.stops.length);
   expect(marks.features.map((f) => f.properties)).toEqual(
-    selected.stops.map((s) => ({ routeId: selected.id, index: s.index, icon: 'stop' })),
+    selected.stops.map((s) => ({
+      routeId: selected.id,
+      index: s.index,
+      icon: riskKey(s.risk),
+    })),
   );
   expect(marks.features[0].geometry.coordinates).toEqual([
     selected.stops[0].lon,
@@ -125,4 +130,17 @@ test('stops are marks for the selected route only, one per stop, none when break
   ]);
   expect(stopPoints(on.routes, null).features).toEqual([]);
   expect(stopPoints(ready.routes, ready.routes[0].id).features).toEqual([]);
+});
+
+test('a stop mark carries the level of the weather it sits in, and pending before it lands', () => {
+  const routes = buildRoutes('mixed', { departure, breaks: true });
+  const weatherAnswer = buildWeather('mixed', { departure, breaks: true });
+  const id = routes.routes[0].id;
+
+  const waiting = stopPoints(buildPlanView(routes).routes, id);
+  const landed = stopPoints(buildPlanView(routes, weatherAnswer).routes, id);
+
+  expect(waiting.features.every((f) => f.properties.icon === 'pending')).toBe(true);
+  const expected = weatherAnswer.routes[0].stops.map((s) => s.risk?.level ?? 'none');
+  expect(landed.features.map((f) => f.properties.icon)).toEqual(expected);
 });

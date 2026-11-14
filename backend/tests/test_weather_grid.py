@@ -213,3 +213,33 @@ def test_cells_beyond_a_pole_are_absent_from_the_corridor():
     # Display row 179 is 89.5 to 90.0 (centre 89.75), the last on the map. Row 180 would be
     # centred at 90.25, 16 miles from the route: in the corridor if it were not left out.
     assert rows == {179}
+
+
+def test_a_stop_in_a_cell_a_checkpoint_already_holds_adds_no_location():
+    route = eastward(40.05, -100.0, -99.0, 4)
+
+    plan = plan_locations([route], stops=[(route[0][0] + 0.001, route[0][1] + 0.001)])
+
+    assert plan.stop_only_cells == ()
+    assert plan.cells == plan_locations([route]).cells
+
+
+def test_a_stop_in_a_new_cell_adds_that_cell_once_after_the_others():
+    route = eastward(40.05, -100.0, -99.0, 4)
+    between = (40.05, -99.65)  # between checkpoints 0.25 degrees apart: a cell none of them holds
+    base = plan_locations([route])
+
+    plan = plan_locations([route], stops=[between, (between[0] + 0.001, between[1] + 0.001)])
+
+    assert plan.stop_only_cells == (forecast_cell(between),)
+    assert plan.cells == base.cells + plan.stop_only_cells
+    assert plan.grid == base.grid  # a stop never changes what colours a display cell
+
+
+def test_stop_cells_count_toward_the_bound():
+    route = eastward(40.05, -100.0, -99.0, 4)
+    base = plan_locations([route])
+
+    plan_locations([route], max_locations=len(base.cells))
+    with pytest.raises(TooManyLocations):
+        plan_locations([route], stops=[(40.05, -99.65)], max_locations=len(base.cells))

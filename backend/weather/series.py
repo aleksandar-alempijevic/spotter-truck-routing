@@ -49,6 +49,22 @@ def utc_hour(instant: datetime) -> datetime:
     return instant.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
 
 
+def instants_during(start: datetime, duration: timedelta) -> list[datetime]:
+    """The instants a parked truck is read at: its start, every top of the UTC hour inside the
+    stop, and its end, in order. A forecast stamp is an hour, so these are the readings the
+    stop passes through; a stop shorter than an hour has its start and end.
+    """
+    end = start + duration
+    instants = [start]
+    tick = utc_hour(start) + HOUR
+    while tick < end:
+        instants.append(tick)
+        tick += HOUR
+    if end > start:
+        instants.append(end)
+    return instants
+
+
 def conditions_at(series: ForecastSeries, instant: datetime) -> Conditions | None:
     """The conditions at `instant`, or None when the series gives no forecast for it.
 

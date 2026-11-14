@@ -126,6 +126,7 @@ test('the weather request is the send-back subset and nothing else', () => {
   expect(Object.keys(body.routes[0]).sort()).toEqual([
     'checkpoints',
     'id',
+    'stops',
     'total_miles',
     'travel_time_seconds',
   ]);
@@ -187,4 +188,84 @@ test('stops never enter the checkpoint list, so checkpoint indexes and the weath
     expect(route.checkpoints).toHaveLength(weather.routes[r].checkpoints.length);
   });
   expect(() => checkAligned(on, weather)).not.toThrow();
+});
+
+test("the weather request carries each route's stops in the send-back subset", () => {
+  const routes = buildRoutes('mixed', { departure, breaks: true });
+
+  const body = buildWeatherBody(routes);
+
+  body.routes.forEach((route, i) => {
+    expect(route.stops).toEqual(routes.routes[i].stops);
+    expect(route.stops!.length).toBeGreaterThan(0);
+    expect(Object.keys(route.stops![0]).sort()).toEqual([
+      'duration_seconds',
+      'kind',
+      'lat',
+      'lon',
+      'mile',
+      'starts_at',
+    ]);
+  });
+  expect(buildWeatherBody(buildRoutes('mixed', { departure })).routes[0].stops).toEqual([]);
+});
+
+test('a stop reads its weather like a checkpoint: a level, no forecast, pending or unavailable', () => {
+  const routes = buildRoutes('mixed', { departure, breaks: true });
+  const weather = buildWeather('mixed', { departure, breaks: true });
+  weather.routes[0].stops[0] = { mile: 1, at: null, weather: null, risk: null };
+
+  const view = buildPlanView(routes, weather);
+  const [none, level] = view.routes[0].stops;
+
+  expect(none.risk).toEqual({ kind: 'none' });
+  expect(none.conditions).toBeNull();
+  expect(none.readAtMs).toBeNull();
+  expect(level.risk.kind).toBe('level');
+  expect(level.conditions).not.toBeNull();
+  expect(level.readAtMs).toBe(Date.parse(weather.routes[0].stops[1].at!));
+  expect(buildPlanView(routes).routes[0].stops.every((s) => s.risk.kind === 'pending')).toBe(true);
+  expect(
+    buildPlanView(routes, undefined, true).routes[0].stops.every(
+      (s) => s.risk.kind === 'unavailable',
+    ),
+  ).toBe(true);
+});
+
+test("stops take no part in a route's risk, summary or ranking, however bad their weather", () => {
+  const routes = buildRoutes('mixed', { departure, breaks: true });
+  const calm = buildWeather('mixed', { departure, breaks: true });
+  const stormy = structuredClone(calm);
+  for (const route of stormy.routes) {
+    route.stops = route.stops.map((stop) => ({
+      ...stop,
+      weather: { wind_mph: 70, gust_mph: 90, rain_in_per_hr: 0, snow_in_per_hr: 0 },
+      risk: { level: 'no_travel', condition: 'wind', load_raised: false },
+    }));
+  }
+
+  const before = buildPlanView(routes, calm);
+  const after = buildPlanView(routes, stormy);
+
+  expect(after.routes[0].stops.every((s) => s.risk.kind === 'level')).toBe(true);
+  after.routes.forEach((route, i) => {
+    expect(route.risk).toEqual(before.routes[i].risk);
+    expect(route.summary).toEqual(before.routes[i].summary);
+    expect(route.rank).toBe(before.routes[i].rank);
+    expect(route.checkpoints.map((c) => c.risk)).toEqual(
+      before.routes[i].checkpoints.map((c) => c.risk),
+    );
+  });
+  expect(after.ranking).toEqual(before.ranking);
+  expect(after.routes.some((r) => r.risk.kind === 'level' && r.risk.level === 'no_travel')).toBe(
+    before.routes.some((r) => r.risk.kind === 'level' && r.risk.level === 'no_travel'),
+  );
+});
+
+test('a weather answer with another number of stops than its routes is not aligned', () => {
+  const routes = buildRoutes('mixed', { departure, breaks: true });
+  const weather = buildWeather('mixed', { departure, breaks: true });
+  weather.routes[1].stops.pop();
+
+  expect(() => checkAligned(routes, weather)).toThrow(ApiError);
 });

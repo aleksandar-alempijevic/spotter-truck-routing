@@ -77,6 +77,12 @@ test.each([
   [3600, '1 h'],
   [4 * 3600 + 5 * 60, '4 h 05 min'],
   [27 * 3600, '1 d 3 h'],
+  [49 * 3600, '2 d 1 h'],
+  [48 * 3600, '2 d'],
+  [25 * 3600 + 4 * 60, '1 d 1 h 04 min'],
+  [29 * 3600 + 35 * 60, '1 d 5 h 35 min'],
+  [24 * 3600 + 5 * 60, '1 d 0 h 05 min'],
+  [0, '0 min'],
 ])('formatDuration(%i)', (seconds, text) => {
   expect(formatDuration(seconds)).toBe(text);
 });

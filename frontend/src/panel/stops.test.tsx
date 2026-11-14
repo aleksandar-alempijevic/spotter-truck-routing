@@ -75,9 +75,11 @@ test('with breaks on the list shows each stop as a row, in time order, with the 
   expect(screen.getByText(/30-minute break: .* to /)).toBeInTheDocument();
   expect(screen.getByText(/10-hour rest: .* to /)).toBeInTheDocument();
   expect(screen.getByText(/rested start and no time except driving/)).toBeInTheDocument();
-  // A stop has no risk badge: the row carries no level.
+  // A stop carries the weather it sits in, like a checkpoint row: a level and the readings.
   const stopRow = screen.getByText(/^Rest · mile/).closest('li')!;
-  expect(within(stopRow).queryByText(/Low|Moderate|High|Severe|No Travel/)).toBeNull();
+  expect(
+    within(stopRow).getByText(/Low|Moderate|High|Severe|No Travel|No forecast/),
+  ).toBeInTheDocument();
 });
 
 test('the selected stop is marked in the list', () => {
@@ -152,4 +154,86 @@ test('a trip that needs no stop says so when breaks are on, and says nothing abo
     />,
   );
   expect(screen.queryByText(/driving \+|no breaks needed/)).toBeNull();
+});
+
+const planWith = (breaks: boolean, landed = true) => {
+  const routes = buildRoutes('mixed', { departure, breaks });
+  return buildPlanView(routes, landed ? buildWeather('mixed', { departure, breaks }) : undefined);
+};
+const listFor = (route: ReturnType<typeof planWith>['routes'][number]) =>
+  render(
+    <CheckpointList
+      route={route}
+      trip={trip}
+      selected={null}
+      selectedStop={null}
+      breaksApplied
+      onSelect={() => {}}
+    />,
+  );
+
+test('a stop row shows the weather it sits in, with the hour that reading is for', () => {
+  const route = planWith(true).routes[0];
+  listFor(route);
+
+  const rows = route.stops.map((stop) =>
+    screen
+      .getByText(new RegExp(`^${stop.kind === 'rest' ? 'Rest' : 'Break'} · mile`))
+      .closest('li')!,
+  );
+
+  rows.forEach((row, i) => {
+    const stop = route.stops[i];
+    if (stop.risk.kind === 'level') {
+      expect(within(row).getByText(/Wind \d+ mph/)).toBeInTheDocument();
+      expect(within(row).getByText(/Worst during the stop, at /)).toBeInTheDocument();
+    }
+    expect(stop.risk.kind).not.toBe('pending');
+  });
+  expect(rows.some((row) => within(row).queryByText(/Low|Moderate|High|Severe|No Travel/))).toBe(
+    true,
+  );
+});
+
+test('a stop row says the weather is not in yet, and not Low, until it lands', () => {
+  listFor(planWith(true, false).routes[0]);
+
+  const row = screen.getByText(/^Rest · mile/).closest('li')!;
+
+  expect(within(row).getByText('Checking weather')).toBeInTheDocument();
+  expect(within(row).getByText('Weather not checked yet')).toBeInTheDocument();
+  expect(within(row).queryByText('Low')).toBeNull();
+  expect(within(row).queryByText(/Worst during the stop/)).toBeNull();
+});
+
+test('a stop the forecast does not reach says no forecast and shows no reading hour', () => {
+  const routes = buildRoutes('mixed', { departure, breaks: true });
+  const weather = buildWeather('mixed', { departure, breaks: true });
+  weather.routes[0].stops = weather.routes[0].stops.map((s) => ({
+    mile: s.mile,
+    at: null,
+    weather: null,
+    risk: null,
+  }));
+  listFor(buildPlanView(routes, weather).routes[0]);
+
+  const row = screen.getByText(/^Rest · mile/).closest('li')!;
+
+  expect(within(row).getByText('No forecast')).toBeInTheDocument();
+  expect(within(row).getByText('No forecast for this time')).toBeInTheDocument();
+  expect(within(row).queryByText(/Worst during the stop/)).toBeNull();
+});
+
+test('with breaks off no stop row exists to carry weather', () => {
+  render(
+    <CheckpointList
+      route={planWith(false).routes[0]}
+      trip={trip}
+      selected={null}
+      onSelect={() => {}}
+    />,
+  );
+
+  expect(screen.queryByText(/Worst during the stop/)).toBeNull();
+  expect(screen.queryByText(/Rest · mile|Break · mile/)).toBeNull();
 });

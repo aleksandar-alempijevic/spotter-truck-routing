@@ -31,7 +31,7 @@ import {
   routeColor,
   routeWidth,
   SOURCE,
-  STOP_IMAGE,
+  STOP_ICON_PREFIX,
   truckRadius,
 } from './layers';
 import { labelReadings, type Reading } from '../plan/describe';
@@ -468,8 +468,10 @@ export class MapController {
       }
     }
     if (!map.hasImage(HATCH_IMAGE)) map.addImage(HATCH_IMAGE, hatchImage());
-    if (!map.hasImage(STOP_IMAGE)) {
-      map.addImage(STOP_IMAGE, stopImage(), { pixelRatio: ICON_PIXEL_RATIO });
+    for (const key of Object.keys(RISK_STYLE) as RiskKey[]) {
+      if (!map.hasImage(STOP_ICON_PREFIX + key)) {
+        map.addImage(STOP_ICON_PREFIX + key, stopImage(key), { pixelRatio: ICON_PIXEL_RATIO });
+      }
     }
 
     for (const id of OUR_SOURCES) {
@@ -544,7 +546,7 @@ export class MapController {
       type: 'symbol',
       source: SOURCE.stops,
       layout: {
-        'icon-image': STOP_IMAGE,
+        'icon-image': ['concat', STOP_ICON_PREFIX, ['get', 'icon']],
         'icon-size': 0.85,
         'icon-allow-overlap': true,
         'icon-ignore-placement': true,

@@ -9,7 +9,7 @@ import asyncio
 import logging
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from ninja.errors import ValidationError
@@ -37,12 +37,13 @@ from weather import (
     conditions_at,
     conditions_by_hour,
     forecast_cell,
+    instants_during,
     plan_locations,
     utc_hour,
 )
 from weather.grid import DISPLAY_DEGREES
 
-from .schemas import TOO_MANY_LOCATIONS, RouteCore
+from .schemas import TOO_MANY_LOCATIONS, RouteCore, StopCore
 
 logger = logging.getLogger(__name__)
 
@@ -105,9 +106,12 @@ async def build_report(
     deadline = runtime.time() + runtime.budget_s
 
     positions = [[(c.lat, c.lon) for c in route.checkpoints] for route in routes]
+    stop_positions = [(s.lat, s.lon) for route in routes for s in route.stops]
     try:
         plan = await asyncio.to_thread(
-            plan_locations, positions, max_locations=runtime.max_locations
+            lambda: plan_locations(
+                positions, stops=stop_positions, max_locations=runtime.max_locations
+            )
         )
     except TooManyLocations:
         raise ValidationError(
@@ -262,7 +266,10 @@ def _assemble(
             checkpoints.append({"mile": checkpoint.mile, "weather": conditions, "risk": risk})
             levels.append(Checkpoint(checkpoint.mile, risk.level if risk else None))
         summary = summarize_route(route.total_miles, levels)
-        route_bodies.append({"id": route.id, "checkpoints": checkpoints, "summary": summary})
+        stops = [_stop_weather(stop, series_by_cell, classify) for stop in route.stops]
+        route_bodies.append(
+            {"id": route.id, "checkpoints": checkpoints, "stops": stops, "summary": summary}
+        )
         candidates.append(RouteCandidate(route.id, route.travel_time_seconds, summary))
 
     cells = []
@@ -283,6 +290,30 @@ def _assemble(
             "cells": cells,
         },
     }
+
+
+def _stop_weather(
+    stop: StopCore,
+    series_by_cell: dict[Cell, ForecastSeries],
+    classify: Callable[[Conditions | None], Classification | None],
+) -> dict[str, Any]:
+    """The worst weather a stop sits in, read like a checkpoint's.
+
+    The truck is parked for the whole stop, so the reading is the worst level at the stop's start,
+    at each top of the hour inside it and at its end; the earliest wins a tie. An instant the
+    forecast does not reach is left out, and when none is reached there is no weather and no risk.
+    """
+    series = series_by_cell[forecast_cell((stop.lat, stop.lon))]
+    worst: tuple[datetime, Conditions, Classification] | None = None
+    for instant in instants_during(stop.starts_at, timedelta(seconds=stop.duration_seconds)):
+        conditions = conditions_at(series, instant)
+        risk = classify(conditions)
+        if conditions is None or risk is None:
+            continue
+        if worst is None or risk.level > worst[2].level:
+            worst = (instant, conditions, risk)
+    at, conditions, risk = worst if worst else (None, None, None)
+    return {"mile": stop.mile, "at": at, "weather": conditions, "risk": risk}
 
 
 def _ranking(candidates: list[RouteCandidate], spacing_miles: int) -> dict[str, Any]:

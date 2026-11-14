@@ -99,6 +99,7 @@ interface StopRowProps {
 
 /** One required stop: what it is, where on the route, and when it starts and ends. */
 export function StopRow({ stop, trip, isSelected, rowRef }: StopRowProps) {
+  const description = describeCheckpoint(stop);
   return (
     <Box
       ref={rowRef}
@@ -118,10 +119,26 @@ export function StopRow({ stop, trip, isSelected, rowRef }: StopRowProps) {
         <Typography variant="body2" sx={{ fontWeight: 600 }}>
           {stopName(stop)} · mile {Math.round(stop.mile)}
         </Typography>
+        <Typography variant="body2" component="span">
+          <RiskBadge state={stop.risk} />
+        </Typography>
       </Box>
       <Typography variant="caption" color="text.secondary" component="div">
         {stopWhat(stop)}: {originClock(trip, stop.startMs)} to {originClock(trip, stop.endMs)}
       </Typography>
+      <Typography variant="caption" color="text.secondary" component="div">
+        <Conditions description={description} />
+      </Typography>
+      {description.decision && (
+        <Typography variant="caption" component="div" sx={{ fontWeight: 600 }}>
+          {description.decision}
+        </Typography>
+      )}
+      {stop.readAtMs !== null && (
+        <Typography variant="caption" color="text.secondary" component="div">
+          Worst during the stop, at {originClock(trip, stop.readAtMs)}
+        </Typography>
+      )}
     </Box>
   );
 }

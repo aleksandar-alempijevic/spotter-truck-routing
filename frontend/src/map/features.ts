@@ -64,8 +64,8 @@ export function checkpointPoints(
 interface StopProps {
   routeId: string;
   index: number;
-  /** Which glyph to draw. */
-  icon: 'stop';
+  /** Which mark to draw: the level of the weather the stop sits in, or a non-level. */
+  icon: RiskKey;
 }
 
 /** The selected route's required stops, one point each. Other routes' stops are not drawn. */
@@ -79,7 +79,7 @@ export function stopPoints(
     features: (route?.stops ?? []).map((stop) => ({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [stop.lon, stop.lat] },
-      properties: { routeId: route!.id, index: stop.index, icon: 'stop' },
+      properties: { routeId: route!.id, index: stop.index, icon: riskKey(stop.risk) },
     })),
   };
 }

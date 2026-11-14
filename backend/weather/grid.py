@@ -49,26 +49,37 @@ class LocationPlan:
     """The corridor's display cells, in row then column order."""
     grid_only_cells: tuple[Cell, ...]
     """Forecast cells the grid needs that hold no checkpoint, sorted."""
+    stop_only_cells: tuple[Cell, ...] = ()
+    """Forecast cells holding a stop that neither a checkpoint nor the grid already needs, in the
+    order first met. They are fetched but never colour a display cell."""
 
     @property
     def cells(self) -> tuple[Cell, ...]:
-        """Every forecast cell to fetch, checkpoint cells first."""
-        return self.checkpoint_cells + self.grid_only_cells
+        """Every forecast cell to fetch: checkpoint cells, then the grid's, then the stops'."""
+        return self.checkpoint_cells + self.grid_only_cells + self.stop_only_cells
 
 
 def plan_locations(
-    routes: Sequence[Sequence[Point]], *, max_locations: int | None = None
+    routes: Sequence[Sequence[Point]],
+    *,
+    stops: Sequence[Point] = (),
+    max_locations: int | None = None,
 ) -> LocationPlan:
-    """The forecast locations for routes given as their checkpoint positions.
+    """The forecast locations for routes given as their checkpoint positions, and for the
+    positions of the stops along them.
+
+    A stop adds a location only when its forecast cell is neither a checkpoint's nor one the grid
+    reads; it never changes which forecast colours a display cell.
 
     Precondition: every position is on the map (latitude within ±90, longitude within ±180). The
     API's service box guarantees it for a weather request; a caller with other input must check it.
 
     With `max_locations`, `TooManyLocations` is raised when the plan's total (checkpoint cells
-    plus grid-only cells) passes it. Two cheaper checks raise it earlier, as soon as the checkpoint
-    cells or the corridor's display cells alone pass it. Both are lower bounds on the total: every
-    display cell reads a forecast cell, and distinct display cells read distinct ones, so a
-    corridor of more display cells than the bound already needs more locations than the bound.
+    plus grid-only cells plus stop-only cells) passes it. Two cheaper checks raise it earlier, as
+    soon as the checkpoint cells or the corridor's display cells alone pass it. Both are lower
+    bounds on the total: every display cell reads a forecast cell, and distinct display cells read
+    distinct ones, so a corridor of more display cells than the bound already needs more
+    locations than the bound.
 
     Planning stops at the bound, but the work before it stops is a sweep of each segment's
     bounding box. That is small for segments of road length (`longitude_span_coverable` is the
@@ -95,7 +106,13 @@ def plan_locations(
     grid_only = sorted({cell.forecast for cell in grid} - known)
     if max_locations is not None and len(checkpoint_cells) + len(grid_only) > max_locations:
         raise TooManyLocations
-    return LocationPlan(checkpoint_cells, tuple(grid), tuple(grid_only))
+    needed = known | set(grid_only)
+    stop_only = tuple(
+        dict.fromkeys(cell for point in stops if (cell := forecast_cell(point)) not in needed)
+    )
+    if max_locations is not None and len(needed) + len(stop_only) > max_locations:
+        raise TooManyLocations
+    return LocationPlan(checkpoint_cells, tuple(grid), tuple(grid_only), stop_only)
 
 
 def _block_center_cell(block: tuple[int, int]) -> Cell:

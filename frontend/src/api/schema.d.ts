@@ -115,6 +115,8 @@ export interface components {
             total_miles: number;
             /** Checkpoints */
             checkpoints: components["schemas"]["CheckpointOut"][];
+            /** Stops */
+            stops: components["schemas"]["StopOut"][];
             /** Line */
             line: [
                 number,
@@ -128,8 +130,6 @@ export interface components {
             via: components["schemas"]["ViaOut"] | null;
             /** Driving Seconds */
             driving_seconds: number;
-            /** Stops */
-            stops: components["schemas"]["StopOut"][];
         };
         /** RoutesOut */
         RoutesOut: {
@@ -387,7 +387,22 @@ export interface components {
             id: string;
             /** Checkpoints */
             checkpoints: components["schemas"]["WeatherCheckpointOut"][];
+            /** Stops */
+            stops: components["schemas"]["WeatherStopOut"][];
             summary: components["schemas"]["RouteSummaryOut"];
+        };
+        /**
+         * WeatherStopOut
+         * @description The weather a parked truck sits in: the worst the forecast gives over the stop, classified
+         *     exactly as a checkpoint's is.
+         */
+        WeatherStopOut: {
+            /** Mile */
+            mile: number;
+            /** At */
+            at: string | null;
+            weather: components["schemas"]["ConditionsOut"] | null;
+            risk: components["schemas"]["RiskOut"] | null;
         };
         /**
          * RouteCore
@@ -402,6 +417,32 @@ export interface components {
             total_miles: number;
             /** Checkpoints */
             checkpoints: components["schemas"]["CheckpointOut"][];
+            /** Stops */
+            stops?: components["schemas"]["StopCore"][];
+        };
+        /**
+         * StopCore
+         * @description A required stop as the weather request sends it back: where and when, to read its weather.
+         */
+        StopCore: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "break" | "rest" | "restart";
+            /** Mile */
+            mile: number;
+            /** Lat */
+            lat: number;
+            /** Lon */
+            lon: number;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /** Duration Seconds */
+            duration_seconds: number;
         };
         /**
          * WeatherIn

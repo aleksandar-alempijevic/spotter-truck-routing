@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { App } from './App';
 import { createQueryClient } from './plan/queryClient';
 import { createStandIn } from './test/standIn';
-import { buildRoutes } from './test/fixtures';
+import { buildRoutes, buildWeather } from './test/fixtures';
 import type { MapViewProps } from './map/MapView';
 
 // The fake map: jsdom has no WebGL, so the real map is covered by the built-app browser run.
@@ -768,16 +768,16 @@ test('with the switch on the pane shows the note, the split, the stop rows and t
 test('the caption follows the answer, not the form: breaks asked for but not applied show none', async () => {
   useViewport('pane');
   const standIn = answer;
+  let departure = '';
   answer = (method, url, body) => {
     const reply = standIn(method, url, body);
     if (url === '/api/routes') {
-      const asked = JSON.parse(body) as { rest_breaks: boolean };
+      const asked = JSON.parse(body) as { rest_breaks: boolean; departure: string };
       expect(asked.rest_breaks).toBe(true);
-      return {
-        ...reply,
-        body: buildRoutes('mixed', { departure: JSON.parse(body).departure, breaks: false }),
-      };
+      departure = asked.departure;
+      return { ...reply, body: buildRoutes('mixed', { departure, breaks: false }) };
     }
+    if (url === '/api/weather') return { ...reply, body: buildWeather('mixed', { departure }) };
     return reply;
   };
   renderApp();
@@ -826,4 +826,56 @@ test('phone: a stop tapped on the map opens the sheet to it and is marked in the
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
   expect(document.querySelector('[aria-current="true"]')).toHaveTextContent(/^Rest · mile/);
+});
+
+test('with breaks on a stop row reads "checking weather" until the weather lands, then its weather', async () => {
+  useViewport('pane');
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  const standIn = fetchMock.getMockImplementation() as (
+    url: string,
+    init?: RequestInit,
+  ) => Promise<Response>;
+  fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url === '/api/weather') await held;
+    return standIn(url, init);
+  });
+  renderApp();
+  await pick('Starting place', 'Dallas', 'Dallas, TX, United States');
+  await pick('Destination', 'Denver', 'Denver, CO, United States');
+  fireEvent.change(screen.getByLabelText('Cargo weight (lb)'), { target: { value: '36,000' } });
+  fireEvent.click(screen.getByRole('switch', { name: 'Include required rest breaks' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+
+  await screen.findByText(BREAKS_NOTE);
+  const rest = () => screen.getByText(/^Rest · mile/).closest('li')!;
+  expect(within(rest()).getByText('Checking weather')).toBeInTheDocument();
+
+  release();
+  await screen.findByText('Route 2 is recommended');
+  expect(within(rest()).queryByText('Checking weather')).toBeNull();
+  expect(within(rest()).getByText(/Wind \d+ mph/)).toBeInTheDocument();
+  expect(screen.getAllByText(/Worst during the stop, at /).length).toBeGreaterThan(0);
+});
+
+test('the weather request carries the stops the routes answer listed', async () => {
+  useViewport('pane');
+  renderApp();
+  await pick('Starting place', 'Dallas', 'Dallas, TX, United States');
+  await pick('Destination', 'Denver', 'Denver, CO, United States');
+  fireEvent.change(screen.getByLabelText('Cargo weight (lb)'), { target: { value: '36,000' } });
+  fireEvent.click(screen.getByRole('switch', { name: 'Include required rest breaks' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+  await screen.findByText('Route 2 is recommended');
+
+  const [, init] = fetchMock.mock.calls.find(([url]) => url === '/api/weather')!;
+  const sent = JSON.parse(String((init as RequestInit).body)) as {
+    routes: { id: string; stops: { kind: string }[] }[];
+  };
+
+  expect(sent.routes.map((r) => r.stops.map((s) => s.kind))).toEqual([
+    ['break', 'rest'],
+    ['break', 'rest'],
+    ['break', 'rest'],
+  ]);
 });
