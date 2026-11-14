@@ -11,6 +11,10 @@ services:
     # Every deploy is a manual act that follows the owner's word, never a side effect of a push.
     autoDeployTrigger: "off"
     envVars:
+      # Non-secret, baked into the frontend at build time through the Dockerfile's build argument of
+      # the same name: this host sleeps when idle, so a long wait says the server may be waking up.
+      - key: VITE_HOST_SLEEPS
+        value: "1"
       - key: DJANGO_SECRET_KEY
         generateValue: true
       # The service's own hostname, known only after the service exists; set in the dashboard.

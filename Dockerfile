@@ -13,6 +13,13 @@ WORKDIR /build/frontend
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
+# The only build-time values, both non-secret and baked into the public page. Empty or unset means
+# the frontend's default, so a build without them is the local one: no wake copy, Positron basemap.
+#   VITE_HOST_SLEEPS    1 on a host that sleeps when idle: a long wait then says the server may be waking
+#   VITE_BASEMAP_STYLE  a basemap style URL other than the default
+ARG VITE_HOST_SLEEPS=
+ARG VITE_BASEMAP_STYLE=
+ENV VITE_HOST_SLEEPS=$VITE_HOST_SLEEPS VITE_BASEMAP_STYLE=$VITE_BASEMAP_STYLE
 RUN pnpm build
 
 # Stage 2: the runtime. Only the backend packages and the built frontend are copied: no tests,
