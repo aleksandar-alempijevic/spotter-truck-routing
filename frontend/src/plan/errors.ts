@@ -33,7 +33,7 @@ const BASE: Record<ApiErrorCode, ErrorMessage> = {
   internal_error: { title: 'Something went wrong on our side', body: TRY_LATER, action: 'retry' },
   no_route: {
     title: 'No truck route found',
-    body: 'There is no truck route between these two places that stays inside the United States. Routes through Canada are not shown, so a trip between the lower 48 and Alaska has none. Choose different places.',
+    body: 'There is no truck route between these two places that stays inside the United States. Routes through Canada are not shown, so a trip such as the lower 48 to Alaska has none, and neither does a point far from any road. Choose different places.',
     action: 'edit',
   },
   provider_timeout: {
@@ -64,7 +64,7 @@ const BASE: Record<ApiErrorCode, ErrorMessage> = {
   provider_error: { title: 'The data provider failed', body: TRY_LATER, action: 'retry' },
   outside_service_area: {
     title: 'Part of the trip is outside the area we cover',
-    body: `Weather is covered between latitude ${SERVICE_AREA.south} and ${SERVICE_AREA.north} and longitude ${SERVICE_AREA.west} to ${SERVICE_AREA.east}: the contiguous US, Alaska, Hawaii, Puerto Rico and the Canadian roads nearby. Choose places inside it.`,
+    body: `Weather is covered between latitude ${SERVICE_AREA.south} and ${SERVICE_AREA.north} and longitude ${SERVICE_AREA.west} to ${SERVICE_AREA.east}: the contiguous US, Alaska, Hawaii and Puerto Rico. Choose places inside it.`,
     action: 'edit',
   },
   too_many_locations: {

@@ -20,12 +20,13 @@ def tomtom_route(
     waypoints: list[Point],
     speed_mps: float = 25.0,
     every: int = 20,
-    countries: tuple[str, ...] = (),
+    countries: tuple[str, ...] = ("USA",),
 ) -> dict:
     """One TomTom route object: legs of points, coded instructions and a summary.
 
     Instruction offsets and times are cumulative over the whole route, across legs. `countries`
-    adds one country section per code, as `sectionType=country` does.
+    adds one country section per code, as `sectionType=country` does; the adapter keeps only
+    routes that have them.
     """
     legs = path(waypoints)
     flat = [p for leg in legs for p in leg]

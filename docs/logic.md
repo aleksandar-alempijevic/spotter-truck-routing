@@ -96,7 +96,7 @@ The routes request can add the federal hours-of-service stops to the ETAs ([assu
 | 11 hours since the last rest | 10 hours (rest) | the 8-hour and 11-hour counts |
 | 8 hours since the last break | 30 minutes (break) | the 8-hour count |
 
-When limits are reached together the longest stop wins and ends the counts the shorter would have. No stop is taken at or after the destination, so a trip that ends exactly at a limit has none. A checkpoint reached exactly where a stop begins gets its arrival time, before the stop. Elapsed time is strictly increasing in driving time. The cycle step matters only for a trip of more than 60 hours at the wheel, which the app can be asked for (a trip to Alaska through Canada, or the longest cross-country runs).
+When limits are reached together the longest stop wins and ends the counts the shorter would have. No stop is taken at or after the destination, so a trip that ends exactly at a limit has none. A checkpoint reached exactly where a stop begins gets its arrival time, before the stop. Elapsed time is strictly increasing in driving time. The cycle step matters only for a trip of more than 60 hours at the wheel, which the app can be asked for only on the longest cross-country runs.
 
 The ranking is unchanged in outcome: every route in a plan has the same schedule, so less driving is always an earlier arrival, and step 5 (travel time) has no tolerance. What changes is the size of the time difference it reports, which is door-to-door time. A few minutes of TomTom's estimate either side of a limit moves an arrival by 10 hours (the step is real under the rule and sharp under the model), and it only decides between routes already tied on safety. A test pins the equivalence.
 

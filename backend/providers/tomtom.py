@@ -94,11 +94,11 @@ async def calculate_routes(
 ) -> list[Route]:
     """Truck routes from origin to destination, optionally through one via point.
 
-    Routes stay inside the US: the request asks TomTom to avoid border crossings, which it treats
-    as a preference, so a route whose country sections include Canada is dropped here too.
+    Routes stay inside the US: the request asks TomTom to avoid border crossings, which it may
+    ignore, so a route whose country sections include Canada, or are missing, is dropped here too.
     TomTom may return fewer routes than `alternatives` + 1. Raises `NoRouteFound` when it
-    returns none, or only routes through Canada, and `MalformedResponse` when a route breaks the
-    contract `routing.Route` needs.
+    returns none, or none that is kept, and `MalformedResponse` when a route breaks the contract
+    `routing.Route` needs.
     """
     if not api_key:
         raise ProviderNotConfigured
@@ -151,12 +151,19 @@ def _parse_routes(body: Any, via: Via | None) -> list[Route]:
     return [
         _build_route(route, via)
         for route in _RESPONSE.validate_python(body)["routes"]
-        if not _enters_canada(route)
+        if _is_kept(route)
     ]
 
 
-def _enters_canada(route: _Route) -> bool:
-    return any(s.get("countryCode") == CANADA for s in route.get("sections", []))
+def _is_kept(route: _Route) -> bool:
+    """Keep a route only when its country sections are all named and none is Canada.
+
+    A route without country sections, or with a section without a code, cannot be shown to
+    avoid Canada, so it is not kept.
+    """
+    sections = route.get("sections", [])
+    codes = [s.get("countryCode") for s in sections]
+    return bool(codes) and all(codes) and CANADA not in codes
 
 
 def _build_route(route: _Route, via: Via | None) -> Route:

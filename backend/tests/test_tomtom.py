@@ -226,3 +226,24 @@ async def test_only_routes_through_canada_is_no_route(provider_mock):
 
     with pytest.raises(NoRouteFound):
         await call()
+
+
+def _without_sections(route: dict) -> dict:
+    return {k: v for k, v in route.items() if k != "sections"}
+
+
+@pytest.mark.parametrize(
+    "route",
+    [
+        pytest.param(_without_sections(tomtom_route([ORIGIN, DESTINATION])), id="no sections"),
+        pytest.param(
+            {**tomtom_route([ORIGIN, DESTINATION]), "sections": [{"startPointIndex": 0}]},
+            id="section without a country code",
+        ),
+    ],
+)
+async def test_a_route_that_does_not_name_its_countries_is_not_kept(provider_mock, route):
+    provider_mock.get(host="api.tomtom.com").respond(json=tomtom_body(route))
+
+    with pytest.raises(NoRouteFound):
+        await call()
