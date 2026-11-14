@@ -43,7 +43,7 @@ The method, results and limits are in [docs/performance.md](docs/performance.md)
 - **Build size (gzip, at commit `57091ed`).** 206.31 kB for the entry that renders the form, then 296.76 kB for the map chunk and 147,800 bytes for its worker, which load after the form.
 - **Planning a trip.** Live routes for seven test trips took 1.6 to 14.7 s; TomTom's latency on long trips varies a lot between identical calls. For Seattle to Miami, the trip with the most forecast locations, weather for three routes with 423 checkpoints and the corridor grid took 1.05 s cold and 0.12 s when repeated, from the shared forecast cache.
 
-These numbers are from local runs. The hosted app has not been measured.
+The slider, build size and planning figures above are from local runs and the build named there. The hosted app was measured once on 2026-11-14, and those numbers are in [Hosting](#hosting) below and in [docs/performance.md](docs/performance.md#hosted-render-free-plan-2026-11-14), labelled as hosted.
 
 ## Run it locally
 
@@ -126,7 +126,7 @@ The hosted numbers below are from the Render free plan on 2026-11-14 and are lab
 - **Routes, warm host:** Dallas to Houston 2.4 s; Seattle to Miami (25 mi) 16.0 s; Los Angeles to Miami (10 mi) 13.6 s; Dallas to Seattle with rest breaks 10.9 s.
 - **Weather:** 1.0 to 3.3 s for the three other trips (Dallas to Houston, Seattle to Miami at 25 mi, Dallas to Seattle); 26.1 s for the 10-mile Los Angeles to Miami trip (926 forecast locations, including one wait of a rate-limit minute window that completed through the edge). Results were on screen 19.7 s and 40.5 s after the click for the two long trips.
 - **Rest breaks on (Dallas to Seattle):** 17 stops, each with its own weather, and the stop marks and their key on the map.
-- **Slider, hosted, one drag per rate on the build deployed for the S6 rerun** (phone size, departure at :11): no frame over 50 ms at 1x or 4x slowdown; largest gap 41.8 ms and 23.8 ms.
+- **Slider, hosted, one drag per rate on the build deployed on 2026-11-14, commit `a1a102e`** (phone size, departure at :11): no frame over 50 ms at 1x or 4x slowdown; largest gap 41.8 ms and 23.8 ms.
 - **Wake:** see the first-load paragraph above.
 
 **Decisions the hosted run settled (2026-11-14).**

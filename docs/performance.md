@@ -93,7 +93,7 @@ All figures here are from the hosted service, on 2026-11-14, one run each throug
 - **Idle wake.** After 16 min 32 s with no requests, an address search showed the wake copy at 4.6 s and got its 200 JSON answer after 13.2 s, with the edge holding the request and no gateway page. That the instance slept is inferred from the timing. The copy now waits 10 s for a search: warm large-city searches took up to 7.1 s after the deadline fix, and the one wake took about 13 s.
 - **Address search.** "New York, NY", "Boston, MA" and "Atlanta, GA" timed out at the 5 s limit then in force, every attempt; the limit is now 10 s.
 - **Compression and caching.** The edge compresses: the entry is 203,813 B and the map chunk 292,291 B as gzip, the API answers with brotli, and a weather answer was 164,882 B uncompressed and 7,463 B with brotli. Assets are not cached at the edge (`DYNAMIC`).
-- **Hosted slider.** One drag per rate on the build deployed for the S6 rerun, at phone size, with a departure at :11: no frame over 50 ms at 1x or 4x slowdown, and the largest gap 41.8 ms at 1x and 23.8 ms at 4x. That is a single drag at each rate, and still software rendering in the measuring browser, so a real phone is unmeasured.
+- **Hosted slider.** One drag per rate on the build deployed on 2026-11-14, commit `a1a102e`, at phone size, with a departure at :11: no frame over 50 ms at 1x or 4x slowdown, and the largest gap 41.8 ms at 1x and 23.8 ms at 4x. That is a single drag at each rate, and still software rendering in the measuring browser, so a real phone is unmeasured.
 - **Open-Meteo.** No 503 in the runs, at one time of day only.
 
 ## Build size
