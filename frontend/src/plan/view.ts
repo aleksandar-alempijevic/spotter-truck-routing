@@ -27,7 +27,7 @@ export interface CheckpointView {
 }
 
 /**
- * A required stop on a route, as the server placed it. Stops are a list of their own, never part
+ * A required stop on a route, as the server placed it; it ends at `stopEndMs`. Stops are a list of their own, never part
  * of `checkpoints`: a checkpoint's index is how the weather answer is joined to its route.
  */
 export interface StopView {
@@ -38,7 +38,6 @@ export interface StopView {
   lat: number;
   lon: number;
   startMs: number;
-  endMs: number;
   durationSeconds: number;
   /**
    * The weather a parked truck sits in: the worst the forecast gives over the stop. Read exactly
@@ -67,6 +66,8 @@ export interface RouteView {
   /** Time at the wheel; equals `travelSeconds` when the plan has no rest breaks. */
   drivingSeconds: number;
   stops: StopView[];
+  /** Whether the times include the rest breaks: the routes answer's echo, the same on every route. */
+  breaksApplied: boolean;
   miles: number;
   line: [number, number][];
   checkpoints: CheckpointView[];
@@ -177,13 +178,13 @@ export function buildPlanView(
             lat: stop.lat,
             lon: stop.lon,
             startMs: Date.parse(stop.starts_at),
-            endMs: Date.parse(stop.starts_at) + stop.duration_seconds * 1000,
             durationSeconds: stop.duration_seconds,
             risk: riskOf(ws?.risk, !ws, weatherFailed),
             conditions: ws?.weather ?? null,
             readAtMs: ws?.at ? Date.parse(ws.at) : null,
           };
         }),
+        breaksApplied: routes.breaks_applied,
         miles: route.total_miles,
         line: route.line,
         checkpoints,

@@ -15,11 +15,11 @@ RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
 # The only build-time values, both non-secret and baked into the public page. Empty or unset means
 # the frontend's default, so a build without them is the local one: no wake copy, Positron basemap.
+# An ARG is visible to the build command as an environment variable, which is how Vite reads it.
 #   VITE_HOST_SLEEPS    1 on a host that sleeps when idle: a long wait then says the server may be waking
 #   VITE_BASEMAP_STYLE  a basemap style URL other than the default
 ARG VITE_HOST_SLEEPS=
 ARG VITE_BASEMAP_STYLE=
-ENV VITE_HOST_SLEEPS=$VITE_HOST_SLEEPS VITE_BASEMAP_STYLE=$VITE_BASEMAP_STYLE
 RUN pnpm build
 
 # Stage 2: the runtime. Only the backend packages and the built frontend are copied: no tests,
@@ -39,6 +39,9 @@ COPY backend/routing ./routing
 COPY backend/weather ./weather
 # config/base.py looks for the build at ../frontend/dist, which is here.
 COPY --from=frontend /build/frontend/dist /app/frontend/dist
+# Compile the app's modules now, as root: the runtime user cannot write __pycache__, and a host
+# that sleeps would otherwise recompile them on every wake. The venv is compiled by uv above.
+RUN python -m compileall -q /app/backend
 
 RUN useradd --system --no-create-home app
 USER app

@@ -19,6 +19,10 @@ ASSET_REF = re.compile(r"/?assets/[A-Za-z0-9_.-]+\.(?:js|mjs|css)")
 JS_TYPES = ("text/javascript", "application/javascript")
 
 
+def lowered(headers) -> dict[str, str]:
+    return {k.lower(): v for k, v in headers.items()}
+
+
 def fetch(base: str, path: str, method: str = "GET", host: str | None = None):
     """Return (status, lowercase headers, body bytes); HTTP error statuses are results."""
     request = urllib.request.Request(base + path, method=method)
@@ -26,13 +30,9 @@ def fetch(base: str, path: str, method: str = "GET", host: str | None = None):
         request.add_header("Host", host)
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            return (
-                response.status,
-                {k.lower(): v for k, v in response.headers.items()},
-                response.read(),
-            )
+            return response.status, lowered(response.headers), response.read()
     except urllib.error.HTTPError as error:
-        return error.code, {k.lower(): v for k, v in error.headers.items()}, error.read()
+        return error.code, lowered(error.headers), error.read()
 
 
 def asset_paths(base: str) -> list[str]:

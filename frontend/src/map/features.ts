@@ -74,12 +74,13 @@ export function stopPoints(
   selectedRouteId: string | null,
 ): FeatureCollection<Point, StopProps> {
   const route = routes.find((r) => r.id === selectedRouteId);
+  if (!route) return emptyCollection();
   return {
     type: 'FeatureCollection',
-    features: (route?.stops ?? []).map((stop) => ({
+    features: route.stops.map((stop) => ({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [stop.lon, stop.lat] },
-      properties: { routeId: route!.id, index: stop.index, icon: riskKey(stop.risk) },
+      properties: { routeId: route.id, index: stop.index, icon: riskKey(stop.risk) },
     })),
   };
 }

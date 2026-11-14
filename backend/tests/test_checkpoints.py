@@ -101,7 +101,7 @@ def test_with_stops_the_etas_include_the_time_stopped_before_each_mark():
     assert [c.mile for c in broken] == [c.mile for c in plain]
     assert [(c.lat, c.lon) for c in broken] == [(c.lat, c.lon) for c in plain]
     assert broken[0].eta == DEPARTURE
-    stopped = sum(stop.duration_s for stop in stops)
+    stopped = sum(stop.duration_seconds for stop in stops)
     assert stopped > 0
     assert (broken[-1].eta - plain[-1].eta).total_seconds() == pytest.approx(stopped)
     assert all(b.eta >= p.eta for b, p in zip(broken, plain, strict=True))

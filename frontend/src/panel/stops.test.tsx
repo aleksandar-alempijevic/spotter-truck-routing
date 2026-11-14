@@ -1,5 +1,6 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
+import { stopEndMs } from '../plan/schedule';
 import type { Trip } from '../plan/trip';
 import { buildPlanView } from '../plan/view';
 import { buildRoutes, buildWeather, DALLAS, scenarioDestination } from '../test/fixtures';
@@ -44,7 +45,7 @@ test('stops sit between the checkpoints they fall between, and no checkpoint mov
     if (before?.kind === 'checkpoint')
       expect(before.cp.etaMs).toBeLessThanOrEqual(item.stop.startMs);
     if (after?.kind === 'checkpoint')
-      expect(after.cp.etaMs).toBeGreaterThanOrEqual(item.stop.endMs);
+      expect(after.cp.etaMs).toBeGreaterThanOrEqual(stopEndMs(item.stop));
   });
 });
 
@@ -63,7 +64,6 @@ test('with breaks on the list shows each stop as a row, in time order, with the 
       trip={trip}
       selected={null}
       selectedStop={null}
-      breaksApplied
       onSelect={() => {}}
     />,
   );
@@ -72,8 +72,8 @@ test('with breaks on the list shows each stop as a row, in time order, with the 
   expect(rows).toHaveLength(route.checkpoints.length + route.stops.length);
   expect(screen.getAllByText(/^Break · mile \d+$/)).toHaveLength(1);
   expect(screen.getAllByText(/^Rest · mile \d+$/)).toHaveLength(1);
-  expect(screen.getByText(/30-minute break: .* to /)).toBeInTheDocument();
-  expect(screen.getByText(/10-hour rest: .* to /)).toBeInTheDocument();
+  expect(screen.getByText(/30 min break: .* to /)).toBeInTheDocument();
+  expect(screen.getByText(/10 h rest: .* to /)).toBeInTheDocument();
   expect(screen.getByText(/rested start and no time except driving/)).toBeInTheDocument();
   // A stop carries the weather it sits in, like a checkpoint row: a level and the readings.
   const stopRow = screen.getByText(/^Rest · mile/).closest('li')!;
@@ -90,7 +90,6 @@ test('the selected stop is marked in the list', () => {
       trip={trip}
       selected={null}
       selectedStop={{ routeId: route.id, index: 1 }}
-      breaksApplied
       onSelect={() => {}}
     />,
   );
@@ -118,7 +117,6 @@ test('the card headline is door-to-door time with the driving and break split be
       trip={trip}
       selectedId={route.id}
       recommendedId={null}
-      breaksApplied
       onSelect={() => {}}
     />,
   );
@@ -137,7 +135,6 @@ test('a trip that needs no stop says so when breaks are on, and says nothing abo
       trip={trip}
       selectedId={null}
       recommendedId={null}
-      breaksApplied
       onSelect={() => {}}
     />,
   );
@@ -167,7 +164,6 @@ const listFor = (route: ReturnType<typeof planWith>['routes'][number]) =>
       trip={trip}
       selected={null}
       selectedStop={null}
-      breaksApplied
       onSelect={() => {}}
     />,
   );

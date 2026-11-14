@@ -346,6 +346,21 @@ test('the stops layer is added above the route and its source follows the select
   expect(sources.has('stops')).toBe(true);
 });
 
+test('the stops are pushed when the plan or the selected route changes, not on a checkpoint tap', () => {
+  const { controller } = setup();
+  const view = buildPlanView(buildRoutes('mixed', { departure: GRID.start }));
+  const stopPushes = () => log.filter((c) => c.method === 'setData:stops').length;
+  controller.setRoutes(view.routes);
+  controller.setSelection('route-1', null);
+  log.length = 0;
+
+  controller.setSelection('route-1', { routeId: 'route-1', index: 2 });
+  expect(stopPushes()).toBe(0);
+
+  controller.setSelection('route-2', null);
+  expect(stopPushes()).toBe(1);
+});
+
 test('a tap on a checkpoint selects it and opens one readout that labels both readings', () => {
   const { controller, ev, holder } = setup();
   controller.setGrid(model(GRID), holder);

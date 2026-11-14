@@ -1,6 +1,8 @@
 // Where a truck is on a route at a given instant, from the checkpoint ETAs the wire carries.
 // Pure: nothing here knows about React or the map.
 
+import { mergeByTime, stopEndMs } from '../plan/schedule';
+
 /** What a route must offer; the plan's route view has all of it. */
 export interface TruckRoute {
   id: string;
@@ -10,8 +12,8 @@ export interface TruckRoute {
   line: readonly (readonly [number, number])[];
   /** In order, by mile, each with the instant the truck is expected there. */
   checkpoints: readonly { mile: number; etaMs: number }[];
-  /** Required stops, if the plan has any: the truck stands still at `mile` from start to end. */
-  stops?: readonly { mile: number; startMs: number; endMs: number }[];
+  /** Required stops, if the plan has any: the truck stands still at `mile` for `durationSeconds`. */
+  stops?: readonly { mile: number; startMs: number; durationSeconds: number }[];
 }
 
 type TruckStatus = 'before' | 'driving' | 'arrived';
@@ -40,8 +42,15 @@ export function mileAt(
   const last = checkpoints[checkpoints.length - 1];
   if (!first || ms < first.etaMs) return { status: 'before', mile: 0 };
   if (ms >= last.etaMs) return { status: 'arrived', mile: miles };
-  let i = 1;
-  while (i < checkpoints.length - 1 && checkpoints[i].etaMs <= ms) i++;
+  // The first checkpoint after the instant, or the last one: the stretch holding it ends there.
+  let lo = 1;
+  let hi = checkpoints.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (checkpoints[mid].etaMs <= ms) lo = mid + 1;
+    else hi = mid;
+  }
+  const i = lo;
   const a = checkpoints[i - 1];
   const b = checkpoints[i];
   const span = b.etaMs - a.etaMs;
@@ -115,21 +124,14 @@ function timedPoints(route: TruckRoute): TruckRoute['checkpoints'] {
   if (!route.stops || route.stops.length === 0) return route.checkpoints;
   let found = timed.get(route);
   if (!found) {
-    const merged: { mile: number; etaMs: number }[] = [];
-    let next = 0;
-    const stops = route.stops;
-    const flush = (before: number) => {
-      while (next < stops.length && stops[next].startMs < before) {
-        merged.push({ mile: stops[next].mile, etaMs: stops[next].startMs });
-        merged.push({ mile: stops[next].mile, etaMs: stops[next].endMs });
-        next++;
-      }
-    };
-    for (const cp of route.checkpoints) {
-      flush(cp.etaMs);
-      merged.push(cp);
-    }
-    found = merged;
+    found = mergeByTime(route.checkpoints, route.stops).flatMap((item) =>
+      item.kind === 'checkpoint'
+        ? [item.cp]
+        : [
+            { mile: item.stop.mile, etaMs: item.stop.startMs },
+            { mile: item.stop.mile, etaMs: stopEndMs(item.stop) },
+          ],
+    );
     timed.set(route, found);
   }
   return found;

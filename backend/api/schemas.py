@@ -144,15 +144,6 @@ class ViaOut(Schema):
     lon: float
 
 
-class StopOut(StopCore):
-    # Built from the planner's `RouteStop`, whose duration is a float of seconds.
-    duration_seconds: int
-
-    @staticmethod
-    def resolve_duration_seconds(obj) -> int:
-        return round(obj.duration_s)
-
-
 class RouteOut(RouteCore):
     # Built from the planner's `PlannedRoute`; the resolvers below read what its route holds. A
     # docstring would end up in the OpenAPI schema and the generated types.
@@ -161,12 +152,12 @@ class RouteOut(RouteCore):
     source: RouteSource
     via: ViaOut | None
     driving_seconds: int
-    stops: list[StopOut]
+    stops: list[StopCore]
     """The required stops in order; empty with rest breaks off, and for a trip under 8 hours."""
 
     @staticmethod
     def resolve_travel_time_seconds(obj) -> int:
-        return round(obj.route.travel_time_s + sum(stop.duration_s for stop in obj.stops))
+        return round(obj.route.travel_time_s + sum(stop.duration_seconds for stop in obj.stops))
 
     @staticmethod
     def resolve_driving_seconds(obj) -> int:
@@ -248,31 +239,25 @@ class WeatherIn(PlanParams):
         return self
 
 
+def _check_service_area(points, what: str, where: str) -> None:
+    if not all(
+        SERVICE_LATITUDES[0] <= p.lat <= SERVICE_LATITUDES[1]
+        and SERVICE_LONGITUDES[0] <= p.lon <= SERVICE_LONGITUDES[1]
+        for p in points
+    ):
+        raise PydanticCustomError(
+            OUTSIDE_SERVICE_AREA,
+            f"{where}: {what} must lie in the service area (latitude "
+            f"{SERVICE_LATITUDES[0]:g} to {SERVICE_LATITUDES[1]:g}, longitude "
+            f"{SERVICE_LONGITUDES[0]:g} to {SERVICE_LONGITUDES[1]:g})",
+        )
+
+
 def _check_marks(route: RouteCore, interval_miles: float) -> None:
     marks = [checkpoint.mile for checkpoint in route.checkpoints]
     where = f"route {route.id!r}"
-    if not all(
-        SERVICE_LATITUDES[0] <= c.lat <= SERVICE_LATITUDES[1]
-        and SERVICE_LONGITUDES[0] <= c.lon <= SERVICE_LONGITUDES[1]
-        for c in route.checkpoints
-    ):
-        raise PydanticCustomError(
-            OUTSIDE_SERVICE_AREA,
-            f"{where}: checkpoints must lie in the service area (latitude "
-            f"{SERVICE_LATITUDES[0]:g} to {SERVICE_LATITUDES[1]:g}, longitude "
-            f"{SERVICE_LONGITUDES[0]:g} to {SERVICE_LONGITUDES[1]:g})",
-        )
-    if not all(
-        SERVICE_LATITUDES[0] <= s.lat <= SERVICE_LATITUDES[1]
-        and SERVICE_LONGITUDES[0] <= s.lon <= SERVICE_LONGITUDES[1]
-        for s in route.stops
-    ):
-        raise PydanticCustomError(
-            OUTSIDE_SERVICE_AREA,
-            f"{where}: stops must lie in the service area (latitude "
-            f"{SERVICE_LATITUDES[0]:g} to {SERVICE_LATITUDES[1]:g}, longitude "
-            f"{SERVICE_LONGITUDES[0]:g} to {SERVICE_LONGITUDES[1]:g})",
-        )
+    _check_service_area(route.checkpoints, "checkpoints", where)
+    _check_service_area(route.stops, "stops", where)
     if marks[0] != 0:
         raise ValueError(f"{where}: the first checkpoint must be at mile 0")
     if any(stop.mile > route.total_miles for stop in route.stops):

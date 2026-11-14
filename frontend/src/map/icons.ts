@@ -36,6 +36,7 @@ export function glyphImage(key: RiskKey): ImageData {
 }
 
 const STOP_SIZE = 34;
+const STOP_INK = '#37474f';
 
 /**
  * The mark for a required stop and the weather it sits in: a dark octagon with a pause sign, a
@@ -57,7 +58,7 @@ export function stopImage(key: RiskKey): ImageData {
     else ctx.lineTo(x, y);
   }
   ctx.closePath();
-  ctx.fillStyle = '#37474f';
+  ctx.fillStyle = STOP_INK;
   ctx.fill();
   ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 2;
@@ -70,7 +71,7 @@ export function stopImage(key: RiskKey): ImageData {
   ctx.arc(25, 9, 8.5, 0, Math.PI * 2);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
-  ctx.strokeStyle = '#37474f';
+  ctx.strokeStyle = STOP_INK;
   ctx.lineWidth = 1.2;
   ctx.stroke();
   const scale = 0.62;

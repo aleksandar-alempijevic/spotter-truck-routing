@@ -10,7 +10,7 @@ from routing.rest_breaks import (
     REST_S,
     RESTART_S,
     SHIFT_DRIVING_S,
-    elapsed_at,
+    StopClock,
 )
 from tests.route_fixtures import route_from
 
@@ -74,7 +74,7 @@ def test_a_break_every_8_hours_driven_and_a_rest_every_11_over_several_cycles():
 
 
 def test_stops_have_the_regulations_durations():
-    durations = {stop.kind: stop.duration_s for stop in plan_stops(70 * H)}
+    durations = {stop.kind: stop.duration_seconds for stop in plan_stops(70 * H)}
 
     assert durations == {"break": 30 * 60, "rest": 10 * H, "restart": 34 * H}
 
@@ -105,30 +105,31 @@ def test_stops_ascend_and_all_fall_before_the_end_of_the_trip(driving_s):
 def test_the_door_to_door_time_adds_every_stop():
     stops = plan_stops(12 * H)
 
-    assert elapsed_at(stops, 12 * H) == 12 * H + BREAK_S + REST_S
-    assert elapsed_at(plan_stops(61 * H), 61 * H) == (61 + 2.5 + 50 + 34) * H
+    assert StopClock(stops).elapsed_at(12 * H) == 12 * H + BREAK_S + REST_S
+    assert StopClock(plan_stops(61 * H)).elapsed_at(61 * H) == (61 + 2.5 + 50 + 34) * H
 
 
 def test_a_point_exactly_at_a_limit_is_reached_before_the_stop_and_the_next_instant_after():
     stops = plan_stops(12 * H)
 
-    assert elapsed_at(stops, 8 * H) == 8 * H
-    assert elapsed_at(stops, 8 * H + 1) == 8 * H + 1 + BREAK_S
-    assert elapsed_at(stops, 11 * H) == 11 * H + BREAK_S
-    assert elapsed_at(stops, 11 * H + 1) == 11 * H + 1 + BREAK_S + REST_S
+    assert StopClock(stops).elapsed_at(8 * H) == 8 * H
+    assert StopClock(stops).elapsed_at(8 * H + 1) == 8 * H + 1 + BREAK_S
+    assert StopClock(stops).elapsed_at(11 * H) == 11 * H + BREAK_S
+    assert StopClock(stops).elapsed_at(11 * H + 1) == 11 * H + 1 + BREAK_S + REST_S
 
 
 def test_elapsed_time_is_strictly_increasing_in_driving_time():
     stops = plan_stops(70 * H)
     samples = [0, 1, 8 * H - 1, 8 * H, 8 * H + 1, 11 * H, 11 * H + 1, 60 * H, 60 * H + 1, 70 * H]
 
-    elapsed = [elapsed_at(stops, s) for s in samples]
+    clock = StopClock(stops)
+    elapsed = [clock.elapsed_at(s) for s in samples]
 
     assert elapsed == sorted(set(elapsed))
 
 
 def test_no_stops_means_driving_time_only():
-    assert elapsed_at((), 9 * H) == 9 * H
+    assert StopClock(()).elapsed_at(9 * H) == 9 * H
 
 
 def test_a_stop_is_placed_where_the_truck_is_when_the_limit_is_reached():
@@ -146,6 +147,6 @@ def test_a_stop_is_placed_where_the_truck_is_when_the_limit_is_reached():
     assert -120.0 < brk.lon < rest.lon < -100.0
     assert brk.starts_at == DEPARTURE + timedelta(hours=8)
     assert rest.starts_at == DEPARTURE + timedelta(hours=11, minutes=30)
-    assert brk.duration_s == BREAK_S
-    assert rest.duration_s == REST_S
+    assert brk.duration_seconds == BREAK_S
+    assert rest.duration_seconds == REST_S
     assert brk.starts_at.utcoffset() == timedelta(0)

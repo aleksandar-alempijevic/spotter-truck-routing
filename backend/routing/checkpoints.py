@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from .geo import METERS_PER_MILE
-from .rest_breaks import RestStop, elapsed_at
+from .rest_breaks import RestStop, StopClock
 from .route import Route
 
 MARK_EPSILON_MILES = 1e-6
@@ -51,11 +51,12 @@ def build_checkpoints(
     add the time spent stopped before each mark.
     """
     start = departure.astimezone(UTC)
+    clock = StopClock(stops)
     result = []
     for mile in checkpoint_marks(route.total_miles, spacing_miles):
         meters = min(mile * METERS_PER_MILE, route.length_m)
         lat, lon = route.position_at(meters)
         seconds = route.travel_time_s if mile >= route.total_miles else route.seconds_at(meters)
-        eta = start + timedelta(seconds=elapsed_at(stops, seconds))
+        eta = start + timedelta(seconds=clock.elapsed_at(seconds))
         result.append(RouteCheckpoint(mile, lat, lon, eta))
     return result

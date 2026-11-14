@@ -16,6 +16,7 @@ from bisect import bisect_left
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from itertools import accumulate
 from typing import Literal
 
 from .geo import METERS_PER_MILE
@@ -42,7 +43,7 @@ class RestStop:
 
     kind: StopKind
     driving_s: float
-    duration_s: float
+    duration_seconds: int
 
 
 def plan_stops(driving_s: float) -> tuple[RestStop, ...]:
@@ -53,9 +54,8 @@ def plan_stops(driving_s: float) -> tuple[RestStop, ...]:
     and ends the periods the shorter one would have.
     """
     stops: list[RestStop] = []
-    since_break = shift = cycle = (
-        0  # driving seconds; the limits are whole seconds, so these stay exact
-    )
+    # Driving seconds; the limits are whole seconds, so these stay exact.
+    since_break = shift = cycle = 0
     position = 0.0
     while True:
         to_cycle = CYCLE_DRIVING_S - cycle
@@ -79,14 +79,25 @@ def plan_stops(driving_s: float) -> tuple[RestStop, ...]:
             cycle += step
 
 
-def elapsed_at(stops: Sequence[RestStop], driving_s: float) -> float:
-    """Seconds from departure at a point of the drive, counting the stops taken before it.
+class StopClock:
+    """The time elapsed at a point of the drive, given a schedule of stops.
 
-    A point reached exactly where a stop begins is reached before the stop, so it gets the
-    arrival time. Strictly increasing in `driving_s`.
+    The offsets are summed once here, so each lookup is one bisect.
     """
-    taken = bisect_left([stop.driving_s for stop in stops], driving_s)
-    return driving_s + sum(stop.duration_s for stop in stops[:taken])
+
+    def __init__(self, stops: Sequence[RestStop]):
+        self._starts = [stop.driving_s for stop in stops]
+        self._stopped_before = list(
+            accumulate((stop.duration_seconds for stop in stops), initial=0)
+        )
+
+    def elapsed_at(self, driving_s: float) -> float:
+        """Seconds from departure at a point of the drive, counting the stops taken before it.
+
+        A point reached exactly where a stop begins is reached before the stop, so it gets the
+        arrival time. Strictly increasing in `driving_s`.
+        """
+        return driving_s + self._stopped_before[bisect_left(self._starts, driving_s)]
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,12 +109,13 @@ class RouteStop:
     lat: float
     lon: float
     starts_at: datetime
-    duration_s: float
+    duration_seconds: int
 
 
 def locate_stops(route: Route, stops: Sequence[RestStop], departure: datetime) -> list[RouteStop]:
     """Each stop's position on the route, through `Route.meters_at`, and its start instant."""
     start = departure.astimezone(UTC)
+    clock = StopClock(stops)
     located = []
     for stop in stops:
         meters = route.meters_at(stop.driving_s)
@@ -114,8 +126,8 @@ def locate_stops(route: Route, stops: Sequence[RestStop], departure: datetime) -
                 meters / METERS_PER_MILE,
                 lat,
                 lon,
-                start + timedelta(seconds=elapsed_at(stops, stop.driving_s)),
-                stop.duration_s,
+                start + timedelta(seconds=clock.elapsed_at(stop.driving_s)),
+                stop.duration_seconds,
             )
         )
     return located

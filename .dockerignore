@@ -1,7 +1,5 @@
 # What never enters the build context. Secrets first: no .env of any kind, and .env.example
 # is not needed by the build either.
-.env
-.env.*
 **/.env
 **/.env.*
 

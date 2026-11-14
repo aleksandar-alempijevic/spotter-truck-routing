@@ -1,13 +1,16 @@
 import { Box, ButtonBase, Typography } from '@mui/material';
 import { useEffect, useRef, type Ref } from 'react';
 import { describeCheckpoint, type CheckpointDescription } from '../plan/describe';
+import { stopEndMs } from '../plan/schedule';
 import type { CheckpointRef, StopRef, StopView } from '../plan/view';
 import type { Trip } from '../plan/trip';
 import type { CheckpointView, RouteView } from '../plan/view';
 import { RiskBadge } from '../risk/RiskBadge';
+import type { RiskState } from '../risk/levels';
 import { zoneName } from '../time/zone';
 import { displayZone } from '../plan/trip';
-import { interleave, stopName, stopWhat, STOPS_ASSUMPTION } from './stops';
+import { STOPS_ASSUMPTION } from '../plan/breaksCopy';
+import { interleave, stopName, stopWhat } from './stops';
 import { originClock } from './times';
 
 interface Props {
@@ -15,8 +18,6 @@ interface Props {
   trip: Trip;
   selected: CheckpointRef | null;
   selectedStop?: StopRef | null;
-  /** Whether the times include rest breaks, from the routes answer. */
-  breaksApplied?: boolean;
   onSelect(ref: CheckpointRef): void;
 }
 
@@ -38,6 +39,65 @@ function Conditions({ description }: { description: CheckpointDescription }) {
   );
 }
 
+/** What the two kinds of row share: the box, and the title, level, readings and decision. */
+const rowSx = (isSelected: boolean, resting: string) => ({
+  minHeight: 56,
+  px: 1,
+  py: 0.75,
+  borderBottom: 1,
+  borderColor: 'divider',
+  borderLeft: 4,
+  borderLeftColor: isSelected ? 'primary.main' : 'transparent',
+  bgcolor: isSelected ? 'action.selected' : resting,
+});
+
+function RowBody({
+  title,
+  risk,
+  description,
+  lead,
+  foot,
+}: {
+  title: string;
+  risk: RiskState;
+  description: CheckpointDescription;
+  /** A line before the readings. */
+  lead?: string;
+  /** A line after the decision. */
+  foot?: string;
+}) {
+  return (
+    <>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'center' }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {title}
+        </Typography>
+        <Typography variant="body2" component="span">
+          <RiskBadge state={risk} />
+        </Typography>
+      </Box>
+      {lead && (
+        <Typography variant="caption" color="text.secondary" component="div">
+          {lead}
+        </Typography>
+      )}
+      <Typography variant="caption" color="text.secondary" component="div">
+        <Conditions description={description} />
+      </Typography>
+      {description.decision && (
+        <Typography variant="caption" component="div" sx={{ fontWeight: 600 }}>
+          {description.decision}
+        </Typography>
+      )}
+      {foot && (
+        <Typography variant="caption" color="text.secondary" component="div">
+          {foot}
+        </Typography>
+      )}
+    </>
+  );
+}
+
 interface RowProps {
   route: RouteView;
   cp: CheckpointView;
@@ -49,8 +109,6 @@ interface RowProps {
 
 /** One checkpoint: mile, ETA, level and conditions. */
 export function CheckpointRow({ route, cp, trip, isSelected, onSelect, buttonRef }: RowProps) {
-  const description = describeCheckpoint(cp);
-  const { decision } = description;
   return (
     <ButtonBase
       ref={buttonRef}
@@ -60,32 +118,14 @@ export function CheckpointRow({ route, cp, trip, isSelected, onSelect, buttonRef
         display: 'block',
         width: '100%',
         textAlign: 'left',
-        minHeight: 56,
-        px: 1,
-        py: 0.75,
-        borderBottom: 1,
-        borderColor: 'divider',
-        borderLeft: 4,
-        borderLeftColor: isSelected ? 'primary.main' : 'transparent',
-        bgcolor: isSelected ? 'action.selected' : 'transparent',
+        ...rowSx(isSelected, 'transparent'),
       }}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'center' }}>
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          Mile {Math.round(cp.mile)} · {originClock(trip, cp.etaMs)}
-        </Typography>
-        <Typography variant="body2" component="span">
-          <RiskBadge state={cp.risk} />
-        </Typography>
-      </Box>
-      <Typography variant="caption" color="text.secondary" component="div">
-        <Conditions description={description} />
-      </Typography>
-      {decision && (
-        <Typography variant="caption" component="div" sx={{ fontWeight: 600 }}>
-          {decision}
-        </Typography>
-      )}
+      <RowBody
+        title={`Mile ${Math.round(cp.mile)} · ${originClock(trip, cp.etaMs)}`}
+        risk={cp.risk}
+        description={describeCheckpoint(cp)}
+      />
     </ButtonBase>
   );
 }
@@ -99,59 +139,29 @@ interface StopRowProps {
 
 /** One required stop: what it is, where on the route, and when it starts and ends. */
 export function StopRow({ stop, trip, isSelected, rowRef }: StopRowProps) {
-  const description = describeCheckpoint(stop);
   return (
     <Box
       ref={rowRef}
       aria-current={isSelected ? 'true' : undefined}
-      sx={{
-        minHeight: 56,
-        px: 1,
-        py: 0.75,
-        borderBottom: 1,
-        borderColor: 'divider',
-        borderLeft: 4,
-        borderLeftColor: isSelected ? 'primary.main' : 'transparent',
-        bgcolor: isSelected ? 'action.selected' : 'action.hover',
-      }}
+      sx={rowSx(isSelected, 'action.hover')}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'center' }}>
-        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          {stopName(stop)} · mile {Math.round(stop.mile)}
-        </Typography>
-        <Typography variant="body2" component="span">
-          <RiskBadge state={stop.risk} />
-        </Typography>
-      </Box>
-      <Typography variant="caption" color="text.secondary" component="div">
-        {stopWhat(stop)}: {originClock(trip, stop.startMs)} to {originClock(trip, stop.endMs)}
-      </Typography>
-      <Typography variant="caption" color="text.secondary" component="div">
-        <Conditions description={description} />
-      </Typography>
-      {description.decision && (
-        <Typography variant="caption" component="div" sx={{ fontWeight: 600 }}>
-          {description.decision}
-        </Typography>
-      )}
-      {stop.readAtMs !== null && (
-        <Typography variant="caption" color="text.secondary" component="div">
-          Worst during the stop, at {originClock(trip, stop.readAtMs)}
-        </Typography>
-      )}
+      <RowBody
+        title={`${stopName(stop)} · mile ${Math.round(stop.mile)}`}
+        risk={stop.risk}
+        description={describeCheckpoint(stop)}
+        lead={`${stopWhat(stop)}: ${originClock(trip, stop.startMs)} to ${originClock(trip, stopEndMs(stop))}`}
+        foot={
+          stop.readAtMs !== null
+            ? `Worst during the stop, at ${originClock(trip, stop.readAtMs)}`
+            : undefined
+        }
+      />
     </Box>
   );
 }
 
 /** The selected route's checkpoints in order, with its required stops between them. */
-export function CheckpointList({
-  route,
-  trip,
-  selected,
-  selectedStop = null,
-  breaksApplied = false,
-  onSelect,
-}: Props) {
+export function CheckpointList({ route, trip, selected, selectedStop = null, onSelect }: Props) {
   const selectedRef = useRef<HTMLButtonElement>(null);
   const stopRef = useRef<HTMLDivElement>(null);
   const selectedIndex = selected?.routeId === route.id ? selected.index : null;
@@ -172,7 +182,7 @@ export function CheckpointList({
       <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
         Times are in {zoneName(trip.departureMs, displayZone(trip))}, the starting place&apos;s time
         zone.
-        {breaksApplied ? ` ${STOPS_ASSUMPTION}` : ''}
+        {route.breaksApplied ? ` ${STOPS_ASSUMPTION}` : ''}
       </Typography>
       <Box component="ol" sx={{ listStyle: 'none', m: 0, p: 0 }}>
         {interleave(route).map((item) => {

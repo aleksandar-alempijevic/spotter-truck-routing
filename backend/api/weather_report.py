@@ -109,9 +109,7 @@ async def build_report(
     stop_positions = [(s.lat, s.lon) for route in routes for s in route.stops]
     try:
         plan = await asyncio.to_thread(
-            lambda: plan_locations(
-                positions, stops=stop_positions, max_locations=runtime.max_locations
-            )
+            plan_locations, positions, stops=stop_positions, max_locations=runtime.max_locations
         )
     except TooManyLocations:
         raise ValidationError(

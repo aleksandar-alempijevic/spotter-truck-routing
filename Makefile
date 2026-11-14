@@ -10,7 +10,7 @@ SCRATCH := $(CURDIR)/frontend/node_modules/.tmp/api-types
 # $(call generate_types,OUTPUT_FILE): export the schema, then generate TypeScript from it.
 define generate_types
 mkdir -p $(SCRATCH)
-DJANGO_SETTINGS_MODULE=config.settings_test uv --directory backend run python manage.py export_openapi_schema --api api.api.api --output $(SCRATCH)/openapi.json
+uv --directory backend run python export_openapi.py $(SCRATCH)/openapi.json
 pnpm -C frontend exec openapi-typescript $(SCRATCH)/openapi.json -o $(1)
 endef
 

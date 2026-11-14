@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { asApiError } from '../api/client';
 import { fetchAddresses } from '../api/endpoints';
-import { HOST_SLEEPS, WAKE_NOTICE, useWaitedLong } from '../hosting';
+import { useWakeNotice } from '../hosting';
 import type { AttributionOut, SuggestionOut } from '../api/types';
 import { describeError } from '../plan/errors';
 import { SEARCH_MAX_CHARS, SEARCH_MIN_CHARS } from '../plan/trip';
@@ -28,24 +28,13 @@ interface Props {
   onCredit(credit: AttributionOut): void;
   error?: string;
   autoFocus?: boolean;
-  /** Whether the host sleeps when idle; the hosted build sets it. */
-  hostSleeps?: boolean;
 }
 
 /**
  * Address search: debounced, never sent below the minimum or above the maximum length, with superseded searches
  * cancelled. What the driver picks is a whole suggestion (label, position, time zone).
  */
-export function AddressField({
-  label,
-  text,
-  choice,
-  onChange,
-  onCredit,
-  error,
-  autoFocus,
-  hostSleeps = HOST_SLEEPS,
-}: Props) {
+export function AddressField({ label, text, choice, onChange, onCredit, error, autoFocus }: Props) {
   const debounced = useDebouncedValue(text.trim(), SEARCH_DEBOUNCE_MS);
   const searching = choice === null && canSearch(debounced);
 
@@ -57,10 +46,7 @@ export function AddressField({
     staleTime: 5 * 60_000,
   });
 
-  const waitedLong = useWaitedLong(
-    hostSleeps && query.isFetching && searching,
-    WAKE_NOTICE_AFTER_MS,
-  );
+  const wakeNotice = useWakeNotice(query.isFetching && searching, WAKE_NOTICE_AFTER_MS);
 
   const credit = query.data?.attribution;
   useEffect(() => {
@@ -79,7 +65,7 @@ export function AddressField({
       inputValue={text}
       filterOptions={(all) => all}
       loading={query.isFetching && searching}
-      loadingText={waitedLong ? `Still searching. ${WAKE_NOTICE}` : 'Loading…'}
+      loadingText={wakeNotice ? `Still searching. ${wakeNotice}` : 'Loading…'}
       getOptionLabel={(s) => s.label}
       isOptionEqualToValue={(a, b) => a.label === b.label && a.lat === b.lat && a.lon === b.lon}
       onInputChange={(_, value, reason) => {

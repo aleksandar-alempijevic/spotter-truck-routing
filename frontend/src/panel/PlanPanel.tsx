@@ -9,7 +9,7 @@ import { CheckpointList, CheckpointRow, StopRow } from './CheckpointList';
 import { PlanHeadline } from './PlanHeadline';
 import { RouteCards } from './RouteCards';
 import { RouteChips } from './RouteChips';
-import { BREAKS_ASSUMPTION } from './stops';
+import { BREAKS_NOTE } from '../plan/breaksCopy';
 import { WhyThisRoute } from './WhyThisRoute';
 
 /**
@@ -86,7 +86,6 @@ export function PlanPanel({
       trip={submission.trip}
       selected={selectedCheckpoint}
       selectedStop={selectedStop}
-      breaksApplied={breaksApplied}
       onSelect={onSelectCheckpoint}
     />
   );
@@ -116,7 +115,7 @@ export function PlanPanel({
       <PlanHeadline state={state} submission={submission} onEditTrip={onEditTrip} />
       {breaksApplied && routes.length > 0 && (
         <Typography variant="body2" color="text.secondary">
-          {BREAKS_ASSUMPTION}
+          {BREAKS_NOTE}
         </Typography>
       )}
       {state.view?.shortfall && (
@@ -139,7 +138,6 @@ export function PlanPanel({
           trip={submission.trip}
           selectedId={selectedRouteId}
           recommendedId={recommendedId}
-          breaksApplied={breaksApplied}
           onSelect={onSelectRoute}
         />
       )}

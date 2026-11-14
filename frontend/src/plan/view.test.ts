@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 import { ApiError } from '../api/client';
 import { buildRoutes, buildWeather } from '../test/fixtures';
 import { describeCheckpoint } from './describe';
+import { stopEndMs } from './schedule';
 import { buildPlanView, checkAligned } from './view';
 import { buildWeatherBody } from './weatherRequest';
 
@@ -163,7 +164,7 @@ test('the mode comes from the routes answer: breaks applied, driving time and st
   expect(first.travelSeconds).toBe(
     first.drivingSeconds + first.stops.reduce((sum, s) => sum + s.durationSeconds, 0),
   );
-  expect(first.stops[0].endMs - first.stops[0].startMs).toBe(30 * 60_000);
+  expect(stopEndMs(first.stops[0]) - first.stops[0].startMs).toBe(30 * 60_000);
 });
 
 test('the echo is read, not inferred: a trip with no stops still says breaks were applied', () => {

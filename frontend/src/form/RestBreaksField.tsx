@@ -1,8 +1,6 @@
 import { FormControlLabel, FormHelperText, Stack, Switch } from '@mui/material';
 
-/** What the switch adds, and what it assumes: said beside the switch, not behind a link. */
-const HELP =
-  'Adds a 30-minute break after 8 hours of driving and 10 hours off after 11. Assumes a rested start and no time except driving.';
+import { BREAKS_HELP } from '../plan/breaksCopy';
 
 export function RestBreaksField({
   checked,
@@ -26,7 +24,7 @@ export function RestBreaksField({
         }
       />
       <FormHelperText id="rest-breaks-help" sx={{ mx: 0 }}>
-        {HELP}
+        {BREAKS_HELP}
       </FormHelperText>
     </Stack>
   );

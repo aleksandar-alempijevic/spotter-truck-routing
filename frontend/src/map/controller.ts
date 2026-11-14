@@ -282,9 +282,12 @@ export class MapController {
   }
 
   setSelection(routeId: string | null, checkpoint: CheckpointRef | null): void {
+    const routeChanged = routeId !== this.selectedRouteId;
     this.selectedRouteId = routeId;
     this.selectedCheckpoint = checkpoint;
     if (this.live) {
+      // The stops follow the selected route, so a tap on a checkpoint of the same route leaves them.
+      if (routeChanged) this.pushStops();
       this.pushSelection();
       this.pushRouteStyle();
     }
@@ -670,13 +673,12 @@ export class MapController {
     map.setPaintProperty(LAYER.trucks, 'circle-radius', truckRadius(id));
   }
 
-  /** The selected route's stops: a few points that follow the route selection. */
+  /** The selected route's stops: a few points that follow the route selection and the plan. */
   private pushStops(): void {
     this.source(SOURCE.stops)?.setData(stopPoints(this.routes, this.selectedRouteId));
   }
 
   private pushSelection(): void {
-    this.pushStops();
     const sel = this.selectedCheckpoint;
     this.source(SOURCE.selected)?.setData(
       selectedPoint(this.routes, sel?.routeId ?? null, sel?.index ?? null),

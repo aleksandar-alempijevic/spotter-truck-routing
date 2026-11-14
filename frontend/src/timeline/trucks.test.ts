@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { buildRoutes, buildWeather } from '../test/fixtures';
 import { buildPlanView } from '../plan/view';
+import { stopEndMs } from '../plan/schedule';
 import { describeTruck, mileAt, pointAtMile, trucksAt, type TruckRoute } from './trucks';
 
 const H = 3_600_000;
@@ -117,7 +118,7 @@ test('truck wording', () => {
 
 test('a truck stands still across a stop and sets off again after it', () => {
   // 100 miles in 2 h of driving, with a 10-hour rest at mile 50.
-  const rest = { mile: 50, startMs: T0 + 1 * H, endMs: T0 + 11 * H };
+  const rest = { mile: 50, startMs: T0 + 1 * H, durationSeconds: 10 * 3600 };
   const route: TruckRoute = {
     ...straight,
     checkpoints: [
@@ -165,11 +166,12 @@ test('a truck on a plan with breaks stands at the stop for its whole duration', 
   const view = buildPlanView(buildRoutes('mixed', { departure, breaks: true }));
   const route = view.routes[0];
   const rest = route.stops.find((s) => s.kind === 'rest')!;
+  const restEndMs = stopEndMs(rest);
 
-  const during = [rest.startMs, rest.startMs + (rest.endMs - rest.startMs) / 2, rest.endMs].map(
+  const during = [rest.startMs, rest.startMs + (restEndMs - rest.startMs) / 2, restEndMs].map(
     (ms) => trucksAt([route], ms)[0],
   );
 
   for (const truck of during) expect(truck.mile).toBeCloseTo(rest.mile, 5);
-  expect(trucksAt([route], rest.endMs + 30 * 60_000)[0].mile).toBeGreaterThan(rest.mile);
+  expect(trucksAt([route], restEndMs + 30 * 60_000)[0].mile).toBeGreaterThan(rest.mile);
 });

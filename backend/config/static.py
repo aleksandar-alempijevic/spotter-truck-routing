@@ -31,8 +31,6 @@ CONTENT_TYPES = {
     ".js": "text/javascript; charset=utf-8",
     ".mjs": "text/javascript; charset=utf-8",
     ".css": "text/css; charset=utf-8",
-    ".json": "application/json",
-    ".map": "application/json",
 }
 # Hashed build output never changes under its name; the entry page names the current files.
 IMMUTABLE = b"public, max-age=31536000, immutable"
@@ -43,7 +41,7 @@ def content_type(path: Path) -> str:
     return (
         CONTENT_TYPES.get(path.suffix)
         or mimetypes.guess_type(path.name)[0]
-        or ("application/octet-stream")
+        or "application/octet-stream"
     )
 
 

@@ -45,9 +45,9 @@ FRONTEND_DIST_DIR = Path(
 
 # Lean on purpose: no database (Django's default is none), sessions, auth or admin;
 # the core flow is stateless.
-# `ninja` is listed for its management commands (the OpenAPI export behind `make types`); the
-# docs page does not depend on it (api/docs_page.py).
-INSTALLED_APPS = ["ninja"]
+# Ninja is deliberately not an installed app: without it, Ninja renders its CDN docs page, which
+# needs no static files from this server.
+INSTALLED_APPS: list[str] = []
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
