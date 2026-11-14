@@ -7,7 +7,8 @@ import { buildRoutes, buildWeather, DALLAS, scenarioDestination } from '../test/
 import { formatDuration } from '../time/zone';
 import { CheckpointList } from './CheckpointList';
 import { RouteCards } from './RouteCards';
-import { interleave, splitText } from './stops';
+import type { StopView } from '../plan/view';
+import { interleave, splitText, stopWhat } from './stops';
 
 afterEach(cleanup);
 
@@ -232,4 +233,13 @@ test('with breaks off no stop row exists to carry weather', () => {
 
   expect(screen.queryByText(/Worst during the stop/)).toBeNull();
   expect(screen.queryByText(/Rest · mile|Break · mile/)).toBeNull();
+});
+
+test('a stop is labelled with its length, a whole number of hours in hours', () => {
+  const label = (kind: StopView['kind'], seconds: number) =>
+    stopWhat({ kind, durationSeconds: seconds } as StopView);
+
+  expect(label('break', 30 * 60)).toBe('30 min break');
+  expect(label('rest', 10 * 3600)).toBe('10 h rest');
+  expect(label('restart', 34 * 3600)).toBe('34 h restart');
 });

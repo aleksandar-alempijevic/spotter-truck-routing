@@ -127,8 +127,13 @@ def run(base: str, keys_set: bool) -> list[str]:
     api_error("/api/no-such-path", "GET", 404, "not_found")
     api_error("/api/health", "POST", 405, "method_not_allowed")
 
-    status, _, _ = fetch(base, "/api/health", host="not-allowed.invalid")
-    check("foreign Host header is refused", status == 400, str(status))
+    for path in ("/api/health", "/", paths[0] if paths else "/assets/"):
+        status, _, body = fetch(base, path, host="not-allowed.invalid")
+        check(
+            f"foreign Host header is refused on {path}",
+            status == 400 and b'id="root"' not in body,
+            str(status),
+        )
 
     if keys_set:
         print("SKIP  keyless 503 (--keys-set)")

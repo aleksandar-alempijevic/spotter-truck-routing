@@ -30,7 +30,9 @@ def dist(tmp_path: Path) -> Path:
     return tmp_path
 
 
-async def call(app, path: str, method: str = "GET", scope_type: str = "http"):
+async def call(
+    app, path: str, method: str = "GET", scope_type: str = "http", host: bytes | None = b"localhost"
+):
     """Run one request through an ASGI app; returns (status, headers, body)."""
     sent: list[dict] = []
 
@@ -50,7 +52,7 @@ async def call(app, path: str, method: str = "GET", scope_type: str = "http"):
         "path": path,
         "raw_path": path.encode(),
         "query_string": b"",
-        "headers": [(b"host", b"localhost")],
+        "headers": [(b"host", host)] if host is not None else [],
         "scheme": "http",
         "server": ("localhost", 80),
         "client": ("127.0.0.1", 1),
@@ -220,3 +222,39 @@ def test_the_frontend_directory_follows_the_environment():
     assert settings_value("FRONTEND_DIST_DIR", FRONTEND_DIST_DIR="/srv/dist") == (
         "PosixPath('/srv/dist')"
     )
+
+
+@pytest.mark.parametrize("path", ["/", "/assets/index-abc.js"])
+@pytest.mark.parametrize("host", [b"evil.example", b"", None, b"localhost.evil.example"])
+async def test_a_host_django_would_refuse_gets_its_400_on_the_static_paths(dist, path, host):
+    status, headers, body = await call(StaticBuild(Recorder(), dist), path, host=host)
+
+    assert status == 400
+    assert headers["content-type"].startswith("text/html")
+    assert b"id=root" not in body and b"console.log" not in body
+
+
+@pytest.mark.parametrize(
+    ("allowed", "host", "status"),
+    [
+        (["app.example"], b"app.example", 200),
+        (["app.example"], b"app.example:8443", 200),
+        (["app.example"], b"APP.example", 200),
+        (["app.example"], b"other.example", 400),
+        ([".example.com"], b"www.example.com", 200),
+        ([".example.com"], b"example.com", 200),
+        ([".example.com"], b"example.com.evil.test", 400),
+        (["*"], b"anything.test", 200),
+        (["app.example"], b"app.example:80:80", 400),
+    ],
+)
+async def test_the_static_host_check_follows_allowed_hosts_as_django_does(
+    dist, allowed, host, status
+):
+    with override_settings(ALLOWED_HOSTS=allowed):
+        got = await call(StaticBuild(Recorder(), dist), "/", host=host)
+        # Django itself answers the same Host the same way.
+        django = await call(get_asgi_application(), "/api/health", host=host)
+
+    assert got[0] == status
+    assert django[0] == (400 if status == 400 else 200)

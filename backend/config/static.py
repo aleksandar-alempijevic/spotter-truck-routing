@@ -8,7 +8,8 @@ from here and the request path of the API stays async.
 
 The build is read into memory once, at start-up: it is about 2.3 MB, there is no file I/O on
 the request path, and a request can only ever name a file that was in the build (no path
-joining, so no traversal).
+joining, so no traversal). A request whose Host Django would refuse gets Django's 400 here too,
+so the page is served to the same hosts as the API.
 """
 
 import logging
@@ -16,6 +17,9 @@ import mimetypes
 from collections.abc import Awaitable, Callable, MutableMapping
 from pathlib import Path
 from typing import Any
+
+from django.conf import settings
+from django.http.request import split_domain_port, validate_host
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +47,22 @@ def content_type(path: Path) -> str:
         or mimetypes.guess_type(path.name)[0]
         or "application/octet-stream"
     )
+
+
+# What Django answers for a Host it refuses (`DisallowedHost`): a 400 page.
+BAD_HOST_BODY = b"<h1>Bad Request (400)</h1>"
+
+
+def host_allowed(scope: Scope) -> bool:
+    """Whether Django would accept this request's Host: its own rules, read from settings per
+    request. The port is ignored, and wildcards, a leading dot and `*` mean what they mean in
+    `ALLOWED_HOSTS`; with debug on and the list empty, Django's local defaults apply."""
+    allowed = settings.ALLOWED_HOSTS
+    if settings.DEBUG and not allowed:
+        allowed = [".localhost", "127.0.0.1", "[::1]"]
+    host = next((v.decode("latin-1") for k, v in scope["headers"] if k == b"host"), "")
+    domain, _ = split_domain_port(host)
+    return bool(domain) and validate_host(domain, allowed)
 
 
 class StaticBuild:
@@ -74,6 +94,19 @@ class StaticBuild:
             await self.app(scope, receive, send)
             return
         body, headers = entry
+        if not host_allowed(scope):
+            await send(
+                {
+                    "type": "http.response.start",
+                    "status": 400,
+                    "headers": [
+                        (b"content-type", b"text/html; charset=utf-8"),
+                        (b"content-length", str(len(BAD_HOST_BODY)).encode()),
+                    ],
+                }
+            )
+            await send({"type": "http.response.body", "body": BAD_HOST_BODY})
+            return
         if scope["method"] not in ("GET", "HEAD"):
             await send(
                 {

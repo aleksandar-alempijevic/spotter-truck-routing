@@ -50,6 +50,8 @@ With rest breaks on (the switch is off by default), stops add forecast locations
 
 The slider recolours only the heatmap cells whose level changed and makes no request, which is what these numbers show.
 
+These runs predate the rest-break and stop-weather UI (the stop rows, the stop marks and the stopped trucks). The build sizes below are those of the current build, but the slider has not been measured on it; it is re-measured at the final build, before the hosted test.
+
 **Limits.** The browser drew with software WebGL, so a real phone and a real GPU are unmeasured. The first paint of the map and the time to draw a plan were not measured. The grid sizes come from the stand-in's cell-size setting and were not recounted in the final run. An earlier run of the same script, on a different Chromium build, saw one or two isolated frames of 50 to 133 ms per drag, at the press and at the far-end turn-around; they did not appear in the final run, and the two builds differ, so the run does not show whether the app or the browser removed them. The drag was measured at commit `de0ce4b`; the rest-break and stop-weather screens added since were not measured again.
 
 ## Build size

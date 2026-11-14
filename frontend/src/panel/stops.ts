@@ -28,9 +28,14 @@ const KIND_WORDS = {
 
 export const stopName = (stop: StopView): string => KIND_WORDS[stop.kind].name;
 
-/** "30 min break", "10 h rest": what the stop is, its length being the one the server planned. */
+/** "30 min break", "10 h rest", "34 h restart": what the stop is, its length being the one the server planned. */
 export const stopWhat = (stop: StopView): string =>
-  `${formatDuration(stop.durationSeconds)} ${KIND_WORDS[stop.kind].noun}`;
+  `${stopLength(stop.durationSeconds)} ${KIND_WORDS[stop.kind].noun}`;
+
+/** A stop's length: whole hours as "34 h", anything else as a duration ("30 min"). */
+function stopLength(seconds: number): string {
+  return seconds >= 3600 && seconds % 3600 === 0 ? `${seconds / 3600} h` : formatDuration(seconds);
+}
 
 /** Total time stopped on a route. */
 export const stoppedSeconds = (route: RouteView): number =>

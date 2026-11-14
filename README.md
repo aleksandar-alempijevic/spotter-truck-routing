@@ -113,7 +113,7 @@ Settings come from environment variables, optionally from a git-ignored `.env` i
 
 ## Hosting
 
-The app is set up to run as one container on [Render's](https://render.com/) free plan, described by [render.yaml](render.yaml): the image above, a health check on `/api/health`, and auto-deploy off. Provider keys and the service's hostname are set in the host's dashboard, never in the repository or the image.
+The app is set up to run as one container on [Render's](https://render.com/) free plan, described by [render.yaml](render.yaml): the image above, a health check on `/api/health` (the `Host` Render's health probe sends is not yet verified against the allowed-hosts list; the first deploy tests it), and auto-deploy off. Provider keys and the service's hostname are set in the host's dashboard, never in the repository or the image.
 
 **The first load can take about a minute.** A free Render service sleeps after 15 minutes without requests and takes about a minute to wake, and the first request after that waits for it. Once the page has loaded, a slow address search or routes request says that the server may be waking up.
 

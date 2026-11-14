@@ -7,6 +7,7 @@ services:
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
+    # Unverified until the first deploy: the app answers 400 to a Host outside DJANGO_ALLOWED_HOSTS.
     healthCheckPath: /api/health
     # Every deploy is a manual act that follows the owner's word, never a side effect of a push.
     autoDeployTrigger: "off"

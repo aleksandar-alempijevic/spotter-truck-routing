@@ -44,7 +44,9 @@ class Route:
     `length_m` is the one distance scale: polyline distances are stretched or shrunk to it, so
     the polyline and the time knots agree. A knot is (metres from the start, seconds from
     departure); the knots must not go backwards and the last one's time must equal
-    `travel_time_s`. A route that breaks this is rejected, never repaired.
+    `travel_time_s`. A route that breaks this is rejected, never repaired. The time here, in the
+    knots and in `travel_time_s`, is time at the wheel: it carries no stops. Rest stops are added
+    on top of it by `rest_breaks` and never stored in a route.
     """
 
     points: tuple[Point, ...]

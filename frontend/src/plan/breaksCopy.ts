@@ -4,7 +4,8 @@
  */
 
 /** The rule the switch applies, as the driver reads it. */
-export const BREAKS_RULE = 'a 30-minute break after 8 hours of driving and 10 hours off after 11';
+export const BREAKS_RULE =
+  'a 30-minute break after 8 hours of driving, 10 hours off after 11, and 34 hours off after 60 hours of driving';
 
 /** Said wherever a time or a stop includes the breaks. */
 export const STOPS_ASSUMPTION =
