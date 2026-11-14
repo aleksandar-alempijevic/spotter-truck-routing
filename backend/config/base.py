@@ -45,7 +45,8 @@ FRONTEND_DIST_DIR = Path(
 
 # Lean on purpose: no database (Django's default is none), sessions, auth or admin;
 # the core flow is stateless.
-# `ninja` is listed only so the API docs at /api/docs can find their template.
+# `ninja` is listed for its management commands (the OpenAPI export behind `make types`); the
+# docs page does not depend on it (api/docs_page.py).
 INSTALLED_APPS = ["ninja"]
 
 MIDDLEWARE = [

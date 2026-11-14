@@ -26,10 +26,12 @@ frontend:
 
 # One origin without Docker: build the frontend, then serve it and the API from uvicorn the way
 # the image does (one worker, no reload, debug off). Needs no .env: a throwaway secret key is
-# used unless DJANGO_SECRET_KEY is set. Keep the uvicorn flags in step with the Dockerfile's CMD.
+# used unless DJANGO_SECRET_KEY is set; `make serve PORT=9000` picks another port. Keep the uvicorn
+# flags in step with the Dockerfile's CMD.
+PORT ?= 8000
 serve:
 	pnpm -C frontend build
-	DJANGO_SECRET_KEY=$${DJANGO_SECRET_KEY:-local-one-origin-only} uv --directory backend run uvicorn config.asgi:application --port 8000 --no-proxy-headers --workers 1
+	DJANGO_SECRET_KEY=$${DJANGO_SECRET_KEY:-local-one-origin-only} uv --directory backend run uvicorn config.asgi:application --port $(PORT) --no-proxy-headers --workers 1
 
 # The deployable image. Secrets are never build arguments; pass them to `docker run`.
 image:
@@ -38,7 +40,7 @@ image:
 # Tier-0 deploy check (no provider calls) against a running one-origin server: `make serve`, the
 # container, or the hosted URL. Add SMOKE_ARGS=--keys-set once provider keys are configured.
 # Not part of `make check`: it needs a running server.
-BASE_URL ?= http://127.0.0.1:8000
+BASE_URL ?= http://127.0.0.1:$(PORT)
 smoke:
 	uv --directory backend run python $(CURDIR)/scripts/smoke_check.py $(BASE_URL) $(SMOKE_ARGS)
 

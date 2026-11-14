@@ -19,6 +19,7 @@ from providers import (
 )
 from providers.errors import error_classes
 
+from .docs_page import CdnSwagger
 from .errors import API_ERRORS, SPECIFIC_VALIDATION_CODES
 from .planner import plan_routes
 from .schemas import (
@@ -32,7 +33,7 @@ from .schemas import (
 )
 from .weather_report import build_report, default_runtime
 
-api = NinjaAPI(title="Spotter truck routing API", version="0.1.0")
+api = NinjaAPI(title="Spotter truck routing API", version="0.1.0", docs=CdnSwagger())
 
 logger = logging.getLogger(__name__)
 
