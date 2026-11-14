@@ -784,6 +784,25 @@ test('with the switch on the pane shows the note, the split, the stop rows and t
   ).toBeInTheDocument();
 });
 
+test('on a phone the break note is left out at peek and shown at half and full', async () => {
+  useViewport('sheet');
+  renderApp();
+  await pick('Starting place', 'Dallas', 'Dallas, TX, United States');
+  await pick('Destination', 'Denver', 'Denver, CO, United States');
+  fireEvent.change(screen.getByLabelText('Cargo weight (lb)'), { target: { value: '36,000' } });
+  fireEvent.click(screen.getByRole('switch', { name: 'Include required rest breaks' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+  await screen.findByText('Route 2 is recommended');
+
+  expect(screen.queryByText(BREAKS_NOTE)).toBeNull(); // peek: the route chips need the room
+
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  expect(screen.getByText(BREAKS_NOTE)).toBeInTheDocument(); // half
+
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  expect(screen.getByText(BREAKS_NOTE)).toBeInTheDocument(); // full
+});
+
 test('the caption follows the answer, not the form: breaks asked for but not applied show none', async () => {
   useViewport('pane');
   const standIn = answer;

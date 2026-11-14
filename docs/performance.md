@@ -10,15 +10,15 @@ Planning is two requests: routes first, so they reach the map before the weather
 
 `backend/live_check.py` runs the routes endpoint over seven trips with the real TomTom, at 25-mile spacing and an 80,000 lb load (2026-11-12):
 
-| Trip | Routes | Latency | Response | TomTom calls |
-|---|---|---|---|---|
-| Los Angeles to New York | 3 (2 from TomTom, 1 via Albuquerque) | 14.7 s | 145 kB | 3 |
-| Seattle to Miami | 3 | 12.0 s | 181 kB | 1 |
-| Chicago to Los Angeles | 2 (no distinct third) on the first run; 3 after the search was widened | 8.5 s | 66 kB | 3 |
-| Dallas to San Francisco | 3 | 8.4 s | 106 kB | 1 |
-| Denver to Atlanta | 3 | 4.1 s | 73 kB | 1 |
-| Chicago to Indianapolis | 3 | 1.9 s | 12 kB | 1 |
-| Dallas to Houston | 3 | 1.6 s | 12 kB | 1 |
+| Trip                    | Routes                                                                 | Latency | Response | TomTom calls |
+| ----------------------- | ---------------------------------------------------------------------- | ------- | -------- | ------------ |
+| Los Angeles to New York | 3 (2 from TomTom, 1 via Albuquerque)                                   | 14.7 s  | 145 kB   | 3            |
+| Seattle to Miami        | 3                                                                      | 12.0 s  | 181 kB   | 1            |
+| Chicago to Los Angeles  | 2 (no distinct third) on the first run; 3 after the search was widened | 8.5 s   | 66 kB    | 3            |
+| Dallas to San Francisco | 3                                                                      | 8.4 s   | 106 kB   | 1            |
+| Denver to Atlanta       | 3                                                                      | 4.1 s   | 73 kB    | 1            |
+| Chicago to Indianapolis | 3                                                                      | 1.9 s   | 12 kB    | 1            |
+| Dallas to Houston       | 3                                                                      | 1.6 s   | 12 kB    | 1            |
 
 After the search was widened, Chicago to Los Angeles took 6 TomTom calls and returned three routes in 8.8 s and 100 kB. Lines carry 100 to 2,100 points after reduction. These are one-off measurements: TomTom's latency on long trips varies a lot between identical calls.
 
@@ -40,13 +40,13 @@ With rest breaks on (the switch is off by default), stops add forecast locations
 
 **Result, 12 drags (the earlier run, at `de0ce4b`):**
 
-| Measure | Result |
-|---|---|
-| Long tasks over 50 ms | 0 |
-| `pointermove` events over 16 ms | 0 |
-| Requests during the drag | 0 (API or other) |
-| Frame gap, median and 95th percentile | 16.7 ms and 16.7 to 16.8 ms |
-| Frames over 50 ms | 0 in this run, at a departure whose minute was not pinned; see the slow-frame section below |
+| Measure                               | Result                                                                                      |
+| ------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Long tasks over 50 ms                 | 0                                                                                           |
+| `pointermove` events over 16 ms       | 0                                                                                           |
+| Requests during the drag              | 0 (API or other)                                                                            |
+| Frame gap, median and 95th percentile | 16.7 ms and 16.7 to 16.8 ms                                                                 |
+| Frames over 50 ms                     | 0 in this run, at a departure whose minute was not pinned; see the slow-frame section below |
 
 The slider recolours only the heatmap cells whose level changed and makes no request, which is what these numbers show. Whether the drag is free of slow frames depends on the departure minute; see the section below.
 
@@ -58,35 +58,37 @@ The fix: when the slider first has no truck to show, the controller draws one tr
 
 Measured after the fix, at `21148f5` (the slider drag of `frontend/scripts/measure-slider.mjs` run as a probe that also records WebGL program links, at 390 by 844 with touch, software WebGL, no warm-up pass, one drag per run):
 
-| Departure | CPU | Runs | Frames over 50 ms | Largest gap |
-|---|---|---|---|---|
-| :10 (slider opens at hour 0) | 1x | 6, breaks off | 0 | 17 to 25 ms |
-| :10 | 4x | 6, breaks off | 0 | 26 to 34 ms |
-| :10 | 1x | 4, breaks on | 0 | 17 to 25 ms |
-| :45 | 1x | 6, breaks off | 0 | 17 to 25 ms |
-| :45 | 4x | 12, breaks off | 2 (one of 76 ms, one of 82 ms) | 25 to 82 ms |
+| Departure                    | CPU | Runs           | Frames over 50 ms              | Largest gap |
+| ---------------------------- | --- | -------------- | ------------------------------ | ----------- |
+| :10 (slider opens at hour 0) | 1x  | 6, breaks off  | 0                              | 17 to 25 ms |
+| :10                          | 4x  | 6, breaks off  | 0                              | 26 to 34 ms |
+| :10                          | 1x  | 4, breaks on   | 0                              | 17 to 25 ms |
+| :45                          | 1x  | 6, breaks off  | 0                              | 17 to 25 ms |
+| :45                          | 4x  | 12, breaks off | 2 (one of 76 ms, one of 82 ms) | 25 to 82 ms |
 
 Before the fix, the same probe at :10 gave one gap of 100 to 133 ms in every run (1x and 4x, breaks on and off), and at :45 none in 16 runs. The two gaps at :45 under 4x slowdown are not the fix's doing: at :45 a truck is already on the road, so the warm-up never runs, and no WebGL program was linked during those drags; the machine was loaded (load average about 7). They are reported as measured. The real-GPU cost of the program compile is not measured. `measure-slider.mjs` takes `DEP_MINUTE` to pin the departure minute; measure at both a minute under 30 and one over 30, because the two open the slider differently.
 
 **Limits.**
+
 - **GPU and scope.** The browser drew with software WebGL, so a real phone and a real GPU are unmeasured, including the cost of the program compile that the fix moves. The first paint of the map and the time to draw a plan were not measured, and the grid sizes come from the stand-in's cell-size setting and were not recounted.
 - **What each table measured.**
   - The 12-drag table is the run at `de0ce4b`: four configurations, 3 drags each, with the departure minute not pinned. It predates the rest-break and stop-weather screens, and its "0 frames over 50 ms" depended on the minute it ran at, as the cause below shows. An earlier run of the same script on a different Chromium build had seen one or two isolated frames of 50 to 133 ms per drag; that was the same cause, not a browser difference.
   - The "before the fix" figures (a gap of 100 to 133 ms at :10, none at :45) are the same probe on the controller of `d3b41e6`, with the other changes of the working tree around it.
   - The after-fix table is the probe on the tree committed as `21148f5`, which holds the fix. It is one drag per run, with no warm-up pass, at 1x and 4x CPU slowdown, and not the four-configuration, 12-drag run: it has not been repeated at 267 and 520 grid cells.
+- **Only the trucks program.** The fix removes the trucks layer's program from the drag, and the measurement no longer depends on the departure minute for that program only. In 3 of about 26 loaded runs a program for a line layer linked mid-drag instead, a late first compile of another layer; it is not covered by the fix and has not been traced.
 - **Noise.** Under the 4x slowdown at :45, two of 12 drags showed one 76 to 82 ms gap with no program built during the drag, on a loaded machine. They are reported, not explained.
 
 ## Build size
 
 Sizes of the frontend build at commit `529b7d0`, as Vite reports them in `make check` (the worker's gzip size is `gzip -c`, because the build prints no figure for it):
 
-| File | Size | Gzip |
-|---|---|---|
-| Entry `index-*.js` | 657.22 kB | 205.53 kB |
-| Map chunk `MapView-*.js` | 1,088.77 kB | 296.57 kB |
-| Worker `maplibre-gl-worker-*.mjs` | 520.11 kB | 147,800 bytes (about 144.3 KiB) |
-| `MapView-*.css` | 71.33 kB | 10.25 kB |
-| `index.html` | 0.54 kB | 0.37 kB |
+| File                              | Size        | Gzip                            |
+| --------------------------------- | ----------- | ------------------------------- |
+| Entry `index-*.js`                | 657.22 kB   | 205.53 kB                       |
+| Map chunk `MapView-*.js`          | 1,088.77 kB | 296.57 kB                       |
+| Worker `maplibre-gl-worker-*.mjs` | 520.11 kB   | 147,800 bytes (about 144.3 KiB) |
+| `MapView-*.css`                   | 71.33 kB    | 10.25 kB                        |
+| `index.html`                      | 0.54 kB     | 0.37 kB                         |
 
 At `de0ce4b`, the build the slider drag above was measured on, the entry was 641.53 kB (201.71 kB gzip) and the map chunk 1,087.20 kB (296.18 kB gzip); the worker and the stylesheet were the same files. The entry grew by about 4 kB gzip between the two commits.
 

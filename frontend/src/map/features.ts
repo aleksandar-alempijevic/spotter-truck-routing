@@ -85,6 +85,22 @@ export function stopPoints(
   };
 }
 
+/** One truck on a given position: it exists only to make the trucks layer draw once. */
+export function warmupTruck(
+  position: readonly [number, number],
+): FeatureCollection<Point, { routeId: string }> {
+  return {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [position[0], position[1]] },
+        properties: { routeId: 'warm-up' },
+      },
+    ],
+  };
+}
+
 export function endpointPoints(
   routes: readonly RouteView[],
 ): FeatureCollection<Point, { kind: 'origin' | 'destination' }> {

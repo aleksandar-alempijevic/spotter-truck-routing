@@ -13,7 +13,8 @@ export const STOP_MARK = {
     { x: 18.3, y: 20.6, width: 3.6, height: 12.7 },
   ],
   badge: { cx: 32, cy: 12, r: 12, rim: 1.2 },
-  /** The glyph's 24-unit box is drawn at this scale: with the layer's 0.85, about 16 CSS px. */
+  /** A level glyph is drawn in this many units, at this scale: with the layer's 0.85, about 16 CSS px. */
+  glyphBox: 24,
   glyphScale: 0.8,
 } as const;
 

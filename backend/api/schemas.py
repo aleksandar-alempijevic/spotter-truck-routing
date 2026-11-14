@@ -63,6 +63,11 @@ MAX_CHECKPOINTS_PER_ROUTE = 600
 room for a route of about 6,000 miles."""
 MAX_STOPS_PER_ROUTE = 100
 MAX_STOP_SECONDS = 48 * 3600
+MAX_ROUTE_SECONDS = 30 * 24 * 3600
+"""No trip here lasts 30 days: the bound keeps a number a hand-built body can make huge out of
+the ranking's arithmetic, where it would overflow into a 500."""
+MAX_ROUTE_MILES = 30_000.0
+"""Most that the schema's own limits can describe: 600 checkpoints at the widest spacing, 50 mi."""
 """The most stops a weather request may carry per route, and the longest one. A planned trip has
 about 2 stops per 11 hours of driving, and the longest stop is a 34-hour restart."""
 MAX_ID_LENGTH = 64
@@ -118,7 +123,7 @@ class RoutesIn(PlanParams):
 
 
 class CheckpointOut(Schema):
-    mile: float = Field(ge=0, allow_inf_nan=False)
+    mile: float = Field(ge=0, le=MAX_ROUTE_MILES, allow_inf_nan=False)
     lat: Latitude
     lon: Longitude
     eta: AwareDatetime
@@ -131,7 +136,7 @@ class StopCore(Schema):
 
     kind: StopKind
     """A 30-minute break, a 10-hour rest or a 34-hour restart."""
-    mile: float = Field(ge=0, allow_inf_nan=False)
+    mile: float = Field(ge=0, le=MAX_ROUTE_MILES, allow_inf_nan=False)
     lat: Latitude
     lon: Longitude
     starts_at: AwareDatetime
@@ -142,10 +147,10 @@ class RouteCore(Schema):
     """The part of a route the weather request sends back; the line is never sent back."""
 
     id: str = Field(min_length=1, max_length=MAX_ID_LENGTH)
-    travel_time_seconds: int = Field(ge=0)
+    travel_time_seconds: int = Field(ge=0, le=MAX_ROUTE_SECONDS)
     """Departure to arrival. With rest breaks on it includes the stops; with them off it is the
     driving time."""
-    total_miles: float = Field(ge=0, allow_inf_nan=False)
+    total_miles: float = Field(ge=0, le=MAX_ROUTE_MILES, allow_inf_nan=False)
     checkpoints: list[CheckpointOut] = Field(min_length=1, max_length=MAX_CHECKPOINTS_PER_ROUTE)
     stops: list[StopCore] = Field(default_factory=list, max_length=MAX_STOPS_PER_ROUTE)
     """The required stops in time order; empty with rest breaks off. Their weather is read, and

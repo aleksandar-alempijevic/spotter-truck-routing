@@ -39,7 +39,7 @@ The rules are in [docs/logic.md](docs/logic.md); this is the summary.
 
 The method, results and limits are in [docs/performance.md](docs/performance.md). In summary:
 
-- **Slider.** A scripted drag across every hour and back in headless Chromium at 390 by 844 with touch emulation, at 267 and 520 grid cells, with and without a 4x CPU slowdown. An earlier build showed one isolated frame of 100 to 217 ms per drag when the departure was under 30 minutes past the hour: the first draw of the trucks layer compiled its WebGL program mid-drag. The map now draws that layer once when the plan appears, and the same probe at a :10 departure shows no frame over 50 ms (largest gap 17 to 34 ms, 16 runs). At a :45 departure two of 12 runs under the 4x slowdown showed one 76 to 82 ms gap with no program built, so they are not this cause. The browser drew with software WebGL, so a real phone and a real GPU are not measured ([docs/performance.md](docs/performance.md#the-map-and-the-slider-frontend)).
+- **Slider.** A scripted drag across every hour and back in headless Chromium at 390 by 844 with touch emulation, at 267 and 520 grid cells, with and without a 4x CPU slowdown. An earlier build showed one isolated frame of 100 to 217 ms per drag when the departure was under 30 minutes past the hour: the first draw of the trucks layer compiled its WebGL program mid-drag. The map now draws that layer once when the plan appears, and the same probe at a :10 departure shows no frame over 50 ms (largest gap 17 to 34 ms, 16 runs). At a :45 departure two of 12 runs under the 4x slowdown showed one 76 to 82 ms gap with no program built, so they are not this cause. In 3 of about 26 loaded runs a line-layer program linked mid-drag instead; the fix covers the trucks program only. The browser drew with software WebGL, so a real phone and a real GPU are not measured ([docs/performance.md](docs/performance.md#the-map-and-the-slider-frontend)).
 - **Build size (gzip).** 205.53 kB for the entry that renders the form, then 296.57 kB for the map chunk and 147,800 bytes for its worker, which load after the form.
 - **Planning a trip.** Live routes for seven test trips took 1.6 to 14.7 s; TomTom's latency on long trips varies a lot between identical calls. For Seattle to Miami, the trip with the most forecast locations, weather for three routes with 423 checkpoints and the corridor grid took 1.05 s cold and 0.12 s when repeated, from the shared forecast cache.
 
@@ -49,13 +49,13 @@ These numbers are from local runs. The hosted app has not been measured.
 
 ### Prerequisites
 
-| Tool | Version | Install |
-|---|---|---|
-| [uv](https://docs.astral.sh/uv/) | any recent | `brew install uv`; it manages the Python version (3.13) and the backend dependencies |
-| [Node.js](https://nodejs.org/) | 22.12+, 24 or 26+ (Vite and Vitest skip 23 and 25) | |
-| [pnpm](https://pnpm.io/) | 9.15.4 (pinned in `frontend/package.json`) | `corepack enable`, which ships with Node and picks the pinned version |
-| make | any | preinstalled on macOS and most Linux |
-| [Docker](https://www.docker.com/) | any recent, only for the image | |
+| Tool                              | Version                                            | Install                                                                              |
+| --------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [uv](https://docs.astral.sh/uv/)  | any recent                                         | `brew install uv`; it manages the Python version (3.13) and the backend dependencies |
+| [Node.js](https://nodejs.org/)    | 22.12+, 24 or 26+ (Vite and Vitest skip 23 and 25) |                                                                                      |
+| [pnpm](https://pnpm.io/)          | 9.15.4 (pinned in `frontend/package.json`)         | `corepack enable`, which ships with Node and picks the pinned version                |
+| make                              | any                                                | preinstalled on macOS and most Linux                                                 |
+| [Docker](https://www.docker.com/) | any recent, only for the image                     |                                                                                      |
 
 You do not need to install Python or Django yourself.
 
@@ -96,12 +96,12 @@ Tests never make live calls: the providers are mocked, and the settings used by 
 
 Four scripts in `backend/` run the real providers and are not part of `make check`, because they spend quota:
 
-| Script | What it does | Needs |
-|---|---|---|
-| `live_check.py` | the routes endpoint over seven test trips (about 12 TomTom calls) | `TOMTOM_API_KEY` |
-| `live_address_check.py` | address search over 8 queries (8 Geoapify calls) | `GEOAPIFY_API_KEY` |
-| `live_weather_report_check.py` | one cross-country trip: routes (1 TomTom call), then weather, repeated to show the cache is used (about 500 Open-Meteo locations) | `TOMTOM_API_KEY` |
-| `live_weather_check.py` | Open-Meteo's quota behaviour (about 1,650 locations) | no key |
+| Script                         | What it does                                                                                                                      | Needs              |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `live_check.py`                | the routes endpoint over seven test trips (about 12 TomTom calls)                                                                 | `TOMTOM_API_KEY`   |
+| `live_address_check.py`        | address search over 8 queries (8 Geoapify calls)                                                                                  | `GEOAPIFY_API_KEY` |
+| `live_weather_report_check.py` | one cross-country trip: routes (1 TomTom call), then weather, repeated to show the cache is used (about 500 Open-Meteo locations) | `TOMTOM_API_KEY`   |
+| `live_weather_check.py`        | Open-Meteo's quota behaviour (about 1,650 locations)                                                                              | no key             |
 
 ```sh
 uv --directory backend run python live_check.py /tmp/live-check.json

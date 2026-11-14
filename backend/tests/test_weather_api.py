@@ -919,3 +919,34 @@ async def test_a_routes_answer_with_rest_breaks_on_is_accepted_and_reported_as_i
         second["travel_time_seconds"] - first["travel_time_seconds"]
     )
     assert second["travel_time_seconds"] - second["driving_seconds"] > 0
+
+
+def _huge(field_path):
+    def mutate(body):
+        target = body["routes"][0]
+        *parents, last = field_path
+        for key in parents:
+            target = target[key]
+        target[last] = 10**400 if last == "travel_time_seconds" else 1e308
+
+    return mutate
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        pytest.param(_huge(["travel_time_seconds"]), id="travel time"),
+        pytest.param(_huge(["total_miles"]), id="total miles"),
+        pytest.param(_huge(["checkpoints", 1, "mile"]), id="checkpoint mile"),
+    ],
+)
+async def test_a_number_no_real_trip_reaches_is_a_422_not_a_500(provider_mock, mutate):
+    calls = forecast(provider_mock)
+    body = request(route())
+    mutate(body)
+
+    response = await post(body)
+
+    assert response.status_code == 422
+    assert set(response.json()) == {"code", "message"}
+    assert calls == []

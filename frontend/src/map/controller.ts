@@ -16,6 +16,7 @@ import {
   selectedPoint,
   stopPoints,
   truckPoints,
+  warmupTruck,
 } from './features';
 import { glyphImage, hatchImage, ICON_PIXEL_RATIO, stopImage } from './icons';
 import {
@@ -756,19 +757,25 @@ export class MapController {
    * builds its WebGL program then and not on the first slider step. That program has a constant
    * colour with a per-feature radius, which no other layer has, and a software-GL browser blocks
    * about 120 ms compiling it. With the slider at hour 0 no truck is driving yet, so the layer
-   * would stay empty until the drag. One truck stands at the first route's start for a single
-   * frame, under the endpoint marks; the next idle replaces it with what the hour says.
+   * would stay empty until the drag. One truck stands at the first route's start, under the
+   * endpoint marks, until the first frame that draws it; that frame replaces it with what the
+   * hour says.
    */
   private warmTrucks(source: GeoJsonSource): boolean {
     const start = this.routes[0]?.line[0];
     if (this.trucksWarm || !start) return false;
     this.trucksWarm = true;
-    source.setData(
-      truckPoints([{ routeId: '', name: '', status: 'driving', mile: 0, position: [...start] }]),
-    );
-    this.map.once('idle', () => {
-      if (this.live) this.pushTrucks();
-    });
+    source.setData(warmupTruck(start));
+    // The truck's tile arrives from the worker, and the next render draws it. Waiting for the map
+    // to be idle instead would hold the placeholder for as long as the basemap keeps loading.
+    const loaded = (event: { sourceId?: string; isSourceLoaded?: boolean }) => {
+      if (event.sourceId !== SOURCE.trucks || !event.isSourceLoaded) return;
+      this.map.off('sourcedata', loaded);
+      this.map.once('render', () => {
+        if (this.live) this.pushTrucks();
+      });
+    };
+    this.map.on('sourcedata', loaded);
     return true;
   }
 

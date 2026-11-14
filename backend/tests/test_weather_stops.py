@@ -315,3 +315,14 @@ async def test_a_plan_a_few_hours_old_can_still_be_sent_again_for_its_weather(pr
     assert response.status_code == 200, response.content[:300]
     reading = response.json()["routes"][0]["stops"][0]
     assert reading["weather"] is None
+
+
+async def test_a_stop_mile_no_real_trip_reaches_is_a_422(provider_mock):
+    calls = forecast(provider_mock)
+    huge = {**stop(), "mile": 1e308}
+
+    response = await post(request({**route(total=20), "stops": [huge]}))
+
+    assert response.status_code == 422
+    assert set(response.json()) == {"code", "message"}
+    assert calls == []

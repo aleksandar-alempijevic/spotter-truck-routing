@@ -43,7 +43,7 @@ export function glyphImage(key: RiskKey): ImageData {
  * too.
  */
 export function stopImage(key: RiskKey): ImageData {
-  const { size, ink, paper, octagon, bars, badge, glyphScale } = STOP_MARK;
+  const { size, ink, paper, octagon, bars, badge, glyphBox, glyphScale } = STOP_MARK;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size * RATIO;
   const ctx = canvas.getContext('2d')!;
@@ -68,7 +68,7 @@ export function stopImage(key: RiskKey): ImageData {
   ctx.lineWidth = badge.rim;
   ctx.stroke();
   ctx.save();
-  ctx.translate(badge.cx - 12 * glyphScale, badge.cy - 12 * glyphScale);
+  ctx.translate(badge.cx - (glyphBox / 2) * glyphScale, badge.cy - (glyphBox / 2) * glyphScale);
   ctx.scale(glyphScale, glyphScale);
   drawGlyph(ctx, key);
   ctx.restore();

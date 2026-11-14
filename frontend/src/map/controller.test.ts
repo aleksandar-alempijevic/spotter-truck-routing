@@ -110,6 +110,9 @@ vi.mock('maplibre-gl', () => {
     fitBounds = record('fitBounds');
     panBy = record('panBy');
     isStyleLoaded = () => styleLoaded;
+    off = (event: string) => {
+      handlers.delete(event);
+    };
     once = (event: string, handler: (event: unknown) => void) => {
       onceHandlers.set(event, handler);
     };
@@ -362,25 +365,73 @@ test('the stops are pushed when the plan or the selected route changes, not on a
   expect(stopPushes()).toBe(1);
 });
 
+// A trip that leaves two hours after the grid starts: at hour 0 no truck is on the road.
+const idleTrip = () => {
+  const later = new Date(Date.parse(GRID.start) + 2 * 3_600_000).toISOString();
+  return buildPlanView(buildRoutes('mixed', { departure: later }));
+};
+const truckPushes = () =>
+  log
+    .filter((c) => c.method === 'setData:trucks')
+    .map((c) => (c.args[0] as FeatureLike).features.length);
+/** The frame that draws the placeholder: its tile arrives, then the next render. */
+const drawWarmFrame = () => {
+  handlers.get('sourcedata')!({ sourceId: 'trucks', isSourceLoaded: true });
+  onceHandlers.get('render')!({});
+};
+
 test('with no truck driving yet the trucks layer is drawn once, so its program is not built mid-drag', () => {
   const { controller, holder } = setup();
-  // The trip leaves two hours after the grid starts, so at hour 0 no truck is on the road.
-  const later = new Date(Date.parse(GRID.start) + 2 * 3_600_000).toISOString();
-  const view = buildPlanView(buildRoutes('mixed', { departure: later }));
-  const pushed = () =>
-    log
-      .filter((c) => c.method === 'setData:trucks')
-      .map((c) => (c.args[0] as FeatureLike).features.length);
-  controller.setRoutes(view.routes);
+  controller.setRoutes(idleTrip().routes);
   log.length = 0;
 
   controller.setGrid(model(GRID), holder);
 
-  expect(pushed()).toEqual([1]); // one truck at the start, for one frame
-  onceHandlers.get('idle')!({});
-  expect(pushed()).toEqual([1, 0]); // then what the hour says: nothing
+  expect(truckPushes()).toEqual([1]); // one truck at the start, until a frame draws it
+  // Neither another source's tile nor the trucks tile still loading is that frame.
+  handlers.get('sourcedata')!({ sourceId: 'grid-cells', isSourceLoaded: true });
+  handlers.get('sourcedata')!({ sourceId: 'trucks', isSourceLoaded: false });
+  expect(onceHandlers.has('render')).toBe(false);
+  drawWarmFrame();
+  expect(truckPushes()).toEqual([1, 0]); // then what the hour says: nothing
   controller.setGrid(model(GRID), holder);
-  expect(pushed()).toEqual([1, 0, 0]); // not drawn again
+  expect(truckPushes()).toEqual([1, 0, 0]); // not drawn again
+});
+
+test('the warm-up is not held for an idle map: the first drawn frame ends it', () => {
+  const { controller, holder } = setup();
+  controller.setRoutes(idleTrip().routes);
+  controller.setGrid(model(GRID), holder);
+
+  drawWarmFrame();
+
+  expect(onceHandlers.has('idle')).toBe(false);
+  expect(truckPushes().at(-1)).toBe(0);
+});
+
+test('a style that installs again draws the trucks layer again', () => {
+  const { controller, holder } = setup();
+  controller.setRoutes(idleTrip().routes);
+  controller.setGrid(model(GRID), holder);
+  drawWarmFrame();
+  log.length = 0;
+
+  handlers.get('style.load')!({}); // the basemap fell back to another style
+
+  expect(truckPushes()).toContain(1);
+});
+
+test('a restored context draws the trucks layer again', () => {
+  const { controller, holder } = setup();
+  controller.setRoutes(idleTrip().routes);
+  controller.setGrid(model(GRID), holder);
+  drawWarmFrame();
+  canvasListeners.get('webglcontextlost')!();
+  log.length = 0;
+
+  canvasListeners.get('webglcontextrestored')!();
+
+  expect(truckPushes()).toContain(1);
 });
 
 test('trucks already on the road need no warm-up draw', () => {
