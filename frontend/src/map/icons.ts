@@ -35,7 +35,7 @@ export function glyphImage(key: RiskKey): ImageData {
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-const STOP_SIZE = 34;
+const STOP_SIZE = 44;
 const STOP_INK = '#37474f';
 
 /**
@@ -52,8 +52,8 @@ export function stopImage(key: RiskKey): ImageData {
   ctx.beginPath();
   for (let i = 0; i < 8; i++) {
     const angle = (Math.PI / 4) * i + Math.PI / 8;
-    const x = 14 + Math.cos(angle) * 11;
-    const y = 20 + Math.sin(angle) * 11;
+    const x = 17 + Math.cos(angle) * 14;
+    const y = 27 + Math.sin(angle) * 14;
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
@@ -64,19 +64,21 @@ export function stopImage(key: RiskKey): ImageData {
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(10.2, 15, 2.8, 10);
-  ctx.fillRect(15, 15, 2.8, 10);
+  ctx.fillRect(12.2, 20.6, 3.6, 12.7);
+  ctx.fillRect(18.3, 20.6, 3.6, 12.7);
   // The badge: a white disc with the level's glyph inside it.
   ctx.beginPath();
-  ctx.arc(25, 9, 8.5, 0, Math.PI * 2);
+  ctx.arc(32, 12, 12, 0, Math.PI * 2);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
   ctx.strokeStyle = STOP_INK;
   ctx.lineWidth = 1.2;
   ctx.stroke();
-  const scale = 0.62;
+  // The glyph is drawn at 0.8 of its 24-unit box and the layer shows the mark at 0.85, so it
+  // reads at about 16 CSS px.
+  const scale = 0.8;
   ctx.save();
-  ctx.translate(25 - 12 * scale, 9 - 12 * scale);
+  ctx.translate(32 - 12 * scale, 12 - 12 * scale);
   ctx.scale(scale, scale);
   drawGlyph(ctx, key);
   ctx.restore();

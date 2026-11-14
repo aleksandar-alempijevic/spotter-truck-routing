@@ -7,6 +7,7 @@ import { RiskGlyph } from '../risk/RiskGlyph';
 import { formatDuration } from '../time/zone';
 import { formatMiles } from '../plan/format';
 import { selectableSx } from './selectable';
+import { Quantities } from './Quantities';
 import { splitText } from './stops';
 import { SelectedMark } from './SelectedMark';
 import { arrivalInDestinationZone, arrivalMs, originClock } from './times';
@@ -16,6 +17,8 @@ interface Props {
   trip: Trip;
   selectedId: string | null;
   recommendedId: string | null;
+  /** Whether the times include rest breaks: the plan's, from the routes answer. */
+  breaksApplied: boolean;
   onSelect(routeId: string): void;
 }
 
@@ -90,7 +93,14 @@ function MilesByLevel({ route }: { route: RouteView }) {
 }
 
 /** One card per route: time, distance, arrival and the miles at each level. */
-export function RouteCards({ routes, trip, selectedId, recommendedId, onSelect }: Props) {
+export function RouteCards({
+  routes,
+  trip,
+  selectedId,
+  recommendedId,
+  breaksApplied,
+  onSelect,
+}: Props) {
   return (
     <Stack spacing={1.5} component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
       {routes.map((route) => {
@@ -130,11 +140,14 @@ export function RouteCards({ routes, trip, selectedId, recommendedId, onSelect }
                 <RiskBadge state={route.risk} />
               </Stack>
               <Typography variant="body2" component="span" sx={{ display: 'block', mt: 0.5 }}>
-                {formatDuration(route.travelSeconds)}
-                {route.breaksApplied ? ` · ${splitText(route) ?? 'no breaks needed'}` : ''}
-                {' · '}
-                {formatMiles(route.miles)}
-                {route.rank !== null ? ` · ranked ${route.rank}` : ''}
+                <Quantities
+                  text={[
+                    formatDuration(route.travelSeconds),
+                    ...(breaksApplied ? [splitText(route) ?? 'no breaks needed'] : []),
+                    formatMiles(route.miles),
+                    ...(route.rank !== null ? [`ranked ${route.rank}`] : []),
+                  ].join(' · ')}
+                />
               </Typography>
               <Typography
                 variant="body2"

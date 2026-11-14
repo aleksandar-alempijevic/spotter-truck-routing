@@ -6,6 +6,7 @@ import { buildPlanView } from '../plan/view';
 import { buildRoutes, buildWeather, DALLAS, scenarioDestination } from '../test/fixtures';
 import { formatDuration } from '../time/zone';
 import { CheckpointList } from './CheckpointList';
+import { Quantities } from './Quantities';
 import { RouteCards } from './RouteCards';
 import type { StopView } from '../plan/view';
 import { interleave, splitText, stopWhat } from './stops';
@@ -65,6 +66,7 @@ test('with breaks on the list shows each stop as a row, in time order, with the 
       trip={trip}
       selected={null}
       selectedStop={null}
+      breaksApplied
       onSelect={() => {}}
     />,
   );
@@ -91,6 +93,7 @@ test('the selected stop is marked in the list', () => {
       trip={trip}
       selected={null}
       selectedStop={{ routeId: route.id, index: 1 }}
+      breaksApplied
       onSelect={() => {}}
     />,
   );
@@ -102,7 +105,15 @@ test('the selected stop is marked in the list', () => {
 
 test('with breaks off the list has no stop rows and no break caption', () => {
   const route = planFor(false).routes[0];
-  render(<CheckpointList route={route} trip={trip} selected={null} onSelect={() => {}} />);
+  render(
+    <CheckpointList
+      route={route}
+      trip={trip}
+      selected={null}
+      breaksApplied={false}
+      onSelect={() => {}}
+    />,
+  );
 
   expect(screen.getAllByRole('listitem')).toHaveLength(route.checkpoints.length);
   expect(screen.queryByText(/Break · mile|Rest · mile/)).toBeNull();
@@ -118,6 +129,7 @@ test('the card headline is door-to-door time with the driving and break split be
       trip={trip}
       selectedId={route.id}
       recommendedId={null}
+      breaksApplied
       onSelect={() => {}}
     />,
   );
@@ -136,6 +148,7 @@ test('a trip that needs no stop says so when breaks are on, and says nothing abo
       trip={trip}
       selectedId={null}
       recommendedId={null}
+      breaksApplied
       onSelect={() => {}}
     />,
   );
@@ -148,6 +161,7 @@ test('a trip that needs no stop says so when breaks are on, and says nothing abo
       trip={trip}
       selectedId={null}
       recommendedId={null}
+      breaksApplied={false}
       onSelect={() => {}}
     />,
   );
@@ -165,6 +179,7 @@ const listFor = (route: ReturnType<typeof planWith>['routes'][number]) =>
       trip={trip}
       selected={null}
       selectedStop={null}
+      breaksApplied
       onSelect={() => {}}
     />,
   );
@@ -227,6 +242,7 @@ test('with breaks off no stop row exists to carry weather', () => {
       route={planWith(false).routes[0]}
       trip={trip}
       selected={null}
+      breaksApplied={false}
       onSelect={() => {}}
     />,
   );
@@ -242,4 +258,11 @@ test('a stop is labelled with its length, a whole number of hours in hours', () 
   expect(label('break', 30 * 60)).toBe('30 min break');
   expect(label('rest', 10 * 3600)).toBe('10 h rest');
   expect(label('restart', 34 * 3600)).toBe('34 h restart');
+});
+
+test('a duration wraps between its quantities, never inside one', () => {
+  render(<Quantities text="3 d 23 h 06 min · 2,048 mi" />);
+
+  const kept = [...document.querySelectorAll('span')].map((s) => s.textContent);
+  expect(kept).toEqual(['3 d', '23 h', '06 min', '2,048 mi']);
 });

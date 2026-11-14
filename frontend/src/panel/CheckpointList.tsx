@@ -18,6 +18,8 @@ interface Props {
   trip: Trip;
   selected: CheckpointRef | null;
   selectedStop?: StopRef | null;
+  /** Whether the times include rest breaks: the plan's, from the routes answer. */
+  breaksApplied: boolean;
   onSelect(ref: CheckpointRef): void;
 }
 
@@ -161,7 +163,14 @@ export function StopRow({ stop, trip, isSelected, rowRef }: StopRowProps) {
 }
 
 /** The selected route's checkpoints in order, with its required stops between them. */
-export function CheckpointList({ route, trip, selected, selectedStop = null, onSelect }: Props) {
+export function CheckpointList({
+  route,
+  trip,
+  selected,
+  selectedStop = null,
+  breaksApplied,
+  onSelect,
+}: Props) {
   const selectedRef = useRef<HTMLButtonElement>(null);
   const stopRef = useRef<HTMLDivElement>(null);
   const selectedIndex = selected?.routeId === route.id ? selected.index : null;
@@ -182,7 +191,7 @@ export function CheckpointList({ route, trip, selected, selectedStop = null, onS
       <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
         Times are in {zoneName(trip.departureMs, displayZone(trip))}, the starting place&apos;s time
         zone.
-        {route.breaksApplied ? ` ${STOPS_ASSUMPTION}` : ''}
+        {breaksApplied ? ` ${STOPS_ASSUMPTION}` : ''}
       </Typography>
       <Box component="ol" sx={{ listStyle: 'none', m: 0, p: 0 }}>
         {interleave(route).map((item) => {

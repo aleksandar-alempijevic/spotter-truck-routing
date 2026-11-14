@@ -6,7 +6,10 @@
 
 # Stage 1: build the frontend. Node 22 satisfies the "engines" range in frontend/package.json;
 # corepack installs the pnpm version pinned in "packageManager".
-FROM node:22-slim AS frontend
+# Base images are pinned by digest, each beside its readable tag, so a rebuild cannot move to a
+# different image unseen. To update one, resolve the new tag with `docker buildx imagetools
+# inspect <tag>` and change the digest with the tag.
+FROM node:22-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee AS frontend
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
 WORKDIR /build/frontend
@@ -24,8 +27,8 @@ RUN pnpm build
 
 # Stage 2: the runtime. Only the backend packages and the built frontend are copied: no tests,
 # no live-check scripts, no spikes, no dev dependencies.
-FROM python:3.13-slim
-COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /usr/local/bin/uv
+FROM python:3.13-slim@sha256:e48f59cdba69a3cbd9ed2cf0f348d90d45a8d350d98134cf1070bc106ee9ed90
+COPY --from=ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=/opt/venv PYTHONUNBUFFERED=1
 WORKDIR /app/backend
 COPY backend/pyproject.toml backend/uv.lock ./

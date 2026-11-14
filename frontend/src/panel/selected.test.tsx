@@ -37,6 +37,7 @@ test('the selected card carries a check mark besides its border, and only the se
       trip={trip}
       selectedId="route-2"
       recommendedId={null}
+      breaksApplied={false}
       onSelect={noop}
     />,
   );
@@ -52,6 +53,7 @@ test('a card holds no heading or paragraph inside its button', () => {
       trip={trip}
       selectedId="route-2"
       recommendedId={null}
+      breaksApplied={false}
       onSelect={noop}
     />,
   );

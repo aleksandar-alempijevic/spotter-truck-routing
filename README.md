@@ -39,7 +39,7 @@ The rules are in [docs/logic.md](docs/logic.md); this is the summary.
 
 The method, results and limits are in [docs/performance.md](docs/performance.md). In summary:
 
-- **Slider.** A scripted drag across every hour and back, 12 drags in headless Chromium at 390 by 844 with touch emulation, at 267 and 520 grid cells, with and without a 4x CPU slowdown: no long task, no request, no frame gap over 50 ms (the worst was 49.9 ms), and a 16.7 ms frame gap at the median and the 95th percentile. The browser drew with software WebGL, so a real phone is not measured.
+- **Slider.** A scripted drag across every hour and back, 12 drags in headless Chromium at 390 by 844 with touch emulation, at 267 and 520 grid cells, with and without a 4x CPU slowdown: an earlier run saw no long task, no request and a 16.7 ms frame gap at the median and the 95th percentile. On the current build, each drag showed one isolated frame of 100 to 217 ms, with rest breaks on or off alike; whether the app or the headless drag turning around causes it is not yet known ([docs/performance.md](docs/performance.md#the-map-and-the-slider-frontend)). The browser drew with software WebGL, so a real phone is not measured.
 - **Build size (gzip).** 205.53 kB for the entry that renders the form, then 296.57 kB for the map chunk and 147,800 bytes for its worker, which load after the form.
 - **Planning a trip.** Live routes for seven test trips took 1.6 to 14.7 s; TomTom's latency on long trips varies a lot between identical calls. For Seattle to Miami, the trip with the most forecast locations, weather for three routes with 423 checkpoints and the corridor grid took 1.05 s cold and 0.12 s when repeated, from the shared forecast cache.
 

@@ -2,6 +2,7 @@ import { Box, ButtonBase, Typography } from '@mui/material';
 import type { RouteView } from '../plan/view';
 import { RiskBadge } from '../risk/RiskBadge';
 import { formatDuration } from '../time/zone';
+import { Quantities } from './Quantities';
 import { selectableSx } from './selectable';
 import { SelectedMark } from './SelectedMark';
 
@@ -53,7 +54,7 @@ export function RouteChips({ routes, selectedId, recommendedId, onSelect }: Prop
               {route.id === recommendedId ? ' ★' : ''}
             </Typography>
             <Typography variant="body2" component="span">
-              {formatDuration(route.travelSeconds)}
+              <Quantities text={formatDuration(route.travelSeconds)} />
             </Typography>
             <Typography variant="caption" component="span" sx={{ lineHeight: 1.2 }}>
               <RiskBadge state={route.risk} />

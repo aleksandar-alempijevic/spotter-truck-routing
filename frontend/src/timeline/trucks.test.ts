@@ -153,12 +153,18 @@ test('without the stops the same ETAs would slide the truck across the stretch',
   expect(trucksAt([route], T0 + 3 * H)[0].mile).toBeCloseTo(50 + 50 * (2 / 11));
 });
 
-test('a plan with breaks off, or a route with no stops, moves a truck exactly as before', () => {
-  const view = buildPlanView(buildRoutes('mixed', { departure: '2026-11-20T14:00:00Z' }));
-  const bare = view.routes.map((r) => ({ ...r, stops: [] }));
-  const t = T0 + 6 * H;
+test('stops change a truck only from the first stop on', () => {
+  const view = buildPlanView(
+    buildRoutes('mixed', { departure: '2026-11-20T14:00:00Z', breaks: true }),
+  );
+  const route = view.routes[0];
+  const bare = { ...route, stops: [] };
+  const first = route.stops[0];
 
-  expect(trucksAt(view.routes, t)).toEqual(trucksAt(bare, t));
+  expect(trucksAt([route], first.startMs - H)).toEqual(trucksAt([bare], first.startMs - H));
+  const midStop = first.startMs + (stopEndMs(first) - first.startMs) / 2;
+  expect(trucksAt([route], midStop)[0].mile).toBeCloseTo(first.mile, 5);
+  expect(trucksAt([bare], midStop)[0].mile).not.toBeCloseTo(first.mile, 1);
 });
 
 test('a truck on a plan with breaks stands at the stop for its whole duration', () => {

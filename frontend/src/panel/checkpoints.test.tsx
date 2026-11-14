@@ -79,6 +79,7 @@ test('a card with No Travel miles carries a text banner, and one without does no
       trip={trip()}
       selectedId={null}
       recommendedId={null}
+      breaksApplied={false}
       onSelect={() => {}}
     />,
   );

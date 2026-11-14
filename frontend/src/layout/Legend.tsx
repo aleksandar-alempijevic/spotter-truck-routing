@@ -6,6 +6,8 @@ const SWATCH = 18;
 
 interface Props {
   open: boolean;
+  /** The plan has required stops, so the key says what their mark is. */
+  hasStops?: boolean;
   onToggle(): void;
 }
 
@@ -13,7 +15,7 @@ interface Props {
  * The key to the heatmap: what each colour of a cell means, and the hatch for "no forecast".
  * It is a toggle, so on a phone it can be out of the way. Every row is a swatch and a word.
  */
-export function Legend({ open, onToggle }: Props) {
+export function Legend({ open, hasStops = false, onToggle }: Props) {
   const listRef = useRef<HTMLUListElement>(null);
   const [scroll, setScroll] = useState({ scrolls: false, moreBelow: false });
 
@@ -88,6 +90,7 @@ export function Legend({ open, onToggle }: Props) {
             <Row key={level} label={RISK_STYLE[level].label} background={cellFill(level)} />
           ))}
           <Row label={RISK_STYLE.none.label} background={HATCH_CSS} />
+          {hasStops && <StopRow />}
         </Box>
       )}
       {open && scroll.moreBelow && (
@@ -134,6 +137,31 @@ function Row({ label, background }: { label: string; background: string }) {
         }}
       />
       <Typography variant="body2">{label}</Typography>
+    </Box>
+  );
+}
+
+/** The required-stop mark as the map draws it, and what its corner badge says. */
+function StopRow() {
+  return (
+    <Box
+      component="li"
+      sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 28, mt: 0.5 }}
+    >
+      <svg aria-hidden width={26} height={26} viewBox="0 0 44 44" style={{ flexShrink: 0 }}>
+        <polygon
+          points="31,27 27,36.9 17,41 7.1,36.9 3,27 7.1,17.1 17,13 27,17.1"
+          fill="#37474f"
+          stroke="#fff"
+          strokeWidth={2}
+        />
+        <rect x={12.2} y={20.6} width={3.6} height={12.7} fill="#fff" />
+        <rect x={18.3} y={20.6} width={3.6} height={12.7} fill="#fff" />
+        <circle cx={32} cy={12} r={11} fill="#fff" stroke="#37474f" strokeWidth={1.5} />
+      </svg>
+      <Typography variant="body2">
+        Required stop; the corner badge is the weather level there
+      </Typography>
     </Box>
   );
 }

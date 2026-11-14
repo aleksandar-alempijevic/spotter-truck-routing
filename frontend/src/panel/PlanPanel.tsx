@@ -9,7 +9,7 @@ import { CheckpointList, CheckpointRow, StopRow } from './CheckpointList';
 import { PlanHeadline } from './PlanHeadline';
 import { RouteCards } from './RouteCards';
 import { RouteChips } from './RouteChips';
-import { BREAKS_NOTE } from '../plan/breaksCopy';
+import { BREAKS_NOTE, BREAKS_NOTE_DETAIL } from '../plan/breaksCopy';
 import { WhyThisRoute } from './WhyThisRoute';
 
 /**
@@ -86,6 +86,7 @@ export function PlanPanel({
       trip={submission.trip}
       selected={selectedCheckpoint}
       selectedStop={selectedStop}
+      breaksApplied={breaksApplied}
       onSelect={onSelectCheckpoint}
     />
   );
@@ -114,9 +115,17 @@ export function PlanPanel({
       </Typography>
       <PlanHeadline state={state} submission={submission} onEditTrip={onEditTrip} />
       {breaksApplied && routes.length > 0 && (
-        <Typography variant="body2" color="text.secondary">
-          {BREAKS_NOTE}
-        </Typography>
+        <Box>
+          <Typography variant="body2" color="text.secondary">
+            {BREAKS_NOTE}
+          </Typography>
+          <Box component="details" sx={{ typography: 'body2', color: 'text.secondary' }}>
+            <Box component="summary" sx={{ cursor: 'pointer', minHeight: 24, fontWeight: 600 }}>
+              The rule and its assumptions
+            </Box>
+            {BREAKS_NOTE_DETAIL}
+          </Box>
+        </Box>
       )}
       {state.view?.shortfall && (
         <Typography variant="body2" color="text.secondary">
@@ -138,6 +147,7 @@ export function PlanPanel({
           trip={submission.trip}
           selectedId={selectedRouteId}
           recommendedId={recommendedId}
+          breaksApplied={breaksApplied}
           onSelect={onSelectRoute}
         />
       )}

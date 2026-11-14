@@ -19,6 +19,10 @@ from .planner import ShortfallReason
 DEPARTURE_GRACE = timedelta(minutes=15)
 """A departure typed as "now" arrives slightly in the past; this much is accepted as given."""
 DEPARTURE_HORIZON = timedelta(hours=48)
+STOP_HORIZON = DEPARTURE_HORIZON + timedelta(days=30)
+"""A stop falls inside a trip that left within the departure window; no trip here lasts 30 days.
+It keeps a stop dated near year 9999 from reaching the forecast code, where adding its length
+would overflow."""
 MAX_LOAD_LB = 80_000
 
 
@@ -262,6 +266,11 @@ def _check_marks(route: RouteCore, interval_miles: float) -> None:
         raise ValueError(f"{where}: the first checkpoint must be at mile 0")
     if any(stop.mile > route.total_miles for stop in route.stops):
         raise ValueError(f"{where}: a stop lies beyond the end of the route")
+    now = datetime.now(UTC)
+    if any(
+        not now - DEPARTURE_GRACE <= stop.starts_at <= now + STOP_HORIZON for stop in route.stops
+    ):
+        raise ValueError(f"{where}: a stop starts outside the planning window")
     starts = [stop.starts_at for stop in route.stops]
     if starts != sorted(starts):
         raise ValueError(f"{where}: stops must be in time order")

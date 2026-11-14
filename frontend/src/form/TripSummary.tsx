@@ -49,11 +49,10 @@ export function TripSummary({
           variant="caption"
           component="span"
           color="text.secondary"
-          sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 1, textTransform: 'none' }}
+          sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 1.5, textTransform: 'none' }}
         >
-          {details.map((part, i) => (
+          {details.map((part) => (
             <span key={part} style={{ whiteSpace: 'nowrap' }}>
-              {i > 0 ? '· ' : ''}
               {part}
             </span>
           ))}

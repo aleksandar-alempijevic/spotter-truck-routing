@@ -38,7 +38,7 @@ With rest breaks on (the switch is off by default), stops add forecast locations
 
 **Method.** A scripted pointer drag of the slider across every hour and back, in headless Chromium (Chrome for Testing 153.0.8010.12) at 390 by 844 with touch emulation, 3 runs for each of four configurations: 267 and 520 grid cells, each with a 4x CPU slowdown and without. The script is `frontend/scripts/measure-slider.mjs`. The app was a production build served by `vite preview` and fed by a typed stand-in API, so no provider was called.
 
-**Result, 12 drags:**
+**Result, 12 drags (the earlier run, at `de0ce4b`):**
 
 | Measure | Result |
 |---|---|
@@ -46,13 +46,15 @@ With rest breaks on (the switch is off by default), stops add forecast locations
 | `pointermove` events over 16 ms | 0 |
 | Requests during the drag | 0 (API or other) |
 | Frame gap, median and 95th percentile | 16.7 ms and 16.7 to 16.8 ms |
-| Frames over 50 ms | 0 (the largest gap was 49.9 ms) |
+| Frames over 50 ms | 0 in this run; see below, it did not reproduce on the current build |
 
 The slider recolours only the heatmap cells whose level changed and makes no request, which is what these numbers show.
 
-These runs predate the rest-break and stop-weather UI (the stop rows, the stop marks and the stopped trucks). The build sizes below are those of the current build, but the slider has not been measured on it; it is re-measured at the final build, before the hosted test.
+These runs predate the rest-break and stop-weather UI (the stop rows, the stop marks and the stopped trucks). The build sizes below are those of the current build.
 
-**Limits.** The browser drew with software WebGL, so a real phone and a real GPU are unmeasured. The first paint of the map and the time to draw a plan were not measured. The grid sizes come from the stand-in's cell-size setting and were not recounted in the final run. An earlier run of the same script, on a different Chromium build, saw one or two isolated frames of 50 to 133 ms per drag, at the press and at the far-end turn-around; they did not appear in the final run, and the two builds differ, so the run does not show whether the app or the browser removed them. The drag was measured at commit `de0ce4b`; the rest-break and stop-weather screens added since were not measured again.
+**The slow frame on the current build.** A repeat of the drag on the current build showed, in each drag, one isolated frame of 100 to 217 ms, with rest breaks on and off alike. The "0 frames over 50 ms" above came from the earlier run and did not reproduce, so this document does not claim it. Whether the frame is the app or the headless drag turning around at the far end is open: a trace taken before the hosted test (S6) decides it, and the slider is measured again then.
+
+**Limits.** The browser drew with software WebGL, so a real phone and a real GPU are unmeasured. The first paint of the map and the time to draw a plan were not measured. The grid sizes come from the stand-in's cell-size setting and were not recounted in the final run. An earlier run of the same script, on a different Chromium build, saw one or two isolated frames of 50 to 133 ms per drag, at the press and at the far-end turn-around; they did not appear in that run, and the two builds differ, so the run did not show whether the app or the browser removed them; the current build shows one again (above). The drag was measured at commit `de0ce4b`; the rest-break and stop-weather screens added since were not measured again.
 
 ## Build size
 

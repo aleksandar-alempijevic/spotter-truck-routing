@@ -759,7 +759,14 @@ test('with the switch on the pane shows the note, the split, the stop rows and t
 
   expect(await screen.findByText(BREAKS_NOTE)).toBeInTheDocument();
   expect(await screen.findByText('Route 2 is recommended')).toBeInTheDocument();
-  expect(screen.getAllByText(/driving \+ 10 h 30 min breaks/)).toHaveLength(3);
+  expect(
+    screen.getAllByText(
+      (_, el) =>
+        el?.tagName === 'SPAN' &&
+        /driving \+ 10 h 30 min breaks/.test(el.textContent ?? '') &&
+        el.querySelector('span') !== null,
+    ),
+  ).toHaveLength(3);
   expect(screen.getAllByText(/^Break · mile \d+$/)).toHaveLength(1);
   expect(screen.getAllByText(/^Rest · mile \d+$/)).toHaveLength(1);
   expect(screen.getByRole('button', { name: TRIP_BAR })).toHaveTextContent('with rest breaks');

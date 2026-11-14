@@ -46,3 +46,11 @@ test('a closed key has no list and no cue', () => {
   expect(document.getElementById('map-legend')).toBeNull();
   expect(cue()).toBeFalsy();
 });
+
+test('the key explains the stop mark only when the plan has stops', () => {
+  const { rerender } = render(<Legend open onToggle={() => {}} />);
+  expect(document.body.textContent).not.toContain('Required stop');
+
+  rerender(<Legend open hasStops onToggle={() => {}} />);
+  expect(document.body.textContent).toContain('Required stop; the corner badge');
+});

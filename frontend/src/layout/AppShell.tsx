@@ -285,7 +285,11 @@ export function AppShell({
           status={mapStatus}
         >
           {grid && hasPlan && !showForm && mapStatus !== 'failed' && (
-            <Legend open={keyOpen} onToggle={() => setLegendChoice(!keyOpen)} />
+            <Legend
+              open={keyOpen}
+              hasStops={plan.view?.routes.some((r) => r.stops.length > 0)}
+              onToggle={() => setLegendChoice(!keyOpen)}
+            />
           )}
         </MapCorner>
       </Box>

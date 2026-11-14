@@ -14,5 +14,6 @@ export const STOPS_ASSUMPTION =
 /** Said beside the switch, not behind a link. */
 export const BREAKS_HELP = `Adds ${BREAKS_RULE}. ${STOPS_ASSUMPTION}`;
 
-/** Said once above the routes when the plan includes breaks. */
-export const BREAKS_NOTE = `Times include the federal rest breaks: ${BREAKS_RULE}. ${STOPS_ASSUMPTION}`;
+/** Said once above the routes when the plan includes breaks: short, with the rest behind a disclosure. */
+export const BREAKS_NOTE = 'Times include the federal rest breaks.';
+export const BREAKS_NOTE_DETAIL = `The rule applied: ${BREAKS_RULE}. ${STOPS_ASSUMPTION}`;

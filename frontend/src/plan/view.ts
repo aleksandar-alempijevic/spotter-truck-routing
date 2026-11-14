@@ -66,8 +66,6 @@ export interface RouteView {
   /** Time at the wheel; equals `travelSeconds` when the plan has no rest breaks. */
   drivingSeconds: number;
   stops: StopView[];
-  /** Whether the times include the rest breaks: the routes answer's echo, the same on every route. */
-  breaksApplied: boolean;
   miles: number;
   line: [number, number][];
   checkpoints: CheckpointView[];
@@ -184,7 +182,6 @@ export function buildPlanView(
             readAtMs: ws?.at ? Date.parse(ws.at) : null,
           };
         }),
-        breaksApplied: routes.breaks_applied,
         miles: route.total_miles,
         line: route.line,
         checkpoints,

@@ -1,13 +1,13 @@
 """The weather at each required stop: read like a checkpoint, worst over the stop, and kept out of
 the summary and the ranking."""
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from api import weather_report
 from tests import test_weather_api as weather_api
-from tests.test_weather_api import NOW, forecast, locations, post, request, route
+from tests.test_weather_api import HOUR, NOW, forecast, locations, post, request, route
 from weather import ForecastCache
 
 # The endpoint's clock, cache and sleep are replaced by autouse fixtures of the weather API tests;
@@ -123,7 +123,7 @@ async def test_a_long_stop_reads_the_worst_hour_it_spans_not_the_one_it_starts_i
     reading = body["routes"][0]["stops"][0]
     assert reading["risk"]["level"] == "no_travel"
     # 9 + 6 * hour passes 55 mph at 22:00, and every later hour is No Travel too: the earliest wins.
-    assert reading["at"] == "2026-11-13T22:00:00Z"
+    assert reading["at"] == (HOUR + timedelta(hours=8)).strftime("%Y-%m-%dT%H:%M:%SZ")
     assert reading["weather"]["wind_mph"] == 57.0
     # The same stop read at its start alone would have been Low.
     start = await read_start_only(provider_mock)
@@ -143,7 +143,9 @@ async def test_the_worst_reading_is_the_hour_with_the_highest_level_and_the_earl
 
     reading = body["routes"][0]["stops"][0]
     assert reading["risk"]["level"] == "no_travel"
-    assert reading["at"] == "2026-11-13T17:00:00Z"  # not the later hour at the same level
+    assert reading["at"] == (HOUR + timedelta(hours=3)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )  # not the later hour at the same level
 
 
 async def test_a_calm_stop_reads_its_start(provider_mock):
@@ -256,6 +258,8 @@ async def test_stops_are_checked_against_the_service_box(provider_mock):
         pytest.param({**stop(), "starts_at": "2026-11-13T14:20:00"}, id="naive start"),
         pytest.param({**stop(), "kind": "nap"}, id="unknown kind"),
         pytest.param(stop(minutes=49 * 60), id="longer than any stop"),
+        pytest.param(stop(at=datetime(9999, 12, 31, tzinfo=UTC)), id="starts near year 9999"),
+        pytest.param(stop(at=NOW - timedelta(days=2)), id="starts in the past"),
     ],
 )
 async def test_a_malformed_stop_is_a_422_before_any_forecast_call(provider_mock, bad):

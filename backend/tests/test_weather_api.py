@@ -35,7 +35,8 @@ from tests.test_routes_api import payload as routes_payload
 from tests.test_routes_api import post as post_routes
 from weather import ForecastCache, cell_center, forecast_cell, plan_locations, utc_hour
 
-NOW = datetime(2026, 11, 13, 14, 20, tzinfo=UTC)
+# Near the real present, because a stop outside the planning window is refused.
+NOW = (datetime.now(UTC) + timedelta(hours=1)).replace(minute=20, second=0, microsecond=0)
 HOUR = utc_hour(NOW)
 
 
@@ -199,7 +200,7 @@ async def test_the_grid_has_a_level_for_each_of_49_hours_from_the_top_of_the_hou
     body = (await post(request(route(), load=20_000))).json()
     grid = body["grid"]
 
-    assert grid["start"] == "2026-11-13T14:00:00Z"
+    assert grid["start"] == HOUR.strftime("%Y-%m-%dT%H:%M:%SZ")
     assert grid["cell_degrees"] == 0.5
     assert grid["level_codes"] == ["low", "moderate", "high", "severe", "no_travel"]
     assert grid["cells"]
