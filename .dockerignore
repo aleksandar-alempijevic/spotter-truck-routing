@@ -1,0 +1,19 @@
+# What never enters the build context. Secrets first: no .env of any kind, and .env.example
+# is not needed by the build either.
+.env
+.env.*
+**/.env
+**/.env.*
+
+.git
+.gitignore
+**/node_modules
+**/.venv
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/*.pyc
+spikes
+docs
+*.md

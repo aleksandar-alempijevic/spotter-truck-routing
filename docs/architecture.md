@@ -87,10 +87,24 @@ Vite forwards `/api` to Django (`vite.config.ts`), so the browser sees one origi
 
 ## Hosting
 
-The risk thresholds, load rules and route ranking, the routes and weather endpoints, and the frontend exist (above); what remains is hosting.
+One container serves the built frontend and the API from the same origin, so the browser needs no CORS setup and the app calls `/api/...` on whatever host it was loaded from.
 
-| Part | Place |
-|---|---|
-| Hosting | One container serving the built frontend and the API from the same origin |
+```
+browser ──► host's HTTPS edge ──► container: uvicorn (one process)
+                                    StaticBuild  ──►  /  and  /assets/*   the built frontend
+                                    Django       ──►  /api/*              Ninja, `{code, message}` errors
+```
+
+- **`Dockerfile`** builds in two stages: Node builds `frontend/dist` (pnpm as pinned in `package.json`), then a Python 3.13 image installs the backend's locked, non-dev dependencies and copies in only the backend packages and the build (no tests, live-check scripts, spikes or docs). It runs as a non-root user. No secret is a build argument.
+- **`.dockerignore`** keeps every `.env` out of the build context, so a `COPY` cannot bake one in. The provider keys and the Django secret reach the container only as run-time environment values.
+- **One origin, fixed paths.** `config/static.py` wraps the Django application in `config/asgi.py`. It answers `/` (`index.html`, `no-cache`, so a redeploy never leaves a browser on an entry that points at deleted chunks) and `/assets/*` (hashed files, cacheable for a year; `.js` and `.mjs` are served as `text/javascript`, which the map's module worker needs). Everything else, including every `/api/` path and the ASGI lifespan, goes to Django untouched. The app has one page and no client-side router, so there is no catch-all route. The API is mounted at `/api/` with no prefix, so the error middleware's `request.path` check holds as deployed. The build is read into memory at start-up (about 2.3 MB), so a request cannot name a file that was not in it.
+- **Why a wrapper and not a middleware.** WhiteNoise's Django middleware (6.12) is synchronous only, and a sync-only middleware makes Django run every API request through a thread; the forecast cache is only safe on the event loop. A test fails if any installed middleware is not async-capable.
+- **One process.** The start command runs one uvicorn worker. The forecast cache and the weather runtime are per process, so a second worker would split them, and a front proxy or supervisor inside the container is not needed.
+- **Proxy trust has one owner.** `DJANGO_TRUST_PROXY_SSL=1` (set in the image) makes Django read `X-Forwarded-Proto`; uvicorn's own forwarded-header handling is turned off (`--no-proxy-headers`). With no cookies, sessions or redirects the only effect is `request.is_secure()`. There is no in-app HTTPS redirect: the host's edge does that, and a redirect in the container would fail a plain-HTTP health check.
+- **Hosts.** `DJANGO_ALLOWED_HOSTS` is the only source. Hosted it holds exactly the service's hostname; `localhost` appears only in a local `docker run`.
+- **No content security policy.** The app has no user content, cookies or login, so a policy would protect little. It would also need a second place that knows the basemap host: the style URL is baked into the frontend at build time while a policy is a server header. A policy would have to allow the same-origin worker and scripts, inline styles (Material UI injects them), `data:` and `blob:` images, and connections to the basemap host for style, tiles, glyphs and sprites.
+- **`render.yaml`** describes the service for Render's free plan: Docker runtime, health check on `/api/health`, and **auto-deploy off**, so a push never deploys by itself. The provider keys and the hostname are named there and set in the dashboard. It does nothing until a service is created from it.
+- **`make serve`** runs the same one-origin arrangement without Docker; **`make smoke`** runs `scripts/smoke_check.py` against any base URL (local server, container, or the hosted address). The check spends no provider quota: health, the page, the four built files with their types and cache headers, the JSON 404 and 405 under `/api/`, a refused foreign `Host`, and, with no keys configured, a `503 provider_not_configured` in the API's body. It is not part of `make check` because it needs a running server.
+- **`/api/docs`** is Ninja's interactive docs page. It renders, but its script and stylesheet 404: `STATIC_URL` is unset and no static files app is installed, so the page references `ninja/swagger-ui-bundle.js` relative to `/api/` and nothing serves it. The page is therefore blank, locally and in the container.
 
 Planning is two requests, routes first and weather risk second, so the routes appear on the map before the weather finishes loading.

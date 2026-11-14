@@ -27,6 +27,19 @@ Open <http://localhost:5173>. The trip form is the first thing on the page, and 
 
 The browser only talks to the Vite dev server, which forwards `/api` requests to Django, so there is one origin and no CORS configuration.
 
+### One origin, as deployed
+
+```sh
+make serve       # build the frontend, then serve it and the API on http://127.0.0.1:8000
+make smoke       # in another terminal: the deploy smoke check against that server (no provider calls)
+
+make image       # build the container image (needs Docker)
+docker run --rm -e DJANGO_SECRET_KEY=any-value -e DJANGO_ALLOWED_HOSTS=localhost -e PORT=8000 -p 8000:8000 spotter-truck-routing
+make smoke       # the same check against the container
+```
+
+The container needs no `.env` and no provider keys to start; without them the two provider endpoints answer 503. `make smoke BASE_URL=https://host.example` checks any other address. See [docs/architecture.md](docs/architecture.md#hosting) for how the image is built and served.
+
 ## Tests and checks
 
 ```sh
@@ -57,6 +70,8 @@ backend/    Django + Django Ninja API on uvicorn (ASGI), Python 3.13, managed by
             providers/ holds outbound HTTP to TomTom, Geoapify and Open-Meteo and the shared request policy
 frontend/   React + TypeScript + Vite + Material UI app, managed by pnpm
 docs/       architecture.md, logic.md (the risk and ranking rules), assumptions.md
-Makefile    install / run / test / check commands
+Makefile    install / run / test / check / serve / image / smoke commands
+scripts/    smoke_check.py, the deploy smoke check (standard library only)
+Dockerfile  the one-container image; render.yaml is the host config (inert until a service is created from it)
 spikes/     throwaway feasibility experiments, each with its own README
 ```

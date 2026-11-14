@@ -1,0 +1,22 @@
+# Render blueprint for the single container (see docs/architecture.md, "Hosting").
+# Inert until a service is created from it. Secrets are named here and set in the dashboard
+# (sync: false): they are never in this file, in the repository or in the image.
+services:
+  - type: web
+    name: spotter-truck-routing
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    # Every deploy is a manual act that follows the owner's word, never a side effect of a push.
+    autoDeployTrigger: "off"
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      # The service's own hostname, known only after the service exists; set in the dashboard.
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      - key: TOMTOM_API_KEY
+        sync: false
+      - key: GEOAPIFY_API_KEY
+        sync: false

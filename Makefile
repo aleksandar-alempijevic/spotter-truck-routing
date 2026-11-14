@@ -1,5 +1,5 @@
 # The one place that defines how to run things. See README.md.
-.PHONY: install backend frontend test check types types-check
+.PHONY: install backend frontend serve image smoke test check types types-check
 
 # Frontend API types are generated from the backend's OpenAPI schema. The schema is exported under
 # the test settings, which read no .env and need no secrets. Scratch files live in node_modules
@@ -24,6 +24,24 @@ backend:
 frontend:
 	pnpm -C frontend dev
 
+# One origin without Docker: build the frontend, then serve it and the API from uvicorn the way
+# the image does (one worker, no reload, debug off). Needs no .env: a throwaway secret key is
+# used unless DJANGO_SECRET_KEY is set. Keep the uvicorn flags in step with the Dockerfile's CMD.
+serve:
+	pnpm -C frontend build
+	DJANGO_SECRET_KEY=$${DJANGO_SECRET_KEY:-local-one-origin-only} uv --directory backend run uvicorn config.asgi:application --port 8000 --no-proxy-headers --workers 1
+
+# The deployable image. Secrets are never build arguments; pass them to `docker run`.
+image:
+	docker build -t spotter-truck-routing .
+
+# Tier-0 deploy check (no provider calls) against a running one-origin server: `make serve`, the
+# container, or the hosted URL. Add SMOKE_ARGS=--keys-set once provider keys are configured.
+# Not part of `make check`: it needs a running server.
+BASE_URL ?= http://127.0.0.1:8000
+smoke:
+	uv --directory backend run python $(CURDIR)/scripts/smoke_check.py $(BASE_URL) $(SMOKE_ARGS)
+
 test:
 	uv --directory backend run pytest
 	pnpm -C frontend test
@@ -37,8 +55,8 @@ types-check:
 	diff $(API_TYPES) $(SCRATCH)/schema.fresh.d.ts || { echo "$(API_TYPES) is stale: run 'make types'"; exit 1; }
 
 check: test types-check
-	uv --directory backend run ruff check .
-	uv --directory backend run ruff format --check .
+	uv --directory backend run ruff check . ../scripts
+	uv --directory backend run ruff format --check . ../scripts
 	pnpm -C frontend typecheck
 	pnpm -C frontend lint
 	pnpm -C frontend format:check
