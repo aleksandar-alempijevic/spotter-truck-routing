@@ -10,21 +10,21 @@ Units throughout are the assessment's: sustained wind in mph, rain and snow in i
 
 Levels, lowest to highest: Low, Moderate, High, Severe, No Travel.
 
-| Condition    | Low    | Moderate       | High           | Severe       | No Travel |
-| ------------ | ------ | -------------- | -------------- | ------------ | --------- |
-| Wind (mph)   | < 25   | 25 to < 35     | 35 to < 45     | 45 to < 55   | >= 55     |
-| Rain (in/hr) | < 0.10 | 0.10 to < 0.25 | 0.25 to < 0.50 | 0.50 to 1.00 | > 1.00    |
-| Snow (in/hr) | < 0.5  | 0.5 to < 1.0   | 1.0 to < 2.0   | 2.0 to 3.0   | > 3.0     |
+| Condition | Low | Moderate | High | Severe | No Travel |
+|---|---|---|---|---|---|
+| Wind (mph) | < 25 | 25 to < 35 | 35 to < 45 | 45 to < 55 | >= 55 |
+| Rain (in/hr) | < 0.10 | 0.10 to < 0.25 | 0.25 to < 0.50 | 0.50 to 1.00 | > 1.00 |
+| Snow (in/hr) | < 0.5 | 0.5 to < 1.0 | 1.0 to < 2.0 | 2.0 to 3.0 | > 3.0 |
 
 **Band edges.** The assessment's bands touch or overlap at their edges (0.25 in/hr rain is both Moderate and High). A value on an edge goes to the higher band, so 25 mph wind is Moderate and 0.25 in/hr rain is High. The top band keeps the assessment's wording: wind of exactly 55 mph is No Travel, but exactly 1.00 in/hr of rain and exactly 3.0 in/hr of snow are Severe, because No Travel is "more than" those values. Wind bands are written as whole numbers in the assessment; they are read as half-open ranges, so 34.9 mph is Moderate. Comparisons are exact: the classifier does not round.
 
 **Load rules** apply to wind only, and only raise the level:
 
-| Wind           | Load                | Level                        |
-| -------------- | ------------------- | ---------------------------- |
-| >= 55 mph      | any                 | No Travel                    |
+| Wind | Load | Level |
+|---|---|---|
+| >= 55 mph | any | No Travel |
 | 45 to < 55 mph | more than 30,000 lb | No Travel (otherwise Severe) |
-| 35 to < 45 mph | more than 40,000 lb | Severe (otherwise High)      |
+| 35 to < 45 mph | more than 40,000 lb | Severe (otherwise High) |
 
 A load of exactly 30,000 or 40,000 lb does not trigger its rule. Rain and snow ignore the load.
 
@@ -49,15 +49,15 @@ A load of exactly 30,000 or 40,000 lb does not trigger its rule. Rain and snow i
 
 The routes are filtered in the assessment's order of preference. At each step the routes within a tolerance of the best value stay in; the rest drop out of the contest for first place:
 
-| Step            | Keeps routes with                                                                                                       | Tolerance                                                        |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| 1. No Travel    | fewest No Travel miles                                                                                                  | none                                                             |
-| 2. Severe       | fewest Severe miles                                                                                                     | none                                                             |
-| 3. High         | High miles no more than the best plus one checkpoint interval                                                           | one interval                                                     |
+| Step | Keeps routes with | Tolerance |
+|---|---|---|
+| 1. No Travel | fewest No Travel miles | none |
+| 2. Severe | fewest Severe miles | none |
+| 3. High | High miles no more than the best plus one checkpoint interval | one interval |
 | 4. Average risk | routes whose average risk, lowered by their own tolerance, is no higher than the best average among the routes still in | one interval / the route's own forecast miles, at most one level |
-| 5. Travel time  | shortest travel time                                                                                                    | none                                                             |
-| 6. Miles        | fewest total miles                                                                                                      | none                                                             |
-| 7. Route id     | smallest id                                                                                                             | none                                                             |
+| 5. Travel time | shortest travel time | none |
+| 6. Miles | fewest total miles | none |
+| 7. Route id | smallest id | none |
 
 The first step that leaves a single route decides first place, and the ranking reports which step that was. Second and third place repeat the same steps over the routes not yet placed. A single route is first with no deciding step (`decided_by` is none) and no comparison, and is recommended unless it has No Travel miles, judged with `FLOAT_MARGIN`. The result is the same whatever order the routes arrive in.
 
@@ -90,11 +90,11 @@ A cap on how much extra time a safer route may cost is not part of the assessmen
 
 The routes request can add the federal hours-of-service stops to the ETAs ([assumptions.md](assumptions.md#when-rest-breaks-are-on) for the readings it rests on). The rule is the one function `plan_stops` in [backend/routing/rest_breaks.py](../backend/routing/rest_breaks.py), from a route's driving time to its list of stops; the clock times, the stop positions and the trip's duration are all derived from that list. The rule follows 49 CFR 395.3 for one property-carrying driver:
 
-| Driving counter reaches      | Stop               | Resets                        |
-| ---------------------------- | ------------------ | ----------------------------- |
-| 60 hours in the cycle        | 34 hours (restart) | all counters                  |
-| 11 hours since the last rest | 10 hours (rest)    | the 8-hour and 11-hour counts |
-| 8 hours since the last break | 30 minutes (break) | the 8-hour count              |
+| Driving counter reaches | Stop | Resets |
+|---|---|---|
+| 60 hours in the cycle | 34 hours (restart) | all counters |
+| 11 hours since the last rest | 10 hours (rest) | the 8-hour and 11-hour counts |
+| 8 hours since the last break | 30 minutes (break) | the 8-hour count |
 
 When limits are reached together the longest stop wins and ends the counts the shorter would have. No stop is taken at or after the destination, so a trip that ends exactly at a limit has none. A checkpoint reached exactly where a stop begins gets its arrival time, before the stop. Elapsed time is strictly increasing in driving time. The cycle step matters only for a trip of more than 60 hours at the wheel, which the app can be asked for (a trip to Alaska through Canada, or the longest cross-country runs).
 

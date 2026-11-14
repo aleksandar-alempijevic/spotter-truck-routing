@@ -39,8 +39,8 @@ The rules are in [docs/logic.md](docs/logic.md); this is the summary.
 
 The method, results and limits are in [docs/performance.md](docs/performance.md). In summary:
 
-- **Slider.** A scripted drag across every hour and back in headless Chromium at 390 by 844 with touch emulation, at 267 and 520 grid cells, with and without a 4x CPU slowdown. An earlier build showed one isolated frame of 100 to 217 ms per drag when the departure was under 30 minutes past the hour: the first draw of the trucks layer compiled its WebGL program mid-drag. The map now draws that layer once when the plan appears, and the same probe at a :10 departure shows no frame over 50 ms (largest gap 17 to 34 ms, 16 runs). At a :45 departure two of 12 runs under the 4x slowdown showed one 76 to 82 ms gap with no program built, so they are not this cause. In 3 of about 26 loaded runs a line-layer program linked mid-drag instead; the fix covers the trucks program only. The browser drew with software WebGL, so a real phone and a real GPU are not measured ([docs/performance.md](docs/performance.md#the-map-and-the-slider-frontend)).
-- **Build size (gzip).** 205.53 kB for the entry that renders the form, then 296.57 kB for the map chunk and 147,800 bytes for its worker, which load after the form.
+- **Slider.** A scripted drag across every hour and back in headless Chromium at 390 by 844 with touch emulation, at 267 and 520 grid cells, with and without a 4x CPU slowdown. An earlier build showed one isolated frame of 100 to 217 ms per drag when the departure was under 30 minutes past the hour: the first draw of the trucks layer compiled its WebGL program mid-drag. The map now draws that layer once when the plan appears. With the draw timed to the map's next idle moment (commit `21148f5`), the same probe at a :10 departure showed no frame over 50 ms (largest gap 17 to 34 ms, 16 runs); the draw now ends at the first frame after the trucks source loads, and a probe at `e76e345` (8 runs at a :10 departure, 1x and 4x CPU) linked no WebGL program during the drag and showed one 68 ms gap, at 4x, with no compile behind it. At a :45 departure two of 12 runs under the 4x slowdown showed one 76 to 82 ms gap with no program built, so they are not this cause. In 3 of about 26 loaded runs a line-layer program linked mid-drag instead; the fix covers the trucks program only. The browser drew with software WebGL, so a real phone and a real GPU are not measured ([docs/performance.md](docs/performance.md#the-map-and-the-slider-frontend)).
+- **Build size (gzip, at commit `57091ed`).** 206.31 kB for the entry that renders the form, then 296.76 kB for the map chunk and 147,800 bytes for its worker, which load after the form.
 - **Planning a trip.** Live routes for seven test trips took 1.6 to 14.7 s; TomTom's latency on long trips varies a lot between identical calls. For Seattle to Miami, the trip with the most forecast locations, weather for three routes with 423 checkpoints and the corridor grid took 1.05 s cold and 0.12 s when repeated, from the shared forecast cache.
 
 These numbers are from local runs. The hosted app has not been measured.
@@ -49,13 +49,13 @@ These numbers are from local runs. The hosted app has not been measured.
 
 ### Prerequisites
 
-| Tool                              | Version                                            | Install                                                                              |
-| --------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| [uv](https://docs.astral.sh/uv/)  | any recent                                         | `brew install uv`; it manages the Python version (3.13) and the backend dependencies |
-| [Node.js](https://nodejs.org/)    | 22.12+, 24 or 26+ (Vite and Vitest skip 23 and 25) |                                                                                      |
-| [pnpm](https://pnpm.io/)          | 9.15.4 (pinned in `frontend/package.json`)         | `corepack enable`, which ships with Node and picks the pinned version                |
-| make                              | any                                                | preinstalled on macOS and most Linux                                                 |
-| [Docker](https://www.docker.com/) | any recent, only for the image                     |                                                                                      |
+| Tool | Version | Install |
+|---|---|---|
+| [uv](https://docs.astral.sh/uv/) | any recent | `brew install uv`; it manages the Python version (3.13) and the backend dependencies |
+| [Node.js](https://nodejs.org/) | 22.12+, 24 or 26+ (Vite and Vitest skip 23 and 25) | |
+| [pnpm](https://pnpm.io/) | 9.15.4 (pinned in `frontend/package.json`) | `corepack enable`, which ships with Node and picks the pinned version |
+| make | any | preinstalled on macOS and most Linux |
+| [Docker](https://www.docker.com/) | any recent, only for the image | |
 
 You do not need to install Python or Django yourself.
 
@@ -67,7 +67,7 @@ make backend     # terminal 1: Django API on http://127.0.0.1:8000
 make frontend    # terminal 2: React app on http://localhost:5173
 ```
 
-Open <http://localhost:5173>. The trip form is the first thing on the page, and the map loads after it. Planning a trip needs the routing and address keys ([Configuration](#configuration)); without one, the page says which part is unavailable. While the backend runs, the interactive API docs are at <http://127.0.0.1:8000/api/docs> (the page loads Swagger UI from a CDN, so the browser needs internet access).
+Open <http://localhost:5173>. The trip form is the first thing on the page, and the map loads after it. Planning a trip needs the routing and address keys ([Configuration](#configuration)); without one, the page says that the address search or the service is not set up. While the backend runs, the interactive API docs are at <http://127.0.0.1:8000/api/docs> (the page loads Swagger UI from a CDN, so the browser needs internet access).
 
 The browser only talks to the Vite dev server, which forwards `/api` requests to Django, so there is one origin and no CORS configuration.
 
@@ -75,14 +75,14 @@ The browser only talks to the Vite dev server, which forwards `/api` requests to
 
 ```sh
 make serve       # build the frontend, then serve it and the API on http://127.0.0.1:8000
-make smoke       # in another terminal: the deploy smoke check against that server (no provider calls)
+make smoke       # in another terminal: the deploy smoke check against that server
 
 make image       # build the container image (needs Docker)
 docker run --rm -e DJANGO_SECRET_KEY=any-value -e DJANGO_ALLOWED_HOSTS=localhost -e PORT=8000 -p 8000:8000 spotter-truck-routing
-make smoke       # the same check against the container
+make smoke BASE_URL=http://localhost:8000   # the same check against the container
 ```
 
-`make serve PORT=9000` and `make smoke PORT=9000` use another port; `make smoke BASE_URL=https://host.example` checks any other address. The container needs no `.env` and no provider keys to start; without them the two provider endpoints answer 503 with a message saying which provider is not configured. The image runs one server process on purpose, because the forecast cache is shared by every request. See [docs/architecture.md](docs/architecture.md#hosting) for how the image is built and served.
+`make serve PORT=9000` and `make smoke PORT=9000` use another port; `make smoke BASE_URL=https://host.example` checks any other address. The container's check names `localhost` because the container allows only the hosts in `DJANGO_ALLOWED_HOSTS`, and `make smoke`'s default address, `127.0.0.1`, is refused with a 400. The check makes no provider call as long as no provider keys are configured: its last step expects the address search to answer 503 because its key is missing. With keys set, add `SMOKE_ARGS=--keys-set`, which skips that step. The container needs no `.env` and no provider keys to start; without them the two provider endpoints answer 503 with the same message, "A data provider is not configured on this server.", and the page says that the address search or the service is not set up. The image runs one server process on purpose, because the forecast cache is shared by every request. See [docs/architecture.md](docs/architecture.md#hosting) for how the image is built and served.
 
 ## Tests and checks
 
@@ -96,12 +96,12 @@ Tests never make live calls: the providers are mocked, and the settings used by 
 
 Four scripts in `backend/` run the real providers and are not part of `make check`, because they spend quota:
 
-| Script                         | What it does                                                                                                                      | Needs              |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `live_check.py`                | the routes endpoint over seven test trips (about 12 TomTom calls)                                                                 | `TOMTOM_API_KEY`   |
-| `live_address_check.py`        | address search over 8 queries (8 Geoapify calls)                                                                                  | `GEOAPIFY_API_KEY` |
-| `live_weather_report_check.py` | one cross-country trip: routes (1 TomTom call), then weather, repeated to show the cache is used (about 500 Open-Meteo locations) | `TOMTOM_API_KEY`   |
-| `live_weather_check.py`        | Open-Meteo's quota behaviour (about 1,650 locations)                                                                              | no key             |
+| Script | What it does | Needs |
+|---|---|---|
+| `live_check.py` | the routes endpoint over seven test trips (about 12 TomTom calls) | `TOMTOM_API_KEY` |
+| `live_address_check.py` | address search over 8 queries (8 Geoapify calls) | `GEOAPIFY_API_KEY` |
+| `live_weather_report_check.py` | one cross-country trip: routes (1 TomTom call), then weather, repeated to show the cache is used (about 500 Open-Meteo locations) | `TOMTOM_API_KEY` |
+| `live_weather_check.py` | Open-Meteo's quota behaviour (about 1,650 locations) | no key |
 
 ```sh
 uv --directory backend run python live_check.py /tmp/live-check.json
@@ -113,9 +113,9 @@ Settings come from environment variables, optionally from a git-ignored `.env` i
 
 ## Hosting
 
-The app is set up to run as one container on [Render's](https://render.com/) free plan, described by [render.yaml](render.yaml): the image above, a health check on `/api/health` (the `Host` Render's health probe sends is not yet verified against the allowed-hosts list; the first deploy tests it), and auto-deploy off. Provider keys and the service's hostname are set in the host's dashboard, never in the repository or the image.
+The app is set up to run as one container on [Render's](https://render.com/) free plan, described by [render.yaml](render.yaml): the image above, a health check on `/api/health` (the `Host` Render's health probe sends is not yet verified against the allowed-hosts list; the first deploy tests it), and auto-deploy expected to be off (the blueprint key is not yet checked against Render; the first deploy tests it). Provider keys and the service's hostname are set in the host's dashboard, never in the repository or the image.
 
-**The first load can take about a minute.** A free Render service sleeps after 15 minutes without requests and takes about a minute to wake, and the first request after that waits for it. Once the page has loaded, a slow address search or routes request says that the server may be waking up.
+**The first load can take about a minute.** Render documents that a free service sleeps after 15 minutes without requests and takes about a minute to wake, and the first request after that waits for it; this has not been observed here, because nothing has been deployed. Once the page has loaded, a slow address search or routes request is expected to say that the server may be waking up. That copy depends on Render passing the service's `VITE_HOST_SLEEPS` setting to the image build, which the first deploy checks.
 
 The hosted address and measurements of the hosted app will be added to this section when the service is running.
 

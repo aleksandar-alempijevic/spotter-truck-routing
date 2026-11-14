@@ -9,11 +9,14 @@ services:
     dockerfilePath: ./Dockerfile
     # Unverified until the first deploy: the app answers 400 to a Host outside DJANGO_ALLOWED_HOSTS.
     healthCheckPath: /api/health
-    # Every deploy is a manual act that follows the owner's word, never a side effect of a push.
+    # Expected to make every deploy a manual act that follows the owner's word, never a side effect
+    # of a push. Unverified until the first deploy: that this key and value turn auto-deploy off.
     autoDeployTrigger: "off"
     envVars:
-      # Non-secret, baked into the frontend at build time through the Dockerfile's build argument of
-      # the same name: this host sleeps when idle, so a long wait says the server may be waking up.
+      # Non-secret. Expected to reach the frontend build through the Dockerfile's build argument of
+      # the same name, so that a long wait says the server may be waking up (this host sleeps when
+      # idle). Unverified until the first deploy: that Render passes service env vars to a Docker
+      # build as build arguments.
       - key: VITE_HOST_SLEEPS
         value: "1"
       - key: DJANGO_SECRET_KEY
