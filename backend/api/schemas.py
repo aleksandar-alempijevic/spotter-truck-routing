@@ -26,9 +26,13 @@ DEPARTURE_GRACE = timedelta(minutes=15)
 """A departure typed as "now" arrives slightly in the past; this much is accepted as given."""
 DEPARTURE_HORIZON = timedelta(hours=48)
 STOP_HORIZON = DEPARTURE_HORIZON + timedelta(days=30)
+STOP_LOOKBACK = timedelta(days=30)
 """A checkpoint or a stop falls inside a trip that left within the departure window; no trip here
-lasts 30 days. It keeps a time near year 9999 or year 1 from reaching the forecast code, where
-adding a length or reading a stamp would overflow."""
+lasts 30 days, so the window runs from 30 days back to the departure horizon plus 30 days ahead.
+It exists only to keep a time near year 9999 or year 1 from reaching the forecast code, where
+adding a length or reading a stamp would overflow. It is wide on the past side on purpose: the
+weather request is resent as it was for a retry, hours after the plan was made, and a plan that
+is still open must not become an error. A time already past just has no forecast."""
 MAX_LOAD_LB = 80_000
 
 
@@ -273,7 +277,7 @@ def _check_marks(route: RouteCore, interval_miles: float) -> None:
     if any(stop.mile > route.total_miles for stop in route.stops):
         raise ValueError(f"{where}: a stop lies beyond the end of the route")
     now = utc_now()
-    window = (now - DEPARTURE_GRACE, now + STOP_HORIZON)
+    window = (now - STOP_LOOKBACK, now + STOP_HORIZON)
     if any(not window[0] <= c.eta <= window[1] for c in route.checkpoints):
         raise ValueError(f"{where}: a checkpoint's eta is outside the planning window")
     if any(not window[0] <= stop.starts_at <= window[1] for stop in route.stops):

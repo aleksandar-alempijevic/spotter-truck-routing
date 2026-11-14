@@ -259,7 +259,7 @@ async def test_stops_are_checked_against_the_service_box(provider_mock):
         pytest.param({**stop(), "kind": "nap"}, id="unknown kind"),
         pytest.param(stop(minutes=49 * 60), id="longer than any stop"),
         pytest.param(stop(at=datetime(9999, 12, 31, tzinfo=UTC)), id="starts near year 9999"),
-        pytest.param(stop(at=NOW - timedelta(days=2)), id="starts in the past"),
+        pytest.param(stop(at=datetime(1, 1, 2, tzinfo=UTC)), id="starts in year 1"),
     ],
 )
 async def test_a_malformed_stop_is_a_422_before_any_forecast_call(provider_mock, bad):
@@ -285,8 +285,8 @@ async def test_stops_out_of_time_order_are_a_422(provider_mock):
 
 @pytest.mark.parametrize(
     "when",
-    [datetime(9999, 12, 31, tzinfo=UTC), datetime(1, 1, 2, tzinfo=UTC), NOW - timedelta(days=2)],
-    ids=["year 9999", "year 1", "in the past"],
+    [datetime(9999, 12, 31, tzinfo=UTC), datetime(1, 1, 2, tzinfo=UTC)],
+    ids=["year 9999", "year 1"],
 )
 async def test_a_checkpoint_eta_outside_the_planning_window_is_a_422_with_the_error_body(
     provider_mock, when
@@ -301,3 +301,17 @@ async def test_a_checkpoint_eta_outside_the_planning_window_is_a_422_with_the_er
     assert response.json()["code"] == "validation_error"
     assert "planning window" in response.json()["message"]
     assert calls == []
+
+
+async def test_a_plan_a_few_hours_old_can_still_be_sent_again_for_its_weather(provider_mock):
+    # A retry resends the body of a plan left open: its checkpoint etas and its stop are hours in
+    # the past by now, and that is no error. Nothing forecast reaches back that far.
+    forecast(provider_mock)
+    old = [NOW - timedelta(hours=6) + timedelta(minutes=12 * i) for i in range(3)]
+    old_stop = stop(at=NOW - timedelta(hours=5), minutes=30)
+
+    response = await post(request({**route(etas=old), "stops": [old_stop]}))
+
+    assert response.status_code == 200, response.content[:300]
+    reading = response.json()["routes"][0]["stops"][0]
+    assert reading["weather"] is None

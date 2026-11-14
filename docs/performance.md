@@ -56,7 +56,7 @@ These runs predate the rest-break and stop-weather UI (the stop rows, the stop m
 
 The fix: when the slider first has no truck to show, the controller draws one truck at the first route's start for a single frame, under the endpoint marks, so the program is built when the plan appears; the next idle replaces it with what the hour says (`warmTrucks` in `map/controller.ts`). It does nothing when a truck is already on the road, so a departure at :45 is unchanged.
 
-Measured after the fix (the drag of `scripts/measure-slider.mjs`' probe, 390 by 844 with touch, software WebGL, no warm-up pass, one drag per run):
+Measured after the fix, at `21148f5` (the slider drag of `frontend/scripts/measure-slider.mjs` run as a probe that also records WebGL program links, at 390 by 844 with touch, software WebGL, no warm-up pass, one drag per run):
 
 | Departure | CPU | Runs | Frames over 50 ms | Largest gap |
 |---|---|---|---|---|
@@ -68,7 +68,13 @@ Measured after the fix (the drag of `scripts/measure-slider.mjs`' probe, 390 by 
 
 Before the fix, the same probe at :10 gave one gap of 100 to 133 ms in every run (1x and 4x, breaks on and off), and at :45 none in 16 runs. The two gaps at :45 under 4x slowdown are not the fix's doing: at :45 a truck is already on the road, so the warm-up never runs, and no WebGL program was linked during those drags; the machine was loaded (load average about 7). They are reported as measured. The real-GPU cost of the program compile is not measured. `measure-slider.mjs` takes `DEP_MINUTE` to pin the departure minute; measure at both a minute under 30 and one over 30, because the two open the slider differently.
 
-**Limits.** The browser drew with software WebGL, so a real phone and a real GPU are unmeasured. The first paint of the map and the time to draw a plan were not measured. The grid sizes come from the stand-in's cell-size setting and were not recounted in the final run. An earlier run of the same script, on a different Chromium build, saw one or two isolated frames of 50 to 133 ms per drag, at the press and at the far-end turn-around; they did not appear in that run, and the two builds differ, so the run did not show whether the app or the browser removed them; the cause is found below. The drag was measured at commit `de0ce4b`; the rest-break and stop-weather screens added since were not measured again.
+**Limits.**
+- **GPU and scope.** The browser drew with software WebGL, so a real phone and a real GPU are unmeasured, including the cost of the program compile that the fix moves. The first paint of the map and the time to draw a plan were not measured, and the grid sizes come from the stand-in's cell-size setting and were not recounted.
+- **What each table measured.**
+  - The 12-drag table is the run at `de0ce4b`: four configurations, 3 drags each, with the departure minute not pinned. It predates the rest-break and stop-weather screens, and its "0 frames over 50 ms" depended on the minute it ran at, as the cause below shows. An earlier run of the same script on a different Chromium build had seen one or two isolated frames of 50 to 133 ms per drag; that was the same cause, not a browser difference.
+  - The "before the fix" figures (a gap of 100 to 133 ms at :10, none at :45) are the same probe on the controller of `d3b41e6`, with the other changes of the working tree around it.
+  - The after-fix table is the probe on the tree committed as `21148f5`, which holds the fix. It is one drag per run, with no warm-up pass, at 1x and 4x CPU slowdown, and not the four-configuration, 12-drag run: it has not been repeated at 267 and 520 grid cells.
+- **Noise.** Under the 4x slowdown at :45, two of 12 drags showed one 76 to 82 ms gap with no program built during the drag, on a loaded machine. They are reported, not explained.
 
 ## Build size
 
