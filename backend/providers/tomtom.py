@@ -2,7 +2,7 @@
 
 import asyncio
 from datetime import datetime
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, NotRequired, TypedDict
 
 from pydantic import Field, TypeAdapter, ValidationError
 
@@ -17,6 +17,13 @@ CALL_TIMEOUT_S = 50.0
 """Long trips took up to 30 s to route in the feasibility test; this leaves room for a slow call."""
 
 KILOGRAMS_PER_POUND = 0.45359237
+
+EMPTY_RIG_LB = 33_000
+"""Assumed weight of the empty tractor and trailer. The driver enters the cargo only; TomTom
+checks the road's weight limits against the gross weight."""
+
+CANADA = "CAN"
+"""TomTom's ISO 3166-1 alpha-3 country code for Canada, as a country section reports it."""
 
 NO_ROUTE_CODES = {"MAP_MATCHING_FAILURE", "NO_ROUTE_FOUND"}
 """TomTom's 400 error codes that mean the points cannot be joined by a road."""
@@ -48,7 +55,12 @@ class _Summary(TypedDict):
     travelTimeInSeconds: Number
 
 
+class _Section(TypedDict):
+    countryCode: NotRequired[str]
+
+
 class _Route(TypedDict):
+    sections: NotRequired[list[_Section]]
     summary: _Summary
     legs: list[_Leg]
     guidance: _Guidance
@@ -65,6 +77,10 @@ def pounds_to_kilograms(pounds: float) -> int:
     return round(pounds * KILOGRAMS_PER_POUND)
 
 
+def gross_weight_kilograms(cargo_lb: float) -> int:
+    return pounds_to_kilograms(cargo_lb + EMPTY_RIG_LB)
+
+
 async def calculate_routes(
     outbound: Outbound,
     api_key: str,
@@ -78,8 +94,11 @@ async def calculate_routes(
 ) -> list[Route]:
     """Truck routes from origin to destination, optionally through one via point.
 
+    Routes stay inside the US: the request asks TomTom to avoid border crossings, which it treats
+    as a preference, so a route whose country sections include Canada is dropped here too.
     TomTom may return fewer routes than `alternatives` + 1. Raises `NoRouteFound` when it
-    returns none and `MalformedResponse` when a route breaks the contract `routing.Route` needs.
+    returns none, or only routes through Canada, and `MalformedResponse` when a route breaks the
+    contract `routing.Route` needs.
     """
     if not api_key:
         raise ProviderNotConfigured
@@ -88,7 +107,9 @@ async def calculate_routes(
     params = {
         "key": api_key,
         "travelMode": "truck",
-        "vehicleWeight": pounds_to_kilograms(load_lb),
+        "vehicleWeight": gross_weight_kilograms(load_lb),
+        "avoid": "borderCrossings",
+        "sectionType": "country",
         "departAt": departure.isoformat(timespec="seconds"),
         "maxAlternatives": alternatives,
         "instructionsType": "coded",
@@ -127,7 +148,15 @@ def _parse_routes(body: Any, via: Via | None) -> list[Route]:
     Raises `ValidationError` for a body of the wrong shape and `RouteContractError` for a route
     that breaks the rules `routing.Route` enforces.
     """
-    return [_build_route(route, via) for route in _RESPONSE.validate_python(body)["routes"]]
+    return [
+        _build_route(route, via)
+        for route in _RESPONSE.validate_python(body)["routes"]
+        if not _enters_canada(route)
+    ]
+
+
+def _enters_canada(route: _Route) -> bool:
+    return any(s.get("countryCode") == CANADA for s in route.get("sections", []))
 
 
 def _build_route(route: _Route, via: Via | None) -> Route:

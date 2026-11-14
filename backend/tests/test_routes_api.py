@@ -130,7 +130,7 @@ async def test_the_request_reaches_tomtom_and_the_checkpoints_as_given(provider_
     ).json()
 
     request = calls[0]
-    assert request.url.params["vehicleWeight"] == "27216"  # 60,000 lb in kilograms
+    assert request.url.params["vehicleWeight"] == "42184"  # 60,000 lb + 33,000 lb rig
     assert request.url.params["departAt"] == departure.isoformat()
     assert request.url.path.split("/")[-2] == (
         f"{LA[0]:.5f},{LA[1]:.5f}:{NY[0]:.5f},{NY[1]:.5f}"  # origin first, then destination
@@ -360,6 +360,35 @@ async def test_no_route_between_the_points_is_a_422(provider_mock):
     assert response.json()["code"] == "no_route"
 
 
+async def test_a_trip_only_reachable_through_canada_is_a_422_no_route(provider_mock):
+    provider_mock.get(host="api.tomtom.com").respond(
+        json=tomtom_body(tomtom_route(MAIN, countries=("USA", "CAN", "USA")))
+    )
+
+    response = await post(payload())
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "no_route"
+    assert "United States" in response.json()["message"]
+
+
+async def test_every_call_avoids_border_crossings_and_a_via_route_through_canada_is_not_kept(
+    provider_mock,
+):
+    async def through_canada(request):
+        return httpx.Response(
+            200, json=tomtom_body(tomtom_route(NORTH, speed_mps=22, countries=("USA", "CAN")))
+        )
+
+    calls = mock_tomtom(provider_mock, base=[MAIN, SOUTH_ROUTE], via=through_canada)
+
+    body = (await post(payload())).json()
+
+    assert len(calls) > 1
+    assert {c.url.params["avoid"] for c in calls} == {"borderCrossings"}
+    assert {r["source"] for r in body["routes"]} == {"provider"}
+
+
 async def test_a_missing_key_is_a_clear_error_not_a_crash(settings):
     settings.TOMTOM_API_KEY = ""
 
@@ -403,13 +432,13 @@ async def test_a_missing_field_is_a_validation_error():
     assert "departure" in response.json()["message"]
 
 
-async def test_the_largest_load_and_a_load_of_one_kilogram_are_accepted(provider_mock):
+async def test_the_largest_load_and_the_smallest_whole_kilogram_are_accepted(provider_mock):
     calls = mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
 
     assert (await post(payload(load_lb=80_000))).status_code == 200
     assert (await post(payload(load_lb=2.2046))).status_code == 200  # the smallest whole kilogram
 
-    assert [c.url.params["vehicleWeight"] for c in calls] == ["36287", "1"]
+    assert [c.url.params["vehicleWeight"] for c in calls] == ["51256", "14970"]
 
 
 async def test_the_smallest_checkpoint_interval_is_accepted(provider_mock):

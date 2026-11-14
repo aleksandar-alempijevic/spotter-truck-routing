@@ -33,7 +33,7 @@ const BASE: Record<ApiErrorCode, ErrorMessage> = {
   internal_error: { title: 'Something went wrong on our side', body: TRY_LATER, action: 'retry' },
   no_route: {
     title: 'No truck route found',
-    body: 'There is no truck route between these two places. Choose different places.',
+    body: 'There is no truck route between these two places that stays inside the United States. Routes through Canada are not shown, so a trip between the lower 48 and Alaska has none. Choose different places.',
     action: 'edit',
   },
   provider_timeout: {

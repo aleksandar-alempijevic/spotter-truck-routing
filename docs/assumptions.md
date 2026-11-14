@@ -5,7 +5,7 @@ Readings and limits the app applies where the assessment is silent. The rules fo
 ## Trip request
 
 - **Departure** is accepted from 15 minutes ago up to 48 hours ahead. A departure typed as "now" arrives slightly in the past, so the 15 minutes are accepted as given; anything earlier is rejected. The 48 hours match the longest forecast the heatmap slider shows. The departure carries a UTC offset, and every ETA the API returns is a UTC instant.
-- **Load weight** must be more than 0 and at most 80,000 lb, the US federal gross vehicle weight limit. It is sent to the routing provider in kilograms, because the provider reads the number as kilograms without checking it.
+- **Load weight** must be more than 0 and at most 80,000 lb, the US federal gross vehicle weight limit. The driver enters the cargo only. The routing provider is sent the cargo plus an assumed 33,000 lb for the empty tractor and trailer, in kilograms (the provider reads the number as kilograms without checking it), because it checks road weight limits against the gross weight. The 33,000 lb is a typical figure, not the weight of the driver's rig.
 - **Origin and destination** must be valid coordinates and different points.
 - **Checkpoint spacing** is 10, 25 or 50 miles.
 - **Every time on screen is read in the origin's time zone,** labelled with it, because the driver sets the departure there; the arrival is also shown in the destination's zone when that differs. A departure typed as a clock time is read in the origin's zone, and "leave now" is the current instant.
@@ -14,7 +14,8 @@ Readings and limits the app applies where the assessment is silent. The rules fo
 
 - **Every route ends with a checkpoint at the destination,** so the arrival ETA is shown. The risk rules accept a final checkpoint that stands for no miles ([logic.md](logic.md#2-route-summary)).
 - **ETAs are driving time only, unless the request turns rest breaks on** ([below](#when-rest-breaks-are-on)); the switch is off by default. The request asks TomTom for traffic (`traffic=true`) at the departure time, so the times are TomTom's time-of-day prediction for that departure, not a fixed typical speed. With breaks off no rest time is included. How much traffic changed the ETAs has not been measured separately.
-- **Routes the provider returns are shown as given.** Only a route made by sending the truck through a via-city must overlap every other route by less than half; the provider's own alternatives skip that check.
+- **No route passes through Canada.** Every routing call asks TomTom to avoid border crossings, which TomTom treats as a preference, so the app also drops any returned route whose country sections include Canada. This holds for the provider's alternatives and for via-city routes. A trip with no road route inside the US, such as the lower 48 to Alaska, gets a `no_route` answer that says so; the app does not show the Canadian route. The avoid setting also steers routes away from Mexico, which no rule requires.
+- **Routes the provider returns are shown as given,** apart from the Canada rule above. Only a route made by sending the truck through a via-city must overlap every other route by less than half; the provider's own alternatives skip that check.
 - **A via-city comes from a fixed list of 45 US hubs,** chosen by geometry alone, so a via route can include a local detour into the city. Up to six cities are tried, so "no distinct third route" means those six did not work, not that no third route exists.
 
 ## When rest breaks are on

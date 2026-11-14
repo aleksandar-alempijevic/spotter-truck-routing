@@ -16,10 +16,16 @@ def path(waypoints: list[Point], steps_per_leg: int = 60) -> list[list[Point]]:
     return [lerp(a, b, steps_per_leg) for a, b in zip(waypoints, waypoints[1:], strict=False)]
 
 
-def tomtom_route(waypoints: list[Point], speed_mps: float = 25.0, every: int = 20) -> dict:
+def tomtom_route(
+    waypoints: list[Point],
+    speed_mps: float = 25.0,
+    every: int = 20,
+    countries: tuple[str, ...] = (),
+) -> dict:
     """One TomTom route object: legs of points, coded instructions and a summary.
 
-    Instruction offsets and times are cumulative over the whole route, across legs.
+    Instruction offsets and times are cumulative over the whole route, across legs. `countries`
+    adds one country section per code, as `sectionType=country` does.
     """
     legs = path(waypoints)
     flat = [p for leg in legs for p in leg]
@@ -38,13 +44,24 @@ def tomtom_route(waypoints: list[Point], speed_mps: float = 25.0, every: int = 2
         for i in indexes
     ]
     length = round(cumulative[-1])
-    return {
+    route = {
         "summary": {"lengthInMeters": length, "travelTimeInSeconds": round(length / speed_mps)},
         "legs": [
             {"points": [{"latitude": lat, "longitude": lon} for lat, lon in leg]} for leg in legs
         ],
         "guidance": {"instructions": instructions},
     }
+    if countries:
+        route["sections"] = [
+            {
+                "startPointIndex": 0,
+                "endPointIndex": len(flat) - 1,
+                "sectionType": "COUNTRY",
+                "countryCode": c,
+            }
+            for c in countries
+        ]
+    return route
 
 
 def tomtom_body(*routes: dict) -> dict:

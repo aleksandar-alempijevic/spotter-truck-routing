@@ -74,6 +74,12 @@ test('weather provider_limited offers the manual retry that reuses the cache', (
   expect(row.body).toMatch(/reused/);
 });
 
+test('no route explains that routes through Canada are not shown', () => {
+  const message = describeError('routes', new ApiError('no_route', 'x', 422));
+  expect(message.body).toContain('Canada');
+  expect(message.body).toContain('Alaska');
+});
+
 test('no route sends the driver back to edit the trip', () => {
   expect(describeError('routes', new ApiError('no_route', 'x', 422)).action).toBe('edit');
 });

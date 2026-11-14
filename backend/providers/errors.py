@@ -50,7 +50,7 @@ class ProviderNotConfigured(ProviderError):
 class NoRouteFound(ProviderError):
     code = "no_route"
     status = 422
-    message = "No route could be found between these points."
+    message = "No truck route inside the United States could be found between these points."
 
 
 class MalformedResponse(ProviderError):

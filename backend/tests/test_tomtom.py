@@ -11,7 +11,7 @@ from providers.errors import (
     ProviderNotConfigured,
     ProviderUnavailable,
 )
-from providers.tomtom import pounds_to_kilograms
+from providers.tomtom import gross_weight_kilograms, pounds_to_kilograms
 from routing import Via
 from tests.route_fixtures import tomtom_body, tomtom_route
 
@@ -37,6 +37,11 @@ def test_pounds_convert_to_kilograms():
     assert pounds_to_kilograms(2.2046) == 1
 
 
+def test_gross_weight_adds_the_empty_rig_to_the_cargo():
+    assert gross_weight_kilograms(0) == 14_969
+    assert gross_weight_kilograms(80_000) == 51_256
+
+
 async def test_request_carries_kilograms_truck_mode_and_coded_instructions(provider_mock):
     route = provider_mock.get(host="api.tomtom.com").respond(
         json=tomtom_body(tomtom_route([ORIGIN, DESTINATION]))
@@ -47,8 +52,10 @@ async def test_request_carries_kilograms_truck_mode_and_coded_instructions(provi
     request = route.calls.last.request
     params = request.url.params
     assert request.url.path.endswith("/41.00000,-100.00000:41.00000,-85.00000/json")
-    assert params["vehicleWeight"] == "36287"
+    assert params["vehicleWeight"] == "51256"  # 80,000 lb + 33,000 lb rig
     assert params["travelMode"] == "truck"
+    assert params["avoid"] == "borderCrossings"
+    assert params["sectionType"] == "country"
     assert params["instructionsType"] == "coded"
     assert params["maxAlternatives"] == "2"
     assert params["departAt"] == "2026-11-13T08:00:00+00:00"
@@ -196,3 +203,26 @@ async def test_the_key_appears_in_no_log_record_at_debug_level(
 
     assert KEY not in caplog.text
     assert all(KEY not in record.getMessage() for record in caplog.records)
+
+
+async def test_a_route_through_canada_is_dropped_and_the_others_kept(provider_mock):
+    provider_mock.get(host="api.tomtom.com").respond(
+        json=tomtom_body(
+            tomtom_route([ORIGIN, (45.0, -92.0), DESTINATION], countries=("USA", "CAN", "USA")),
+            tomtom_route([ORIGIN, DESTINATION], countries=("USA",)),
+        )
+    )
+
+    routes = await call()
+
+    assert len(routes) == 1
+    assert (45.0, -92.0) not in routes[0].points
+
+
+async def test_only_routes_through_canada_is_no_route(provider_mock):
+    provider_mock.get(host="api.tomtom.com").respond(
+        json=tomtom_body(tomtom_route([ORIGIN, DESTINATION], countries=("USA", "CAN")))
+    )
+
+    with pytest.raises(NoRouteFound):
+        await call()
