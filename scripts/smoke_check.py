@@ -35,6 +35,18 @@ def fetch(base: str, path: str, method: str = "GET", host: str | None = None):
         return error.code, lowered(error.headers), error.read()
 
 
+def foreign_host_refusal(status: int, headers: dict[str, str], body: bytes) -> tuple[bool, str]:
+    """Whether an answer to a foreign Host is a refusal, and who gave it.
+
+    The app answers a Host it does not allow with a 400. Behind Cloudflare the edge may refuse
+    first, with a 403 the app never sees; that is accepted only when the answer says it came from
+    the edge, so a local run, which has no edge, still demands the app's 400.
+    """
+    by_edge = status == 403 and "cloudflare" in headers.get("server", "").lower()
+    refused = (status == 400 or by_edge) and b'id="root"' not in body
+    return refused, "the edge, 403" if by_edge else "the app, 400"
+
+
 def asset_paths(base: str) -> list[str]:
     """The built files the page needs: the entry's references, then what the entry and the lazy
     map chunk reference in turn (the map chunk and the worker are named only inside scripts)."""
@@ -128,11 +140,12 @@ def run(base: str, keys_set: bool) -> list[str]:
     api_error("/api/health", "POST", 405, "method_not_allowed")
 
     for path in ("/api/health", "/", paths[0] if paths else "/assets/"):
-        status, _, body = fetch(base, path, host="not-allowed.invalid")
+        status, headers, body = fetch(base, path, host="not-allowed.invalid")
+        refused, who = foreign_host_refusal(status, headers, body)
         check(
-            f"foreign Host header is refused on {path}",
-            status == 400 and b'id="root"' not in body,
-            str(status),
+            f"foreign Host header is refused on {path}" + (f" (by {who})" if refused else ""),
+            refused,
+            f"{status} server={headers.get('server')}",
         )
 
     if keys_set:

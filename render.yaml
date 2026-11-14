@@ -7,21 +7,26 @@ services:
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
-    # Unverified until the first deploy: the app answers 400 to a Host outside DJANGO_ALLOWED_HOSTS.
+    # The app answers 400 to a Host outside DJANGO_ALLOWED_HOSTS. Observed on the first deploy
+    # (2026-11-14): Render's port and health checker calls with Host `localhost`, so
+    # DJANGO_ALLOWED_HOSTS on Render must list `localhost` next to the service hostname; without it
+    # two deploys failed with "Port scan timeout reached". That is inferred from the fix and from
+    # a forum report; the exact Host the checker sends was not seen in our logs.
     healthCheckPath: /api/health
     # Expected to make every deploy a manual act that follows the owner's word, never a side effect
-    # of a push. Unverified until the first deploy: that this key and value turn auto-deploy off.
+    # of a push. Still unverified: that this key and value really turn auto-deploy off.
     autoDeployTrigger: "off"
     envVars:
       # Non-secret. Expected to reach the frontend build through the Dockerfile's build argument of
       # the same name, so that a long wait says the server may be waking up (this host sleeps when
-      # idle). Unverified until the first deploy: that Render passes service env vars to a Docker
-      # build as build arguments.
+      # idle). The wake copy is present in the served bundle of the first deploy (2026-11-14), which
+      # suggests Render passed this value to the Docker build as a build argument.
       - key: VITE_HOST_SLEEPS
         value: "1"
       - key: DJANGO_SECRET_KEY
         generateValue: true
-      # The service's own hostname, known only after the service exists; set in the dashboard.
+      # The service's own hostname, known only after the service exists, plus `localhost` for
+      # Render's port and health checker (comma-separated); set in the dashboard.
       - key: DJANGO_ALLOWED_HOSTS
         sync: false
       - key: TOMTOM_API_KEY
