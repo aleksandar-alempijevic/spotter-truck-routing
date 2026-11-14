@@ -9,15 +9,19 @@ import { formatClockWithZone } from '../time/zone';
  */
 export function TripSummary({
   trip,
+  breaksApplied,
   onClick,
   ref,
 }: {
   trip: Trip;
+  /** From the routes answer: undefined until it lands. Says which mode the plan was made in. */
+  breaksApplied?: boolean;
   onClick(): void;
   ref?: Ref<HTMLButtonElement>;
 }) {
   const leaves = formatClockWithZone(trip.departureMs, displayZone(trip));
   const details = [leaves, `${trip.loadLb.toLocaleString('en-US')} lb`, `every ${trip.spacing} mi`];
+  if (breaksApplied) details.push('with rest breaks');
   return (
     <Button
       ref={ref}

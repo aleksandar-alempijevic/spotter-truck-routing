@@ -4,6 +4,7 @@ import type { Trip } from '../plan/trip';
 import { AddressField } from './AddressField';
 import { DepartureField } from './DepartureField';
 import { LoadField } from './LoadField';
+import { RestBreaksField } from './RestBreaksField';
 import { SpacingControl } from './SpacingControl';
 import { validateTrip, type FormValues } from './validation';
 
@@ -108,6 +109,10 @@ export function TripForm({ values, onChange, onSubmit, autoFocus = false }: Prop
         <SpacingControl
           value={values.spacing}
           onChange={(spacing) => onChange({ ...values, spacing })}
+        />
+        <RestBreaksField
+          checked={values.restBreaks}
+          onChange={(restBreaks) => onChange({ ...values, restBreaks })}
         />
         {values.addressCredit && (
           <Typography variant="caption" color="text.secondary">

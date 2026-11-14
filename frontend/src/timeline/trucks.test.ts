@@ -114,3 +114,62 @@ test('truck wording', () => {
   expect(describeTruck(t('driving', 240.4))).toBe('Route 1 at mile 240');
   expect(describeTruck(t('arrived', 788))).toBe('Route 1 arrived');
 });
+
+test('a truck stands still across a stop and sets off again after it', () => {
+  // 100 miles in 2 h of driving, with a 10-hour rest at mile 50.
+  const rest = { mile: 50, startMs: T0 + 1 * H, endMs: T0 + 11 * H };
+  const route: TruckRoute = {
+    ...straight,
+    checkpoints: [
+      { mile: 0, etaMs: T0 },
+      { mile: 50, etaMs: T0 + 1 * H },
+      { mile: 100, etaMs: T0 + 12 * H },
+    ],
+    stops: [rest],
+  };
+  const at = (ms: number) => trucksAt([route], ms)[0];
+
+  expect(at(T0 + 0.5 * H).mile).toBeCloseTo(25);
+  for (const ms of [T0 + 1 * H, T0 + 3 * H, T0 + 6 * H, T0 + 11 * H]) {
+    expect(at(ms).mile).toBeCloseTo(50);
+    expect(at(ms).position).toEqual(at(T0 + 1 * H).position);
+    expect(at(ms).status).toBe('driving');
+  }
+  expect(at(T0 + 11.5 * H).mile).toBeCloseTo(75);
+  expect(at(T0 + 12 * H).status).toBe('arrived');
+});
+
+test('without the stops the same ETAs would slide the truck across the stretch', () => {
+  const route: TruckRoute = {
+    ...straight,
+    checkpoints: [
+      { mile: 0, etaMs: T0 },
+      { mile: 50, etaMs: T0 + 1 * H },
+      { mile: 100, etaMs: T0 + 12 * H },
+    ],
+  };
+
+  expect(trucksAt([route], T0 + 3 * H)[0].mile).toBeCloseTo(50 + 50 * (2 / 11));
+});
+
+test('a plan with breaks off, or a route with no stops, moves a truck exactly as before', () => {
+  const view = buildPlanView(buildRoutes('mixed', { departure: '2026-11-20T14:00:00Z' }));
+  const bare = view.routes.map((r) => ({ ...r, stops: [] }));
+  const t = T0 + 6 * H;
+
+  expect(trucksAt(view.routes, t)).toEqual(trucksAt(bare, t));
+});
+
+test('a truck on a plan with breaks stands at the stop for its whole duration', () => {
+  const departure = '2026-11-20T14:00:00Z';
+  const view = buildPlanView(buildRoutes('mixed', { departure, breaks: true }));
+  const route = view.routes[0];
+  const rest = route.stops.find((s) => s.kind === 'rest')!;
+
+  const during = [rest.startMs, rest.startMs + (rest.endMs - rest.startMs) / 2, rest.endMs].map(
+    (ms) => trucksAt([route], ms)[0],
+  );
+
+  for (const truck of during) expect(truck.mile).toBeCloseTo(rest.mile, 5);
+  expect(trucksAt([route], rest.endMs + 30 * 60_000)[0].mile).toBeGreaterThan(rest.mile);
+});

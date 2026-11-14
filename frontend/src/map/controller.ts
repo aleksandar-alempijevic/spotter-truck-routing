@@ -14,9 +14,10 @@ import {
   routeBounds,
   routeLines,
   selectedPoint,
+  stopPoints,
   truckPoints,
 } from './features';
-import { glyphImage, hatchImage, ICON_PIXEL_RATIO } from './icons';
+import { glyphImage, hatchImage, ICON_PIXEL_RATIO, stopImage } from './icons';
 import {
   checkpointIconSize,
   checkpointSortKey,
@@ -30,10 +31,11 @@ import {
   routeColor,
   routeWidth,
   SOURCE,
+  STOP_IMAGE,
   truckRadius,
 } from './layers';
 import { labelReadings, type Reading } from '../plan/describe';
-import type { CheckpointRef } from '../plan/view';
+import type { CheckpointRef, StopRef } from '../plan/view';
 import type { MapInsets, MapSpot } from './types';
 
 // Vite emits the worker as its own file; MapLibre cannot find it next to its module otherwise.
@@ -47,6 +49,8 @@ interface MapEvents {
   onRecovered(): void;
   onSelectRoute(routeId: string): void;
   onSelectCheckpoint(ref: CheckpointRef): void;
+  /** A required stop was tapped: the page shows it in the list. */
+  onSelectStop(ref: StopRef): void;
   /**
    * Every tap on the map says what it landed on, `null` for nothing readable. Where the page shows
    * the reading itself (see `setReadoutOnMap`) this is all the map does with a tap.
@@ -464,6 +468,9 @@ export class MapController {
       }
     }
     if (!map.hasImage(HATCH_IMAGE)) map.addImage(HATCH_IMAGE, hatchImage());
+    if (!map.hasImage(STOP_IMAGE)) {
+      map.addImage(STOP_IMAGE, stopImage(), { pixelRatio: ICON_PIXEL_RATIO });
+    }
 
     for (const id of OUR_SOURCES) {
       if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: emptyCollection() });
@@ -528,6 +535,17 @@ export class MapController {
       layout: {
         'icon-image': ['concat', ICON_PREFIX, ['get', 'icon']],
         'icon-size': checkpointIconSize(null),
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+      },
+    });
+    add({
+      id: LAYER.stops,
+      type: 'symbol',
+      source: SOURCE.stops,
+      layout: {
+        'icon-image': STOP_IMAGE,
+        'icon-size': 0.85,
         'icon-allow-overlap': true,
         'icon-ignore-placement': true,
       },
@@ -634,6 +652,7 @@ export class MapController {
     this.source(SOURCE.routes)?.setData(routeLines(this.routes));
     this.source(SOURCE.checkpoints)?.setData(checkpointPoints(this.routes));
     this.source(SOURCE.endpoints)?.setData(endpointPoints(this.routes));
+    this.pushStops();
     this.pushTrucks();
   }
 
@@ -649,7 +668,13 @@ export class MapController {
     map.setPaintProperty(LAYER.trucks, 'circle-radius', truckRadius(id));
   }
 
+  /** The selected route's stops: a few points that follow the route selection. */
+  private pushStops(): void {
+    this.source(SOURCE.stops)?.setData(stopPoints(this.routes, this.selectedRouteId));
+  }
+
   private pushSelection(): void {
+    this.pushStops();
     const sel = this.selectedCheckpoint;
     this.source(SOURCE.selected)?.setData(
       selectedPoint(this.routes, sel?.routeId ?? null, sel?.index ?? null),
@@ -745,7 +770,11 @@ export class MapController {
   private showHover(point: maplibregl.Point): void {
     const checkpoint = this.hit(point, [LAYER.checkpoints])[0];
     this.map.getCanvas().style.cursor =
-      checkpoint || this.hit(point, [LAYER.routeLine]).length > 0 ? 'pointer' : '';
+      checkpoint ||
+      this.hit(point, [LAYER.stops]).length > 0 ||
+      this.hit(point, [LAYER.routeLine]).length > 0
+        ? 'pointer'
+        : '';
     if (!checkpoint || !window.matchMedia?.(HOVER_QUERY).matches) {
       this.hidePopup();
       return;
@@ -930,6 +959,14 @@ export class MapController {
 
   private onClick(point: maplibregl.Point): void {
     this.hideReadout();
+    const stop = this.hit(point, [LAYER.stops])[0];
+    if (stop) {
+      // A stop sits on the route like a checkpoint but has no reading: the list shows it.
+      this.events.onSelectStop(stop.properties as unknown as StopRef);
+      this.hidePopup();
+      this.events.onSpot(null);
+      return;
+    }
     const checkpoint = this.hit(point, [LAYER.checkpoints])[0];
     if (checkpoint) {
       const { routeId, index } = checkpoint.properties as { routeId: string; index: number };

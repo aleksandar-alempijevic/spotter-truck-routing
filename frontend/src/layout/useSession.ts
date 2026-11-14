@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { CheckpointRef } from '../plan/view';
+import type { CheckpointRef, StopRef } from '../plan/view';
 import type { PlanView } from '../plan/view';
 import { createHourHolder, type HourHolder } from '../timeline/hourHolder';
 
@@ -9,8 +9,11 @@ export interface Session {
   /** The route shown as selected: the driver's pick, else the recommended route, else the fastest. */
   routeId: string | null;
   checkpoint: CheckpointRef | null;
+  /** The stop tapped on the map, to show in the list. */
+  stop: StopRef | null;
   selectRoute(routeId: string): void;
   selectCheckpoint(ref: CheckpointRef): void;
+  selectStop(ref: StopRef): void;
   /** Drops the selected checkpoint and keeps the route. */
   clearCheckpoint(): void;
 }
@@ -20,6 +23,7 @@ interface Held {
   holder: HourHolder;
   routeId: string | null;
   checkpoint: CheckpointRef | null;
+  stop: StopRef | null;
 }
 
 const fresh = (submissionId: number | null): Held => ({
@@ -27,6 +31,7 @@ const fresh = (submissionId: number | null): Held => ({
   holder: createHourHolder(),
   routeId: null,
   checkpoint: null,
+  stop: null,
 });
 
 function defaultRoute(view: PlanView | null): string | null {
@@ -52,11 +57,19 @@ export function useSession(submissionId: number | null, view: PlanView | null): 
 
   const selectRoute = useCallback(
     (routeId: string) =>
-      setHeld((old) => (old.routeId === routeId ? old : { ...old, routeId, checkpoint: null })),
+      setHeld((old) =>
+        old.routeId === routeId ? old : { ...old, routeId, checkpoint: null, stop: null },
+      ),
     [],
   );
   const selectCheckpoint = useCallback(
-    (ref: CheckpointRef) => setHeld((old) => ({ ...old, routeId: ref.routeId, checkpoint: ref })),
+    (ref: CheckpointRef) =>
+      setHeld((old) => ({ ...old, routeId: ref.routeId, checkpoint: ref, stop: null })),
+    [],
+  );
+  const selectStop = useCallback(
+    (ref: StopRef) =>
+      setHeld((old) => ({ ...old, routeId: ref.routeId, checkpoint: null, stop: ref })),
     [],
   );
 
@@ -69,8 +82,10 @@ export function useSession(submissionId: number | null, view: PlanView | null): 
     holder: current.holder,
     routeId: current.routeId ?? defaultRoute(view),
     checkpoint: current.checkpoint,
+    stop: current.stop,
     selectRoute,
     selectCheckpoint,
+    selectStop,
     clearCheckpoint,
   };
 }

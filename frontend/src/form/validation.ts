@@ -23,10 +23,11 @@ export interface FormValues {
   departure: DepartureValue;
   loadText: string;
   spacing: Spacing;
+  restBreaks: boolean;
   addressCredit: AttributionOut | null;
 }
 
-/** The cargo weight starts empty; spacing starts at 25. */
+/** The cargo weight starts empty; spacing starts at 25; rest breaks start off. */
 export const INITIAL_VALUES: FormValues = {
   origin: null,
   originText: '',
@@ -35,6 +36,7 @@ export const INITIAL_VALUES: FormValues = {
   departure: { mode: 'now' },
   loadText: '',
   spacing: DEFAULT_SPACING,
+  restBreaks: false,
   addressCredit: null,
 };
 
@@ -123,6 +125,7 @@ export function validateTrip(
       departureMs,
       loadLb: load.value,
       spacing: values.spacing,
+      restBreaks: values.restBreaks,
       addressCredit: values.addressCredit,
     },
     errors: null,

@@ -22,6 +22,7 @@ const trip: Trip = {
   departureMs: Date.parse(departure),
   loadLb: 36_000,
   spacing: 25,
+  restBreaks: false,
   addressCredit: null,
 };
 const noop = () => {};

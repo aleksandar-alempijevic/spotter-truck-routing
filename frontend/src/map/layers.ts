@@ -10,6 +10,7 @@ export const SOURCE = {
   endpoints: 'endpoints',
   selected: 'selected-checkpoint',
   trucks: 'trucks',
+  stops: 'stops',
 } as const;
 
 export const LAYER = {
@@ -21,10 +22,12 @@ export const LAYER = {
   selectedRing: 'selected-checkpoint-ring',
   endpoints: 'endpoints',
   trucks: 'trucks',
+  stops: 'stops',
 } as const;
 
 export const ICON_PREFIX = 'risk-';
 export const HATCH_IMAGE = 'no-forecast-hatch';
+export const STOP_IMAGE = 'stop-mark';
 
 /** The level a cell shows: the hour's diff as feature state, else the level it was built with. */
 const cellLevel: ExpressionSpecification = ['coalesce', ['feature-state', 'level'], ['get', 'l']];

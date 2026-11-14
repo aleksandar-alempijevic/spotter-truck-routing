@@ -1,14 +1,15 @@
 import { Box, Divider, Stack, Typography } from '@mui/material';
 import type { Ref } from 'react';
-import type { CheckpointRef } from '../plan/view';
+import type { CheckpointRef, StopRef } from '../plan/view';
 import type { PlanState } from '../plan/queries';
 import { placeName, type Submission } from '../plan/trip';
 import { visuallyHidden } from '../visuallyHidden';
 import { Credits } from './Credits';
-import { CheckpointList, CheckpointRow } from './CheckpointList';
+import { CheckpointList, CheckpointRow, StopRow } from './CheckpointList';
 import { PlanHeadline } from './PlanHeadline';
 import { RouteCards } from './RouteCards';
 import { RouteChips } from './RouteChips';
+import { BREAKS_ASSUMPTION } from './stops';
 import { WhyThisRoute } from './WhyThisRoute';
 
 /**
@@ -35,6 +36,7 @@ interface Props {
   submission: Submission;
   selectedRouteId: string | null;
   selectedCheckpoint: CheckpointRef | null;
+  selectedStop: StopRef | null;
   onSelectRoute(routeId: string): void;
   onSelectCheckpoint(ref: CheckpointRef): void;
   onEditTrip(): void;
@@ -49,6 +51,7 @@ export function PlanPanel({
   submission,
   selectedRouteId,
   selectedCheckpoint,
+  selectedStop,
   onSelectRoute,
   onSelectCheckpoint,
   onEditTrip,
@@ -57,10 +60,15 @@ export function PlanPanel({
   const parts = PARTS[tier];
   const routes = state.view?.routes ?? [];
   const recommendedId = state.view?.ranking?.recommended_id ?? null;
+  const breaksApplied = state.view?.breaksApplied ?? false;
   const selected = routes.find((r) => r.id === selectedRouteId) ?? null;
   const detailCp =
     selected && selectedCheckpoint?.routeId === selected.id
       ? selected.checkpoints[selectedCheckpoint.index]
+      : undefined;
+  const detailStop =
+    selected && selectedStop?.routeId === selected.id
+      ? selected.stops[selectedStop.index]
       : undefined;
   const criteria =
     state.explanation && 'criteria' in state.explanation ? state.explanation.criteria : undefined;
@@ -77,6 +85,8 @@ export function PlanPanel({
       route={selected}
       trip={submission.trip}
       selected={selectedCheckpoint}
+      selectedStop={selectedStop}
+      breaksApplied={breaksApplied}
       onSelect={onSelectCheckpoint}
     />
   );
@@ -104,6 +114,11 @@ export function PlanPanel({
         {placeName(submission.trip.destination.label)}
       </Typography>
       <PlanHeadline state={state} submission={submission} onEditTrip={onEditTrip} />
+      {breaksApplied && routes.length > 0 && (
+        <Typography variant="body2" color="text.secondary">
+          {BREAKS_ASSUMPTION}
+        </Typography>
+      )}
       {state.view?.shortfall && (
         <Typography variant="body2" color="text.secondary">
           {state.view.shortfall}
@@ -124,8 +139,17 @@ export function PlanPanel({
           trip={submission.trip}
           selectedId={selectedRouteId}
           recommendedId={recommendedId}
+          breaksApplied={breaksApplied}
           onSelect={onSelectRoute}
         />
+      )}
+      {tier === 'half' && selected && detailStop && (
+        <Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            Selected stop on {selected.name}
+          </Typography>
+          <StopRow stop={detailStop} trip={submission.trip} isSelected />
+        </Box>
       )}
       {tier === 'half' && selected && detailCp && (
         <Box>

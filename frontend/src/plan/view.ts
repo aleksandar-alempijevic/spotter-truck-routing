@@ -1,6 +1,7 @@
 import { ApiError } from '../api/client';
 import type {
   ConditionsOut,
+  StopOut,
   RankingOut,
   RouteSummaryOut,
   RoutesOut,
@@ -24,13 +25,39 @@ export interface CheckpointView {
   conditions: ConditionsOut | null;
 }
 
+/**
+ * A required stop on a route, as the server placed it. Stops are a list of their own, never part
+ * of `checkpoints`: a checkpoint's index is how the weather answer is joined to its route.
+ */
+export interface StopView {
+  /** Position in the route's stop list: with the route id, what a tap on a stop selects. */
+  index: number;
+  kind: StopOut['kind'];
+  mile: number;
+  lat: number;
+  lon: number;
+  startMs: number;
+  endMs: number;
+  durationSeconds: number;
+}
+
+/** One stop of one route, by route id and index in its stop list. */
+export interface StopRef {
+  routeId: string;
+  index: number;
+}
+
 export interface RouteView {
   id: string;
   /** "Route 2". */
   name: string;
   /** The via city of a route built through one. */
   via: string | null;
+  /** Departure to arrival: includes the stops when the plan was made with rest breaks. */
   travelSeconds: number;
+  /** Time at the wheel; equals `travelSeconds` when the plan has no rest breaks. */
+  drivingSeconds: number;
+  stops: StopView[];
   miles: number;
   line: [number, number][];
   checkpoints: CheckpointView[];
@@ -44,6 +71,8 @@ export interface RouteView {
 
 export interface PlanView {
   routes: RouteView[];
+  /** Whether the times include the rest breaks, as the routes answer says it was made. */
+  breaksApplied: boolean;
   /** The server's note on why there are fewer than three routes, verbatim. */
   shortfall: string | null;
   ranking: RankingOut | null;
@@ -121,6 +150,17 @@ export function buildPlanView(
         name: `Route ${routeIndex + 1}`,
         via: route.via?.name ?? null,
         travelSeconds: route.travel_time_seconds,
+        drivingSeconds: route.driving_seconds,
+        stops: route.stops.map((stop, index) => ({
+          index,
+          kind: stop.kind,
+          mile: stop.mile,
+          lat: stop.lat,
+          lon: stop.lon,
+          startMs: Date.parse(stop.starts_at),
+          endMs: Date.parse(stop.starts_at) + stop.duration_seconds * 1000,
+          durationSeconds: stop.duration_seconds,
+        })),
         miles: route.total_miles,
         line: route.line,
         checkpoints,
@@ -130,6 +170,7 @@ export function buildPlanView(
         isFastest: route.id === fastest.id,
       };
     }),
+    breaksApplied: routes.breaks_applied,
     shortfall: routes.shortfall?.message ?? null,
     ranking: weather?.ranking ?? null,
     weather: weatherState,

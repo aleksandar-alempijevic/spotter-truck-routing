@@ -682,3 +682,148 @@ test('phone: a checkpoint chosen from the list since the tap keeps its selection
 
   expect(mapProps?.selectedCheckpoint).toEqual({ routeId: 'route-3', index: 4 });
 });
+
+const routesBodies = () =>
+  fetchMock.mock.calls
+    .filter(([url]) => String(url) === '/api/routes')
+    .map(([, init]) => JSON.parse(String((init as RequestInit).body)) as { rest_breaks: boolean });
+
+const BREAKS_NOTE = /Times include the federal rest breaks/;
+
+test('the rest-break switch is on the form, off at the start, and says what it adds and assumes', () => {
+  useViewport('sheet');
+  renderApp();
+
+  const toggle = screen.getByRole('switch', { name: 'Include required rest breaks' });
+
+  expect(toggle).not.toBeChecked();
+  expect(toggle).toHaveAccessibleDescription(/30-minute break after 8 hours.*rested start/);
+});
+
+test('the request carries the switch: false by default, true when it is on', async () => {
+  useViewport('pane');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  expect(routesBodies()).toEqual([expect.objectContaining({ rest_breaks: false })]);
+
+  fireEvent.click(screen.getByRole('button', { name: TRIP_BAR }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Include required rest breaks' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+  await screen.findByText(BREAKS_NOTE);
+
+  expect(routesBodies().map((b) => b.rest_breaks)).toEqual([false, true]);
+});
+
+test('changing the switch makes a new submission: routes are requested again and nothing carries over', async () => {
+  useViewport('pane');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+  const offRoutes = mapProps!.routes;
+  act(() => mapProps!.onSelectStop({ routeId: 'route-3', index: 0 }));
+
+  fireEvent.click(screen.getByRole('button', { name: TRIP_BAR }));
+  fireEvent.click(screen.getByRole('switch', { name: 'Include required rest breaks' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+  await screen.findByText(BREAKS_NOTE);
+  await screen.findByText('Route 2 is recommended');
+
+  expect(calls('/api/routes')).toBe(2);
+  expect(calls('/api/weather')).toBe(2);
+  expect(mapProps!.routes).not.toBe(offRoutes);
+  expect(mapProps!.selectedRouteId).toBe('route-2'); // the recommended route again, not route-3
+});
+
+test('with the switch off there is no stop UI: no note, no stop rows, no stop on the trip bar', async () => {
+  useViewport('pane');
+  renderApp();
+  await planTrip();
+  await screen.findByText('Route 2 is recommended');
+
+  expect(screen.queryByText(BREAKS_NOTE)).toBeNull();
+  expect(screen.queryByText(/Break · mile|Rest · mile/)).toBeNull();
+  expect(screen.queryByText(/driving \+/)).toBeNull();
+  expect(screen.getByRole('button', { name: TRIP_BAR })).not.toHaveTextContent('rest breaks');
+  expect(mapProps!.routes.every((r) => r.stops.length === 0)).toBe(true);
+});
+
+test('with the switch on the pane shows the note, the split, the stop rows and the trip bar says so', async () => {
+  useViewport('pane');
+  renderApp();
+  await pick('Starting place', 'Dallas', 'Dallas, TX, United States');
+  await pick('Destination', 'Denver', 'Denver, CO, United States');
+  fireEvent.change(screen.getByLabelText('Cargo weight (lb)'), { target: { value: '36,000' } });
+  fireEvent.click(screen.getByRole('switch', { name: 'Include required rest breaks' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+
+  expect(await screen.findByText(BREAKS_NOTE)).toBeInTheDocument();
+  expect(await screen.findByText('Route 2 is recommended')).toBeInTheDocument();
+  expect(screen.getAllByText(/driving \+ 10 h 30 min breaks/)).toHaveLength(3);
+  expect(screen.getAllByText(/^Break · mile \d+$/)).toHaveLength(1);
+  expect(screen.getAllByText(/^Rest · mile \d+$/)).toHaveLength(1);
+  expect(screen.getByRole('button', { name: TRIP_BAR })).toHaveTextContent('with rest breaks');
+});
+
+test('the caption follows the answer, not the form: breaks asked for but not applied show none', async () => {
+  useViewport('pane');
+  const standIn = answer;
+  answer = (method, url, body) => {
+    const reply = standIn(method, url, body);
+    if (url === '/api/routes') {
+      const asked = JSON.parse(body) as { rest_breaks: boolean };
+      expect(asked.rest_breaks).toBe(true);
+      return {
+        ...reply,
+        body: buildRoutes('mixed', { departure: JSON.parse(body).departure, breaks: false }),
+      };
+    }
+    return reply;
+  };
+  renderApp();
+  await pick('Starting place', 'Dallas', 'Dallas, TX, United States');
+  await pick('Destination', 'Denver', 'Denver, CO, United States');
+  fireEvent.change(screen.getByLabelText('Cargo weight (lb)'), { target: { value: '36,000' } });
+  fireEvent.click(screen.getByRole('switch', { name: 'Include required rest breaks' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+
+  await screen.findByText('Route 2 is recommended');
+
+  expect(screen.queryByText(BREAKS_NOTE)).toBeNull();
+  expect(screen.queryByText(/Break · mile/)).toBeNull();
+  expect(screen.getByRole('button', { name: TRIP_BAR })).not.toHaveTextContent('rest breaks');
+});
+
+test('a trip with breaks on and no stop says so on its card and still carries the note', async () => {
+  useViewport('pane');
+  renderApp();
+  await pick('Starting place', 'Dallas', 'Dallas, TX, United States');
+  await pick('Destination', 'Fort Worth', 'Fort Worth, TX, United States');
+  fireEvent.change(screen.getByLabelText('Cargo weight (lb)'), { target: { value: '36,000' } });
+  fireEvent.click(screen.getByRole('switch', { name: 'Include required rest breaks' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+
+  expect(await screen.findByText(BREAKS_NOTE)).toBeInTheDocument();
+  expect(await screen.findByText(/no breaks needed/)).toBeInTheDocument();
+  expect(screen.queryByText(/Break · mile|Rest · mile/)).toBeNull();
+});
+
+test('phone: a stop tapped on the map opens the sheet to it and is marked in the list', async () => {
+  useViewport('sheet');
+  renderApp();
+  await pick('Starting place', 'Dallas', 'Dallas, TX, United States');
+  await pick('Destination', 'Denver', 'Denver, CO, United States');
+  fireEvent.change(screen.getByLabelText('Cargo weight (lb)'), { target: { value: '36,000' } });
+  fireEvent.click(screen.getByRole('switch', { name: 'Include required rest breaks' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Plan routes' }));
+  await screen.findByText('Route 2 is recommended');
+
+  act(() => mapProps!.onSelectStop({ routeId: 'route-3', index: 1 }));
+
+  expect(await screen.findByText('Selected stop on Route 3')).toBeInTheDocument();
+  expect(mapProps?.selectedRouteId).toBe('route-3');
+  expect(mapProps?.selectedCheckpoint).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  fireEvent.click(screen.getByRole('button', { name: 'More' }));
+  expect(document.querySelector('[aria-current="true"]')).toHaveTextContent(/^Rest · mile/);
+});

@@ -1,18 +1,22 @@
 import { Box, ButtonBase, Typography } from '@mui/material';
 import { useEffect, useRef, type Ref } from 'react';
 import { describeCheckpoint, type CheckpointDescription } from '../plan/describe';
-import type { CheckpointRef } from '../plan/view';
+import type { CheckpointRef, StopRef, StopView } from '../plan/view';
 import type { Trip } from '../plan/trip';
 import type { CheckpointView, RouteView } from '../plan/view';
 import { RiskBadge } from '../risk/RiskBadge';
 import { zoneName } from '../time/zone';
 import { displayZone } from '../plan/trip';
+import { interleave, stopName, stopWhat, STOPS_ASSUMPTION } from './stops';
 import { originClock } from './times';
 
 interface Props {
   route: RouteView;
   trip: Trip;
   selected: CheckpointRef | null;
+  selectedStop?: StopRef | null;
+  /** Whether the times include rest breaks, from the routes answer. */
+  breaksApplied?: boolean;
   onSelect(ref: CheckpointRef): void;
 }
 
@@ -86,14 +90,62 @@ export function CheckpointRow({ route, cp, trip, isSelected, onSelect, buttonRef
   );
 }
 
-/** The selected route's checkpoints in order. */
-export function CheckpointList({ route, trip, selected, onSelect }: Props) {
+interface StopRowProps {
+  stop: StopView;
+  trip: Trip;
+  isSelected: boolean;
+  rowRef?: Ref<HTMLDivElement>;
+}
+
+/** One required stop: what it is, where on the route, and when it starts and ends. */
+export function StopRow({ stop, trip, isSelected, rowRef }: StopRowProps) {
+  return (
+    <Box
+      ref={rowRef}
+      aria-current={isSelected ? 'true' : undefined}
+      sx={{
+        minHeight: 56,
+        px: 1,
+        py: 0.75,
+        borderBottom: 1,
+        borderColor: 'divider',
+        borderLeft: 4,
+        borderLeftColor: isSelected ? 'primary.main' : 'transparent',
+        bgcolor: isSelected ? 'action.selected' : 'action.hover',
+      }}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'center' }}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {stopName(stop)} · mile {Math.round(stop.mile)}
+        </Typography>
+      </Box>
+      <Typography variant="caption" color="text.secondary" component="div">
+        {stopWhat(stop)}: {originClock(trip, stop.startMs)} to {originClock(trip, stop.endMs)}
+      </Typography>
+    </Box>
+  );
+}
+
+/** The selected route's checkpoints in order, with its required stops between them. */
+export function CheckpointList({
+  route,
+  trip,
+  selected,
+  selectedStop = null,
+  breaksApplied = false,
+  onSelect,
+}: Props) {
   const selectedRef = useRef<HTMLButtonElement>(null);
+  const stopRef = useRef<HTMLDivElement>(null);
   const selectedIndex = selected?.routeId === route.id ? selected.index : null;
+  const stopIndex = selectedStop?.routeId === route.id ? selectedStop.index : null;
 
   useEffect(() => {
     selectedRef.current?.scrollIntoView?.({ block: 'nearest' });
   }, [selectedIndex]);
+  useEffect(() => {
+    stopRef.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [stopIndex]);
 
   return (
     <Box>
@@ -103,9 +155,23 @@ export function CheckpointList({ route, trip, selected, onSelect }: Props) {
       <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1 }}>
         Times are in {zoneName(trip.departureMs, displayZone(trip))}, the starting place&apos;s time
         zone.
+        {breaksApplied ? ` ${STOPS_ASSUMPTION}` : ''}
       </Typography>
       <Box component="ol" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-        {route.checkpoints.map((cp) => {
+        {interleave(route).map((item) => {
+          if (item.kind === 'stop') {
+            return (
+              <li key={`stop-${item.stop.index}`}>
+                <StopRow
+                  stop={item.stop}
+                  trip={trip}
+                  isSelected={item.stop.index === stopIndex}
+                  rowRef={item.stop.index === stopIndex ? stopRef : undefined}
+                />
+              </li>
+            );
+          }
+          const { cp } = item;
           const isSelected = cp.index === selectedIndex;
           return (
             <li key={cp.index}>

@@ -9,6 +9,7 @@ import {
   routeBounds,
   routeLines,
   selectedPoint,
+  stopPoints,
   truckPoints,
 } from './features';
 import { gridFillColor } from './layers';
@@ -106,4 +107,22 @@ test('checkpoints of a failed weather request draw the unavailable glyph, not th
   expect(
     checkpointPoints(failed.routes).features.every((f) => f.properties.icon === 'unavailable'),
   ).toBe(true);
+});
+
+test('stops are marks for the selected route only, one per stop, none when breaks are off', () => {
+  const on = buildPlanView(buildRoutes('mixed', { departure, breaks: true }), weather);
+  const selected = on.routes[0];
+
+  const marks = stopPoints(on.routes, selected.id);
+
+  expect(marks.features).toHaveLength(selected.stops.length);
+  expect(marks.features.map((f) => f.properties)).toEqual(
+    selected.stops.map((s) => ({ routeId: selected.id, index: s.index, icon: 'stop' })),
+  );
+  expect(marks.features[0].geometry.coordinates).toEqual([
+    selected.stops[0].lon,
+    selected.stops[0].lat,
+  ]);
+  expect(stopPoints(on.routes, null).features).toEqual([]);
+  expect(stopPoints(ready.routes, ready.routes[0].id).features).toEqual([]);
 });

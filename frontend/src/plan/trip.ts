@@ -19,6 +19,8 @@ export interface Trip {
   departureMs: number;
   loadLb: number;
   spacing: Spacing;
+  /** Whether the plan adds the federal rest breaks to arrival times. Off unless the driver asks. */
+  restBreaks: boolean;
   /** Geoapify's credit as the address search last returned it. */
   addressCredit: AttributionOut | null;
 }
@@ -53,7 +55,6 @@ export function buildRoutesBody(trip: Trip): RoutesIn {
     origin: { lat: trip.origin.lat, lon: trip.origin.lon },
     destination: { lat: trip.destination.lat, lon: trip.destination.lon },
     departure: new Date(trip.departureMs).toISOString(),
-    // The trip form has no rest-break switch yet, so every plan is made without breaks.
-    rest_breaks: false,
+    rest_breaks: trip.restBreaks,
   };
 }

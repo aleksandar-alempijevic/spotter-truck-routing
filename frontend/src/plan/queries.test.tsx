@@ -14,6 +14,7 @@ const trip = () => ({
   departureMs,
   loadLb: 36_000,
   spacing: 25 as const,
+  restBreaks: false,
   addressCredit: null,
 });
 const departure = new Date(departureMs).toISOString();

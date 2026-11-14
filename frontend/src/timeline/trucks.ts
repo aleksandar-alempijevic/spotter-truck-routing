@@ -10,6 +10,8 @@ export interface TruckRoute {
   line: readonly (readonly [number, number])[];
   /** In order, by mile, each with the instant the truck is expected there. */
   checkpoints: readonly { mile: number; etaMs: number }[];
+  /** Required stops, if the plan has any: the truck stands still at `mile` from start to end. */
+  stops?: readonly { mile: number; startMs: number; endMs: number }[];
 }
 
 type TruckStatus = 'before' | 'driving' | 'arrived';
@@ -101,9 +103,41 @@ export function pointAtMile(
   ];
 }
 
+// The route's timed points are merged once per route, not once per slider step.
+const timed = new WeakMap<object, TruckRoute['checkpoints']>();
+
+/**
+ * The checkpoints with each stop's start and end added as two points at the stop's mile, in time
+ * order. Interpolating between those two points holds the truck still for the stop, where the
+ * checkpoints alone would slide it across the stop's whole stretch.
+ */
+function timedPoints(route: TruckRoute): TruckRoute['checkpoints'] {
+  if (!route.stops || route.stops.length === 0) return route.checkpoints;
+  let found = timed.get(route);
+  if (!found) {
+    const merged: { mile: number; etaMs: number }[] = [];
+    let next = 0;
+    const stops = route.stops;
+    const flush = (before: number) => {
+      while (next < stops.length && stops[next].startMs < before) {
+        merged.push({ mile: stops[next].mile, etaMs: stops[next].startMs });
+        merged.push({ mile: stops[next].mile, etaMs: stops[next].endMs });
+        next++;
+      }
+    };
+    for (const cp of route.checkpoints) {
+      flush(cp.etaMs);
+      merged.push(cp);
+    }
+    found = merged;
+    timed.set(route, found);
+  }
+  return found;
+}
+
 export function trucksAt(routes: readonly TruckRoute[], ms: number): Truck[] {
   return routes.map((route) => {
-    const { status, mile } = mileAt(route.checkpoints, route.miles, ms);
+    const { status, mile } = mileAt(timedPoints(route), route.miles, ms);
     return {
       routeId: route.id,
       name: route.name,

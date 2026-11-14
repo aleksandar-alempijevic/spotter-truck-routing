@@ -29,6 +29,37 @@ export function glyphImage(key: RiskKey): ImageData {
   return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
+/**
+ * The mark for a required stop: a dark octagon with a pause sign, a shape and a colour that no
+ * risk glyph uses.
+ */
+export function stopImage(): ImageData {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = SIZE * RATIO;
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(RATIO, RATIO);
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  const centre = SIZE / 2;
+  for (let i = 0; i < 8; i++) {
+    const angle = (Math.PI / 4) * i + Math.PI / 8;
+    const x = centre + Math.cos(angle) * 10.5;
+    const y = centre + Math.sin(angle) * 10.5;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#37474f';
+  ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(8.5, 7.5, 2.6, 9);
+  ctx.fillRect(12.9, 7.5, 2.6, 9);
+  return ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
+
 /** A diagonal hatch tile for cells with no forecast. */
 export function hatchImage(): ImageData {
   const canvas = document.createElement('canvas');

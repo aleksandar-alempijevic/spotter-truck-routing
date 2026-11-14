@@ -5,7 +5,7 @@ import type { RouteView } from '../plan/view';
 import type { GridModel } from '../timeline/grid';
 import type { HourHolder } from '../timeline/hourHolder';
 import { MapController } from './controller';
-import type { CheckpointRef } from '../plan/view';
+import type { CheckpointRef, StopRef } from '../plan/view';
 import type { Reading } from '../plan/describe';
 import type { RiskKey } from '../risk/levels';
 import type { MapInsets, MapSpot } from './types';
@@ -21,6 +21,7 @@ export interface MapViewProps {
   fitKey: number;
   onSelectRoute(routeId: string): void;
   onSelectCheckpoint(ref: CheckpointRef): void;
+  onSelectStop(ref: StopRef): void;
   /** What the hover popup says about a checkpoint. */
   describeCheckpoint(ref: CheckpointRef): Reading | null;
   /** What the readout says about a heatmap cell at the slider's hour. */
@@ -72,6 +73,7 @@ export default function MapView(props: MapViewProps) {
         onReady: () => latest.current.onReady(),
         onSelectRoute: (id) => latest.current.onSelectRoute(id),
         onSelectCheckpoint: (ref) => latest.current.onSelectCheckpoint(ref),
+        onSelectStop: (ref) => latest.current.onSelectStop(ref),
         onSpot: (spot) => latest.current.onSpot(spot),
         onBasemapUnavailable: () => latest.current.onBasemapUnavailable(),
         onContextLost: () => latest.current.onContextLost(),

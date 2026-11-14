@@ -65,6 +65,7 @@ vi.mock('maplibre-gl/dist/maplibre-gl-worker.mjs?url', () => ({ default: 'worker
 vi.mock('./icons', () => ({
   glyphImage: () => ({}),
   hatchImage: () => ({}),
+  stopImage: () => ({}),
   ICON_PIXEL_RATIO: 2,
 }));
 vi.mock('maplibre-gl', () => {
@@ -162,6 +163,7 @@ const events = () => ({
   onRecovered: vi.fn(),
   onSelectRoute: vi.fn(),
   onSelectCheckpoint: vi.fn(),
+  onSelectStop: vi.fn(),
   onSpot: vi.fn(),
   onBasemapUnavailable: vi.fn(),
   describeCheckpoint: vi.fn(() => ({ title: 'checkpoint', lines: [] as string[] })),
@@ -314,6 +316,35 @@ function checkpointUnder(controller: unknown, seen: unknown[][] = []) {
     return [hit];
   };
 }
+
+test('a tap on a stop mark selects the stop for the list and opens no readout', () => {
+  const { controller, ev, holder } = setup();
+  controller.setGrid(model(GRID), holder);
+  queried = [{ id: 0 }];
+  const map = (controller as unknown as { map: { queryRenderedFeatures: unknown } }).map;
+  const original = map.queryRenderedFeatures as (...args: unknown[]) => unknown[];
+  map.queryRenderedFeatures = (area: unknown, options: { layers: string[] }) =>
+    options.layers.includes('stops')
+      ? [{ properties: { routeId: 'route-1', index: 1, icon: 'stop' } }]
+      : original(area, options);
+
+  handlers.get('click')!({ point: { x: 120, y: 300 } });
+
+  expect(ev.onSelectStop).toHaveBeenCalledWith(
+    expect.objectContaining({ routeId: 'route-1', index: 1 }),
+  );
+  expect(ev.onSelectCheckpoint).not.toHaveBeenCalled();
+  expect(popups.filter((p) => !p.removed)).toHaveLength(0);
+});
+
+test('the stops layer is added above the route and its source follows the selection', () => {
+  setup();
+
+  const added = log.filter((c) => c.method === 'addLayer').map((c) => c.args[0]);
+
+  expect(added.indexOf('stops')).toBeGreaterThan(added.indexOf('route-line'));
+  expect(sources.has('stops')).toBe(true);
+});
 
 test('a tap on a checkpoint selects it and opens one readout that labels both readings', () => {
   const { controller, ev, holder } = setup();

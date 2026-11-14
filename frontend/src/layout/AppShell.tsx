@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TripForm } from '../form/TripForm';
 import { TripSummary } from '../form/TripSummary';
 import type { FormValues } from '../form/validation';
-import type { CheckpointRef, RouteView } from '../plan/view';
+import type { CheckpointRef, RouteView, StopRef } from '../plan/view';
 import { PlanPanel, type PanelTier } from '../panel/PlanPanel';
 import { originClock } from '../panel/times';
 import { describeCheckpoint } from '../plan/describe';
@@ -142,6 +142,12 @@ export function AppShell({
     setSheet((state) => (state === 'peek' ? 'half' : state));
   };
 
+  // A stop chosen on the map is shown in the list, so the sheet opens far enough to show it.
+  const selectStop = (ref: StopRef) => {
+    session.selectStop(ref);
+    setSheet((state) => (state === 'peek' ? 'half' : state));
+  };
+
   // Where the map reports a tap: in the sheet the reading is shown there, and the sheet opens
   // far enough to show it.
   const onSpot = useCallback(
@@ -219,6 +225,7 @@ export function AppShell({
         submission={submission}
         selectedRouteId={session.routeId}
         selectedCheckpoint={session.checkpoint}
+        selectedStop={session.stop}
         onSelectRoute={session.selectRoute}
         onSelectCheckpoint={selectCheckpoint}
         onEditTrip={() => setFormOpen(true)}
@@ -259,6 +266,7 @@ export function AppShell({
           fitKey={submission?.id ?? 0}
           onSelectRoute={session.selectRoute}
           onSelectCheckpoint={selectCheckpoint}
+          onSelectStop={selectStop}
           readoutOnMap={!isSheet}
           onSpot={onSpot}
           spotOpen={spot !== null}
@@ -295,6 +303,7 @@ export function AppShell({
                 <TripSummary
                   ref={editRef}
                   trip={submission.trip}
+                  breaksApplied={plan.view?.breaksApplied}
                   onClick={() => setFormOpen(true)}
                 />
               </Paper>
@@ -379,6 +388,7 @@ export function AppShell({
                 <TripSummary
                   ref={editRef}
                   trip={submission.trip}
+                  breaksApplied={plan.view?.breaksApplied}
                   onClick={() => setFormOpen(true)}
                 />
               </Box>

@@ -146,3 +146,45 @@ test('a failed weather request reads as unavailable everywhere the view is read,
     note: 'Weather could not be loaded',
   });
 });
+
+const withBreaks = { departure, breaks: true };
+
+test('the mode comes from the routes answer: breaks applied, driving time and stops', () => {
+  const off = buildPlanView(buildRoutes('mixed', { departure }));
+  const on = buildPlanView(buildRoutes('mixed', withBreaks));
+
+  expect(off.breaksApplied).toBe(false);
+  expect(off.routes.every((r) => r.stops.length === 0)).toBe(true);
+  expect(off.routes.every((r) => r.drivingSeconds === r.travelSeconds)).toBe(true);
+  expect(on.breaksApplied).toBe(true);
+  const first = on.routes[0];
+  expect(first.stops.map((s) => s.kind)).toEqual(['break', 'rest']);
+  expect(first.travelSeconds).toBe(
+    first.drivingSeconds + first.stops.reduce((sum, s) => sum + s.durationSeconds, 0),
+  );
+  expect(first.stops[0].endMs - first.stops[0].startMs).toBe(30 * 60_000);
+});
+
+test('the echo is read, not inferred: a trip with no stops still says breaks were applied', () => {
+  const view = buildPlanView(buildRoutes('oneRoute', withBreaks));
+
+  expect(view.routes[0].stops).toEqual([]);
+  expect(view.breaksApplied).toBe(true);
+});
+
+test('stops never enter the checkpoint list, so checkpoint indexes and the weather join hold', () => {
+  const off = buildRoutes('mixed', { departure });
+  const on = buildRoutes('mixed', withBreaks);
+  const weather = buildWeather('mixed', withBreaks);
+
+  const view = buildPlanView(on, weather);
+
+  view.routes.forEach((route, r) => {
+    expect(route.checkpoints.map((c) => c.index)).toEqual(route.checkpoints.map((_, i) => i));
+    expect(route.checkpoints.map((c) => c.mile)).toEqual(
+      off.routes[r].checkpoints.map((c) => c.mile),
+    );
+    expect(route.checkpoints).toHaveLength(weather.routes[r].checkpoints.length);
+  });
+  expect(() => checkAligned(on, weather)).not.toThrow();
+});

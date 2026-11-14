@@ -61,6 +61,29 @@ export function checkpointPoints(
   return { type: 'FeatureCollection', features };
 }
 
+interface StopProps {
+  routeId: string;
+  index: number;
+  /** Which glyph to draw. */
+  icon: 'stop';
+}
+
+/** The selected route's required stops, one point each. Other routes' stops are not drawn. */
+export function stopPoints(
+  routes: readonly RouteView[],
+  selectedRouteId: string | null,
+): FeatureCollection<Point, StopProps> {
+  const route = routes.find((r) => r.id === selectedRouteId);
+  return {
+    type: 'FeatureCollection',
+    features: (route?.stops ?? []).map((stop) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [stop.lon, stop.lat] },
+      properties: { routeId: route!.id, index: stop.index, icon: 'stop' },
+    })),
+  };
+}
+
 export function endpointPoints(
   routes: readonly RouteView[],
 ): FeatureCollection<Point, { kind: 'origin' | 'destination' }> {
