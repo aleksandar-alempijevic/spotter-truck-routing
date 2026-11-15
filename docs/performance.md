@@ -48,7 +48,7 @@ A scripted pointer drag of the slider across every hour and back (`frontend/scri
 | Run | Measured on | What it showed |
 |---|---|---|
 | 12 drags: 267 and 520 grid cells, with and without a 4x CPU slowdown, departure minute not pinned | `de0ce4b`, 2026-11-13, before the rest-break screens | No long task over 50 ms, no `pointermove` event over 16 ms, no request during the drag; frame gap median 16.7 ms, 95th percentile 16.7 to 16.8 ms; no frame over 50 ms at the minute it ran |
-| Program-link probe, without the fix | `d3b41e6`, 2026-11-14 | One gap of 100 to 133 ms at a :10 departure in every run (1x and 4x, breaks on and off); none at :45 in 16 runs |
+| Trace probe, without the fix | 2026-11-14; the record names no commit, `d3b41e6` is inferred | 6 runs at :10 (1x and 4x, breaks on and off): one gap of 100 to 117 ms each, with the trucks program linked mid-drag; 5 runs at :45: no frame over 50 ms; 3 runs at :10 with a warm-up pass first: none. The trace record gives the slow frame on that build as 100 to 217 ms |
 | Program-link probe, with the fix (table below) | `21148f5`, 2026-11-14 | No frame over 50 ms except two gaps at :45 under 4x |
 | Program-link probe, current fix: 8 runs at :10, 1x and 4x | `e76e345`, 2026-11-14 | No WebGL program linked during the drag; one 68 ms gap, at 4x, with no compile behind it |
 
@@ -64,6 +64,17 @@ With the fix (`21148f5`), one drag per run, no warm-up pass:
 
 The slider recolours only the heatmap cells whose level changed and makes no request. The two gaps at :45 under 4x are not the trucks compile: at :45 a truck is already on the road, so the warm-up never runs, no WebGL program was linked during those drags, and the machine was loaded (load average about 7). Their cause, and that of the 68 ms gap, has not been traced.
 
+### Current frontend
+
+**Measured on:** `ad25475` (the current frontend; later commits change only how a route's gust is computed) against `eefc4b6` (before the review changes), 2026-11-15. Six interleaved runs per build at each of :10 and :45, 1x and 4x CPU, one drag each, on Chrome for Testing 149 at about 120 Hz, so the median frame gap is 8.3 ms and the figures do not compare with the 60 Hz tables above. The machine's load average was about 6 and not controlled.
+
+| Build | Drags with a frame of 50 ms or more | Largest gap in the other drags | WebGL program linked mid-drag |
+|---|---|---|---|
+| `ad25475`, current | 2 of 24, one frame each (108 and 117 ms, both at :10, 1x) | 17 to 35 ms | in no run |
+| `eefc4b6`, before the review | 7 of 24, some with several slow frames (up to 449 ms) | 17 to 33 ms | in 3 runs |
+
+The review changes did not make the drag slower. The two slow frames on the current build had no program compile behind them, and their cause has not been traced.
+
 ### The slow frame: cause and fix
 
 Without the fix, a drag that starts at hour 0 shows one isolated slow frame (100 to 217 ms across the runs), with rest breaks on or off alike. A trace found the cause in the app: the first time the map draws a moving truck, MapLibre compiles a WebGL program for the trucks circle layer (a constant colour with a per-feature radius that no other layer uses), and under headless software GL that compile blocks the GPU process for about 117 ms. The layer is empty while the slider sits at hour 0, because no truck is driving yet (`truckPoints`). The slider opens at hour 0 only for a departure under 30 minutes past the hour (`initialHour` in `timeline/grid.ts`), so the first draw lands on the first step of the drag, and whether a run sees the slow frame depends on the minute it is made.
@@ -75,7 +86,7 @@ The fix: when the slider first has no truck to show, the controller draws one tr
 - **Software graphics only.** The browser drew with software WebGL, so a real phone and a real GPU are not measured, including the real cost of the program compile that the fix moves.
 - **Not measured:** the first paint of the map and the time to draw a plan. The grid sizes come from the stand-in's cell-size setting and were not recounted.
 - **Only the trucks program.** The fix moves only the trucks layer's compile out of the drag. In 3 of about 26 loaded runs a program for a line layer linked mid-drag instead; it is not covered by the fix and has not been traced.
-- **Coverage of the with-fix runs.** They are one drag per run and have not been repeated at 267 and 520 grid cells. The slider has not been re-measured on the current frontend, which adds the gust warning and the keyboard layout hold.
+- **Coverage of the with-fix runs.** They are one drag per run and have not been repeated at 267 and 520 grid cells.
 
 ## Hosted (Render free plan, 2026-11-14)
 

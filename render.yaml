@@ -1,4 +1,4 @@
-# Render blueprint for the single container (see docs/architecture.md, "Hosting").
+# Render blueprint for the single container (see docs/hosting.md).
 # Inert until a service is created from it. Secrets are named here and set in the dashboard
 # (sync: false): they are never in this file, in the repository or in the image.
 services:
