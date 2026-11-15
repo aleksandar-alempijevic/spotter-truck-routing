@@ -43,7 +43,7 @@ COPY backend/weather ./weather
 # config/base.py looks for the build at ../frontend/dist, which is here.
 COPY --from=frontend /build/frontend/dist /app/frontend/dist
 # Compile the app's modules now, as root: the runtime user cannot write __pycache__, and a host
-# that sleeps would otherwise recompile them on every wake. The venv is compiled by uv above.
+# that sleeps when idle would otherwise recompile them on every wake. The venv is compiled by uv above.
 RUN python -m compileall -q /app/backend
 
 RUN useradd --system --no-create-home app

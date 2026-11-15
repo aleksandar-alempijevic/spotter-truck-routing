@@ -5,7 +5,7 @@ services:
   - type: web
     name: spotter-truck-routing
     runtime: docker
-    plan: free
+    plan: starter
     dockerfilePath: ./Dockerfile
     # The app answers 400 to a Host outside DJANGO_ALLOWED_HOSTS. Observed on the first deploy
     # (2026-11-14): Render's port and health checker calls with Host `localhost`, so
@@ -17,12 +17,12 @@ services:
     # of a push. Still unverified: that this key and value really turn auto-deploy off.
     autoDeployTrigger: "off"
     envVars:
-      # Non-secret. Expected to reach the frontend build through the Dockerfile's build argument of
-      # the same name, so that a long wait says the server may be waking up (this host sleeps when
-      # idle). The wake copy is present in the served bundle of the first deploy (2026-11-14), which
-      # suggests Render passed this value to the Docker build as a build argument.
+      # Non-secret. Reaches the frontend build through the Dockerfile's build argument of the same
+      # name; "1" turns on the copy that says a long wait may be the server waking up. Starter does
+      # not sleep, so it is "0" (off). The first deploy, on the free plan, had "1" and the wake copy
+      # was in its served bundle (2026-11-14), which suggests Render passed the value to the build.
       - key: VITE_HOST_SLEEPS
-        value: "1"
+        value: "0"
       - key: DJANGO_SECRET_KEY
         generateValue: true
       # The service's own hostname, known only after the service exists, plus `localhost` for

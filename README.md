@@ -2,7 +2,7 @@
 
 A web app that recommends the safest of up to three truck routes between two places. For each route it reads the weather along the road at the time the truck will be there, applies the assessment's risk and load-weight rules, and ranks the routes on weather risk first and travel time second. Full-stack take-home: React frontend, Django backend.
 
-**Live app: <https://spotter-truck-routing-kxsl.onrender.com>.** It runs on Render's free plan, which puts the service to sleep after 15 minutes without requests, so the first visit can take about a minute. Hosting is described in [docs/hosting.md](docs/hosting.md).
+**Live app: <https://spotter-truck-routing-kxsl.onrender.com>.** It runs on Render's Starter plan. Hosting is described in [docs/hosting.md](docs/hosting.md).
 
 ## Quickstart
 
@@ -82,6 +82,7 @@ The rules are in [docs/logic.md](docs/logic.md), and the core code is four files
 
 ## Known limitations
 
+- **The host is Render Starter,** one container with one server process. The hosted measurements in [docs/performance.md](docs/performance.md#hosted-render-free-plan-2026-11-14) were made on the free plan, before the move, and have not been repeated.
 - **The weather source is free and limited per IP address,** and the host's address is shared with other users, so a trip can wait for Open-Meteo's minute window or fail with a 503. 10-mile spacing on a long trip can take about a minute ([quota](docs/assumptions.md#quota-and-cache)).
 - **Connections from the host to Open-Meteo sometimes fail.** The hosted log has shown a weather call that timed out while connecting; the suspected cause is the host's shared outbound address. The app retries the connection quickly, and a weather request that still fails answers 504 or 502 ([deadline](docs/architecture.md#quota-waiting-and-deadline)).
 - **No route between Alaska and the lower 48,** or for any trip with no road route inside the US: the app shows "No truck route found" and says that routes stay inside the US, rather than show a route through Canada.

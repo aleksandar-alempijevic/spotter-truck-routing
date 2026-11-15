@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Build-time: this build runs on a host that sleeps when idle. `VITE_HOST_SLEEPS` unset, empty or
- * anything but `1`/`true` means it does not, so local dev, tests and the stand-in show no wake copy.
+ * Build-time: this build is for a host that sleeps when idle. `VITE_HOST_SLEEPS` unset, empty or
+ * anything but `1`/`true` means it is not, so local dev, tests, the stand-in and the current host
+ * (Render Starter, which does not sleep) show no wake copy.
  */
 export function hostSleeps(value: string | undefined): boolean {
   return value === '1' || value === 'true';

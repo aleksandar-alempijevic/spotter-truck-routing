@@ -1,6 +1,6 @@
 # Hosting
 
-The live app is <https://spotter-truck-routing-kxsl.onrender.com>, on Render's free plan. One container serves the built frontend and the API from the same origin, so the browser needs no CORS setup and the app calls `/api/...` on whatever host it was loaded from. This page covers running the app that way, the image, the Render set-up, the wake copy, the logs and the hosting choices. Hosted measurements are in [performance.md](performance.md#hosted-render-free-plan-2026-11-14).
+The live app is <https://spotter-truck-routing-kxsl.onrender.com>, on Render's Starter plan. One container serves the built frontend and the API from the same origin, so the browser needs no CORS setup and the app calls `/api/...` on whatever host it was loaded from. This page covers running the app that way, the image, the Render set-up, the wake copy, the logs and the hosting choices. Hosted measurements, made on the free plan, are in [performance.md](performance.md#hosted-render-free-plan-2026-11-14).
 
 ```
 browser ──► host's HTTPS edge ──► container: uvicorn (one process)
@@ -37,16 +37,16 @@ make smoke BASE_URL=http://localhost:8000   # the same check against the contain
 
 ## Render configuration
 
-- **`render.yaml`** describes the service: Docker runtime, health check on `/api/health`, and auto-deploy off, expected to mean a push never deploys by itself (whether `autoDeployTrigger: "off"` is the right blueprint key and value is not verified). The provider keys and the hostname are named there and set in the dashboard, never in the repository or the image.
+- **`render.yaml`** describes the service: the Starter plan, Docker runtime, health check on `/api/health`, and auto-deploy off, expected to mean a push never deploys by itself (whether `autoDeployTrigger: "off"` is the right blueprint key and value is not verified). The provider keys and the hostname are named there and set in the dashboard, never in the repository or the image.
 - **Allowed hosts.** `DJANGO_ALLOWED_HOSTS` is the only source. On Render it holds the service's hostname and `localhost`, comma-separated, because Render's port and health checker calls with Host `localhost`. That Host value is inferred, not observed: with the hostname alone, deploys failed with "Port scan timeout reached", with `localhost` added they succeeded, and a [Render community report](https://community.render.com/t/health-check-invalid-http-host-header-localhost-10000/4438) describes the same. In a local `docker run` the value is `localhost`. A request for the hosted page with any other Host is refused at Cloudflare's edge with a 403 before it reaches the app (observed); the app's own 400 is what a local container shows.
 
 ## Wake copy
 
-Render documents that a free service sleeps after 15 minutes idle and that the first request afterwards waits about a minute while it wakes ([measured wake](performance.md#hosted-render-free-plan-2026-11-14)). A fresh visit pays that wait for the page itself, before any app code exists, so no in-app text can cover it; the README says so.
+The wake copy is off on the current host. Render Starter does not sleep, so `render.yaml` sets `VITE_HOST_SLEEPS` to `0` and the hosted bundle carries no wake notice. The mechanism stays in the code for a host that sleeps when idle.
 
-The in-app copy covers a tab that stayed open while the host went back to sleep. In a build with `VITE_HOST_SLEEPS=1`, an address search still pending after 10 s says "Still searching. The server may be waking up after being idle. That can take up to a minute.", and a routes request still pending after 20 s adds "The server may be waking up after being idle. That can take up to a minute." The thresholds sit above the longest warm waits measured on the host. The weather wait cannot be the first request, so it carries none.
+In a build with `VITE_HOST_SLEEPS=1`, an address search still pending after 10 s says "Still searching. The server may be waking up after being idle. That can take up to a minute.", and a routes request still pending after 20 s adds "The server may be waking up after being idle. That can take up to a minute." The thresholds sit above the longest warm waits measured on the free plan ([measured wake](performance.md#hosted-render-free-plan-2026-11-14)). The weather wait cannot be the first request, so it carries none. A fresh visit to a sleeping host pays its wake for the page itself, before any app code exists, so no in-app text covers that; the copy covers a tab that stayed open while the host went back to sleep.
 
-`render.yaml` sets `VITE_HOST_SLEEPS` as a service environment value and the Dockerfile reads it as a build argument. The copy is present in the served bundle (observed on the first deploy, 2026-11-14), which suggests Render passes the value to the image build. Local builds, tests and `make check` never set it.
+The Dockerfile reads `VITE_HOST_SLEEPS` as a build argument; unset, empty or anything but `1`/`true` means off. Local builds, tests and `make check` never set it.
 
 ## Logs
 
@@ -71,13 +71,13 @@ The app's own lines carry no provider URL, key or coordinate. uvicorn's access l
 
 ## Hosting choices
 
-Each rests on the hosted measurements in [performance.md](performance.md#hosted-render-free-plan-2026-11-14):
+Each rests on the hosted measurements, made on the free plan, in [performance.md](performance.md#hosted-render-free-plan-2026-11-14):
 
 - **Open-Meteo on the free plan, with no paid key.** The hosted runs showed no 503, though at one time of day only, so this is not a guarantee ([Known limitations](../README.md#known-limitations)).
 - **No compression in the app.** Cloudflare's edge compresses the assets and the API answers.
 - **The OpenFreeMap Positron basemap.** It drew the plan on the hosted service with no failures; every cell was Low there, so the colour ramp was not judged against it on the host.
 
-**Switching the basemap** is a build-time act: set `VITE_BASEMAP_STYLE` to the style URL and redeploy. The Dockerfile reads it as a build argument of that name, and on Render the service environment value is expected to reach the image build the same way `VITE_HOST_SLEEPS` appears to; `VITE_BASEMAP_STYLE` has not been set on Render, so this is expected, not observed. A Carto style such as `https://basemaps.cartocdn.com/gl/positron-gl-style/style.json` is the named alternative; that URL is untested here. A style other than Positron needs the heatmap's colour ramp and the stop and checkpoint halos re-measured against it first, because they were chosen against Positron's greys ([assumptions.md](assumptions.md#heatmap-and-corridor)).
+**Switching the basemap** is a build-time act: set `VITE_BASEMAP_STYLE` to the style URL and redeploy. The Dockerfile reads it as a build argument of that name, and on Render the service environment value is expected to reach the image build the same way `VITE_HOST_SLEEPS` appeared to on the first deploy; `VITE_BASEMAP_STYLE` has not been set on Render, so this is expected, not observed. A Carto style such as `https://basemaps.cartocdn.com/gl/positron-gl-style/style.json` is the named alternative; that URL is untested here. A style other than Positron needs the heatmap's colour ramp and the stop and checkpoint halos re-measured against it first, because they were chosen against Positron's greys ([assumptions.md](assumptions.md#heatmap-and-corridor)).
 
 ## API docs page and content policy
 

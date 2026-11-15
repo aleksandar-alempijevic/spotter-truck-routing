@@ -3,10 +3,10 @@ import { useWakeNotice } from '../hosting';
 import { useElapsed } from './useElapsed';
 
 /**
- * A warm host took 2.4 to 16.0 s for routes (a 3,400-mile plan was the slowest),
- * and a laptop's worst was 14.7 s; a wake took about 13 s before the request began. The copy
- * waits past the slowest warm plan, with a margin, so it is not said while a long plan is simply
- * being worked out.
+ * On the free plan, a warm host took 2.4 to 16.0 s for routes (a 3,400-mile plan was the
+ * slowest), and a laptop's worst was 14.7 s; a wake took about 13 s before the request began. The
+ * copy, shown only on a host that sleeps, waits past the slowest warm plan, with a margin, so it
+ * is not said while a long plan is simply being worked out.
  */
 export const WAKE_NOTICE_AFTER_S = 20;
 

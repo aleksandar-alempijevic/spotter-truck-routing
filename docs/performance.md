@@ -90,7 +90,7 @@ The fix: when the slider first has no truck to show, the controller draws one tr
 
 ## Hosted (Render free plan, 2026-11-14)
 
-**Measured on:** the deployed build `a1a102e`, 2026-11-14, one run each through the page, with the live providers. The "New York, NY" and "Boston, MA" searches ran on `f43a2ae`, and the long-request holds on a throwaway probe build, the same day. These builds predate the US-only routing, the gross weight sent to TomTom and the gust warning. The figures show what a trip costs on the small free instance; they are not a distribution.
+**Measured on:** the deployed build `a1a102e`, 2026-11-14, one run each through the page, with the live providers. The "New York, NY" and "Boston, MA" searches ran on `f43a2ae`, and the long-request holds on a throwaway probe build, the same day. These builds predate the US-only routing, the gross weight sent to TomTom and the gust warning. Every figure in this section was measured on Render's free plan; the service now runs on the Starter plan and has not been re-measured. The figures show what a trip costs on the small free instance; they are not a distribution.
 
 | Trip | Routes | Weather | Forecast locations | Results on screen |
 |---|---|---|---|---|
@@ -99,10 +99,10 @@ The fix: when the slider first has no truck to show, the controller draws one tr
 | Los Angeles to Miami, 10 mi | 13.61 s | 26.07 s | 926, with one minute-window wait completed through the edge | 40.5 s after the click |
 | Dallas to Seattle, rest breaks on | 10.88 s | 1.96 s | 410 | not recorded |
 
-- **Planning waits.** Warm routes took 2.4 to 16.0 s, so the wake copy on the routes wait appears only after 20 s. The wait across a rate-limit minute window completed through the edge.
+- **Planning waits.** Warm routes took 2.4 to 16.0 s, so the wake copy on the routes wait (shown only on a host that sleeps) appears only after 20 s. The wait across a rate-limit minute window completed through the edge.
 - **Rest breaks.** The Dallas to Seattle trip, the one trip run with breaks on against TomTom, had 17 stops, each with its weather, and its stop marks and their key showed on the map. The rule is otherwise tested on synthetic and mocked routes.
 - **Address search.** Warm large-city searches took up to 7.1 s ("New York, NY" 6.66 s, "Boston, MA" 7.11 s), and other city searches 1.0 to 4.45 s, so the address wake copy waits 10 s.
-- **Idle wake.** After 16 min 32 s with no requests, an address search got its 200 JSON answer after 13.2 s, with the edge holding the request and no gateway page. That the instance slept is inferred from the timing.
+- **Idle wake (free plan).** After 16 min 32 s with no requests, an address search got its 200 JSON answer after 13.2 s, with the edge holding the request and no gateway page. That the instance slept is inferred from the timing.
 - **Long requests.** Responses held for 100, 130 and 160 s arrived intact through the edge, and origin 502, 503 and 504 answers kept the API's JSON body, so the routes and weather deadlines fit.
 - **Compression and caching.** The edge compresses: the entry is 203,813 B and the map chunk 292,291 B as gzip, the API answers with brotli, and a weather answer was 164,882 B uncompressed and 7,463 B with brotli. Hashed assets are served `immutable` and the page is never cached, but assets are not cached at the edge (`DYNAMIC`).
 - **Slider.** One drag per rate, at phone size, with a departure at :11: no frame over 50 ms at 1x or 4x slowdown, and the largest gap 41.8 ms at 1x and 23.8 ms at 4x. That is a single drag at each rate, still with software rendering in the measuring browser.
