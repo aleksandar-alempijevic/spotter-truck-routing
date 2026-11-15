@@ -7,6 +7,7 @@ from ninja import Schema
 from pydantic import AwareDatetime, Field, model_validator
 from pydantic_core import PydanticCustomError
 
+from providers.tomtom import EMPTY_RIG_LB
 from risk_rules import Condition, Level, RankingStep
 from routing.checkpoints import MARK_EPSILON_MILES
 from routing.geo import METERS_PER_MILE, haversine_m
@@ -29,11 +30,14 @@ STOP_HORIZON = DEPARTURE_HORIZON + timedelta(days=30)
 STOP_LOOKBACK = timedelta(days=30)
 """A checkpoint or a stop falls inside a trip that left within the departure window; no trip here
 lasts 30 days, so the window runs from 30 days back to the departure horizon plus 30 days ahead.
-It exists only to keep a time near year 9999 or year 1 from reaching the forecast code, where
-adding a length or reading a stamp would overflow. It is wide on the past side on purpose: the
-weather request is resent as it was for a retry, hours after the plan was made, and a plan that
-is still open must not become an error. A time already past just has no forecast."""
-MAX_LOAD_LB = 47_000
+It only keeps a time near year 9999 or year 1 from overflowing in the forecast code. It is wide on
+the past side because the weather request is resent as it was, hours after the plan was made; a
+time already past just has no forecast."""
+GROSS_LIMIT_LB = 80_000
+"""The federal gross vehicle weight limit."""
+MAX_LOAD_LB = GROSS_LIMIT_LB - EMPTY_RIG_LB
+"""The most cargo accepted: the federal gross limit less the assumed empty rig, so the gross weight
+sent to TomTom stays within the limit (47,000 lb). The frontend's `MAX_LOAD_LB` mirrors it."""
 
 
 ErrorCode = Literal[
@@ -75,7 +79,7 @@ MAX_WEATHER_ROUTES = 3
 SERVICE_LATITUDES = (15.0, 72.0)
 SERVICE_LONGITUDES = (-170.0, -50.0)
 """The box the weather request's checkpoints must lie in: the contiguous US with its margin,
-Alaska, Hawaii and Puerto Rico. Routes never enter Canada, so the box needs no Canadian road.
+Alaska, Hawaii and Puerto Rico. The box also covers most of Canada, but a route never enters it.
 Outside it the corridor sweep's planar and pole-and-antimeridian assumptions stop holding."""
 GAP_DISTANCE_SLACK = 1.05
 GAP_DISTANCE_SLACK_MILES = 0.25
@@ -100,6 +104,7 @@ class PlanParams(Schema):
     """What a plan was made for, and what the weather request sends back with the routes."""
 
     load_lb: float = Field(gt=0, le=MAX_LOAD_LB, allow_inf_nan=False)
+    """The cargo weight alone, without the rig; the risk rules' load limits compare against it."""
     checkpoint_interval_miles: Literal[10, 25, 50]
 
 

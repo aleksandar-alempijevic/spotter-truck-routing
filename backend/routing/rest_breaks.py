@@ -3,8 +3,8 @@
 `plan_stops` is the only place that decides a stop. Everything else here derives from its result:
 the time elapsed at a point of the drive, and where and when each stop falls on a route.
 
-The rule is 49 CFR 395.3 for one property-carrying driver (checked in the project's hours-of-
-service report): a 30-minute break once 8 hours have been driven without one, 10 hours off once
+The rule is 49 CFR 395.3 for one property-carrying driver (a driver's hours-of-
+service rules): a 30-minute break once 8 hours have been driven without one, 10 hours off once
 11 hours have been driven since the last rest, and 34 hours off once 60 hours have been driven in
 a cycle (the stricter of the 60-hour and 70-hour limits, as the carrier's schedule is unknown). The
 model assumes a rested start, a driver who does nothing but drive, and no exception: no sleeper-
@@ -25,7 +25,8 @@ from .route import Route
 StopKind = Literal["break", "rest", "restart"]
 
 BREAK_AFTER_DRIVING_S = 8 * 3600
-"""§395.3(a)(3)(ii): no driving once more than 8 hours have passed without a 30-minute break."""
+"""§395.3(a)(3)(ii), counted as hours driven since the last break (the model's driver only drives):
+a 30-minute break is due once 8 hours have been driven without one."""
 BREAK_S = 30 * 60
 SHIFT_DRIVING_S = 11 * 3600
 """§395.3(a)(3)(i): at most 11 hours of driving after 10 consecutive hours off."""

@@ -49,7 +49,7 @@ function standingText(
 
 /**
  * The reasoning behind first place, behind an expand. Only first place is explained: the steps at
- * which second and third place left the contest are no order between them.
+ * which second and third place left the contest are not ranked against each other.
  */
 export function WhyThisRoute({ criteria, routes }: Props) {
   const name = (id: string) => routes.find((r) => r.id === id)?.name ?? id;

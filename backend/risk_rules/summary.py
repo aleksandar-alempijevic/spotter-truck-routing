@@ -18,7 +18,7 @@ class Checkpoint:
 
 @dataclass(frozen=True, slots=True)
 class RouteSummary:
-    """Miles at each level, the miles with no forecast, and the mile-weighted average risk.
+    """Miles at each level, the miles with no forecast, and the average risk.
 
     Construction checks the summary's own invariants: every mileage is finite and at least 0, and
     the average risk is present exactly when some miles have a forecast, and equals the

@@ -8,12 +8,11 @@ from .outbound import Outbound, UpstreamBadRequest
 
 AUTOCOMPLETE_URL = "https://api.geoapify.com/v1/geocode/autocomplete"
 CALL_TIMEOUT_S = 10.0
-"""The deadline of every Geoapify call. A search that starts with a house number and names no
-place is slow (7 to 9 s measured), and no filter or type speeds it up. On the hosted service
-(2026-11-14) a city search took 1.0 to 4.45 s, and "New York, NY", "Boston, MA" and "Atlanta, GA"
-timed out at the earlier 5 s every time. A city search that fails ends the request; only one that
-answers with nothing is followed by a second call, so the worst wait is two answers each just under
-this deadline, 20 s, and a failure is a 504 within 10 s."""
+"""The read and connect limits of every Geoapify call, each 10 s, so one call can take up to about
+20 s. A search that starts with a house number and names no place is slow (7 to 9 s measured), and
+no filter or type speeds it up; a city search took 1.0 to 4.45 s on the hosted service. A city
+search that fails ends the request; only one that answers with nothing is followed by a second
+call, so a request can take up to two calls' time before it fails with a 504."""
 SUGGESTION_LIMIT = 5
 
 ATTRIBUTION_TEXT = "Powered by Geoapify"

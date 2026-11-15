@@ -75,15 +75,13 @@ def plan_locations(
     API's service box guarantees it for a weather request; a caller with other input must check it.
 
     With `max_locations`, `TooManyLocations` is raised when the plan's total (checkpoint cells
-    plus grid-only cells plus stop-only cells) passes it. Two cheaper checks raise it earlier, as
-    soon as the checkpoint cells or the corridor's display cells alone pass it. Both are lower
-    bounds on the total: every display cell reads a forecast cell, and distinct display cells read
-    distinct ones, so a corridor of more display cells than the bound already needs more
-    locations than the bound.
+    plus grid-only cells plus stop-only cells) passes it. Two cheaper checks raise it earlier, when
+    the checkpoint cells or the corridor's display cells alone pass it: each is a lower bound on
+    the total, because distinct display cells read distinct forecast cells.
 
-    Planning stops at the bound, but the work before it stops is a sweep of each segment's
-    bounding box. That is small for segments of road length (`longitude_span_coverable` is the
-    check that keeps a segment's longitude span to what its miles cover), and not otherwise.
+    The work before planning stops at the bound is a sweep of each segment's bounding box, which
+    is small for segments of road length (`longitude_span_coverable` keeps a segment's longitude
+    span to what its miles cover), and not otherwise.
     """
     checkpoint_cells = tuple(
         dict.fromkeys(forecast_cell(point) for points in routes for point in points)

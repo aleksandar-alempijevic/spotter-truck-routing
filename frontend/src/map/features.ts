@@ -24,7 +24,7 @@ export const emptyCollection = <G, P>(): FeatureCollection<G, P> => ({
   features: [],
 });
 
-/** One feature per route: the line stays one feature so a later change can colour it by segment. */
+/** One feature per route: the line stays one feature so each segment can be styled separately. */
 export function routeLines(
   routes: readonly RouteView[],
 ): FeatureCollection<LineString, { id: string }> {

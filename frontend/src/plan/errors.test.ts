@@ -51,7 +51,7 @@ test('the two weather refusals each say their own way forward', () => {
   expect([area.action, many.action]).toEqual(['edit', 'edit']);
 });
 
-test('a plain validation error on the weather request no longer claims either cause', () => {
+test('a plain validation error on the weather request claims neither cause', () => {
   const row = describeError('weather', new ApiError('validation_error', 'x', 422));
   expect(row.body).not.toMatch(/spacing|latitude/);
 });

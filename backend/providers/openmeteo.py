@@ -1,8 +1,8 @@
 """Open-Meteo hourly forecasts: the only module that knows Open-Meteo's URL, parameters, field
 names, unit strings and snow ratio.
 
-Open-Meteo needs no key, so there is no key setting and no not-configured error. Its free tier is
-per IP: 600 locations a minute, 5,000 an hour and 10,000 a day, and a call of N locations costs N.
+Open-Meteo needs no key, so there is no key setting and no not-configured error. Its free tier
+limits locations per IP (see `LOCATIONS_PER_WINDOW`).
 """
 
 import asyncio
@@ -22,8 +22,8 @@ CALL_TIMEOUT_S = 12.0
 """A call of 150 locations takes about half a second (measured in `live_weather_check.py`), so a
 call still running after this is stuck; the weather request's own deadline bounds the rest."""
 CONNECT = ConnectPolicy(timeout_s=3.0, attempts=4)
-"""Connections from the host's shared address are sometimes dropped (hosted log, 2026-11-15: a
-`ConnectTimeout` after 20 s), so a connect is tried 4 times at 3 s, at most 12 s in all."""
+"""Connections from the host's shared address are sometimes dropped, so a connect is tried 4
+times at 3 s: at most 12 s, and about 13.25 s with the pauses after refused connections."""
 RATE_LIMIT_WINDOW_S = 60.0
 LOCATIONS_PER_WINDOW = 600
 """The free tier's limit, per IP: this many locations in one window (a call of N locations costs

@@ -111,6 +111,8 @@ def _steps(interval_miles: float) -> list[_Step]:
         return 0.0
 
     def one_interval(_: RouteCandidate) -> float:
+        # High tolerates one interval of road, as the average-risk tolerance does for one
+        # checkpoint's level; Severe tolerates none.
         return interval_miles
 
     def average_risk_tolerance(c: RouteCandidate) -> float:

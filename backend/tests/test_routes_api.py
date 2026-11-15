@@ -432,11 +432,13 @@ async def test_a_missing_field_is_a_validation_error():
     assert "departure" in response.json()["message"]
 
 
-async def test_the_largest_load_and_the_smallest_whole_kilogram_are_accepted(provider_mock):
+async def test_the_largest_load_and_the_smallest_load_are_accepted_and_sent_as_gross_weight(
+    provider_mock,
+):
     calls = mock_tomtom(provider_mock, base=[MAIN, NORTH, SOUTH_ROUTE])
 
     assert (await post(payload(load_lb=47_000))).status_code == 200
-    assert (await post(payload(load_lb=2.2046))).status_code == 200  # the smallest whole kilogram
+    assert (await post(payload(load_lb=2.2046))).status_code == 200  # about 1 kg of cargo
 
     assert [c.url.params["vehicleWeight"] for c in calls] == ["36287", "14970"]
 

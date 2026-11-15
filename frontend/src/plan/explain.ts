@@ -44,7 +44,7 @@ export interface CriteriaRow {
   decides: boolean;
   /** Routes other than the winner that were still in the contest after this step. */
   tiedWith: string[];
-  /** Every route but the first, in rank order. This is no order between them. */
+  /** Every route but the first, in rank order. The order of this list says nothing about how second and third place compare. */
   standings: { routeId: string; standing: Standing }[];
 }
 

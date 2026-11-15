@@ -124,8 +124,7 @@ async def routes(request: HttpRequest, payload: RoutesIn):
 
 
 WEATHER_RUNTIME = default_runtime()
-"""The clock, sleep and forecast cache the weather endpoint uses: one per process, so every
-request shares the cache."""
+"""The weather endpoint's runtime, built once per process."""
 
 
 @api.post(

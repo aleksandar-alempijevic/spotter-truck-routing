@@ -1,5 +1,5 @@
-"""Shared outbound HTTP policy: one client per planning request, a concurrency cap, a timeout,
-one retry and quick connect retries, for GET and for form-encoded POST.
+"""Shared outbound HTTP policy: one client per request to this server, a concurrency cap, a
+timeout, one retry and optional connect retries, for GET and for form-encoded POST.
 
 The providers carry their keys in the query string, and httpx logs the full URL of every request
 at INFO level and puts it in its exception text. Every httpx failure is therefore turned into a
@@ -29,7 +29,7 @@ from .errors import (
 logger = logging.getLogger(__name__)
 
 MAX_CONCURRENT_CALLS = 4
-"""Calls in flight at once within one planning request; further calls wait their turn."""
+"""Calls in flight at once on one client; further calls wait their turn."""
 
 CONNECT_ERROR_PAUSES_S = (0.25, 0.5, 0.5)
 """The pause before each further connect try (the last repeats) after a refused connection or a
@@ -138,9 +138,9 @@ class Outbound:
         """GET a URL and return its parsed JSON.
 
         Retries once on a timeout, a transport error or a 5xx, never on a 4xx. A connection that
-        cannot be opened is tried as `connect` says. Raises the
-        neutral errors from `providers.errors`. A 400 raises `UpstreamBadRequest` so the adapter
-        can tell its provider's cases apart.
+        cannot be opened is tried as `connect` says. Raises the neutral errors from
+        `providers.errors`. A 400 raises `UpstreamBadRequest` so the adapter can tell its
+        provider's cases apart.
         """
         return await self._call("GET", url, timeout, retry, connect, params=params)
 

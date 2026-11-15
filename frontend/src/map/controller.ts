@@ -82,16 +82,16 @@ const POPUP_ANCHORS = [
   'right',
 ] as const;
 type PopupAnchor = (typeof POPUP_ANCHORS)[number];
-// A popup on hover is for a mouse or a trackpad. A touch screen reports `hover: none`, and the
-// panel's list says all the popup does.
-/** Widest first: a popup on a narrow map is tried narrower, and its text wraps. */
-/** A popup spilling out of the open part by no more than this (px, for rounding) counts as on the map. */
-/** Between a point and the near edge of the popup's box: its offset (up to 16) and its 10 px tip. */
+/** Between a point and the near edge of the popup's box: the larger popup offset (16 px) plus room for the tip. */
 const POPUP_GAP_PX = 28;
 const MIN_POPUP_HEIGHT_PX = 96;
+/** A popup spilling out of the open part by no more than this (px, for rounding) counts as on the map. */
 const NEARLY_ON_MAP = 2;
+/** Widest first: a popup on a narrow map is tried narrower, and its text wraps. */
 const READOUT_WIDTHS = [320, 280, 240, 200, 160] as const;
 const HOVER_WIDTHS = [280, 220] as const;
+// A popup on hover is for a mouse or a trackpad. A touch screen reports `hover: none`, and the
+// panel's list says all the popup does.
 const HOVER_QUERY = '(hover: hover) and (pointer: fine)';
 
 /** The words of a popup as DOM, built with text nodes only. */
@@ -754,12 +754,10 @@ export class MapController {
 
   /**
    * Draws the trucks layer once, when the slider first has nothing to show on it, so MapLibre
-   * builds its WebGL program then and not on the first slider step. That program has a constant
-   * colour with a per-feature radius, which no other layer has, and a software-GL browser blocks
-   * about 120 ms compiling it. With the slider at hour 0 no truck is driving yet, so the layer
-   * would stay empty until the drag. One truck stands at the first route's start, under the
-   * endpoint marks, until the first frame that draws it; that frame replaces it with what the
-   * hour says.
+   * builds its WebGL program then and not on the first slider step (a software-GL browser blocks
+   * about 120 ms compiling it: a constant colour with a per-feature radius, which no other layer
+   * has). At hour 0 no truck is driving, so one stands at the first route's start, under the
+   * endpoint marks, until the first frame that draws the trucks replaces it.
    */
   private warmTrucks(source: GeoJsonSource): boolean {
     const start = this.routes[0]?.line[0];

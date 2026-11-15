@@ -64,7 +64,7 @@ interface RiskStyle {
   dashed?: boolean;
 }
 
-// One file owns the palette and the glyph set, so a review can change both in one place.
+// One file owns the palette and the glyph set, so both change in one place.
 export const RISK_STYLE: Record<RiskKey, RiskStyle> = {
   low: {
     label: 'Low',

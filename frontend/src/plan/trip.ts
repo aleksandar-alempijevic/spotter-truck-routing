@@ -2,7 +2,7 @@ import type { AttributionOut, RoutesIn, Spacing, SuggestionOut } from '../api/ty
 
 export const SPACINGS: readonly Spacing[] = [10, 25, 50];
 export const DEFAULT_SPACING: Spacing = 25;
-/** The backend's bounds on the cargo weight; the form mirrors them. */
+/** The most cargo the backend accepts: the 80,000 lb federal gross limit less its assumed 33,000 lb rig. */
 export const MAX_LOAD_LB = 47_000;
 /** Address search is sent only between these lengths; the backend refuses anything outside. */
 export const SEARCH_MIN_CHARS = 3;

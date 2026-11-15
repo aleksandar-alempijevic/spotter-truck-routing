@@ -71,12 +71,13 @@ class WeatherReading:
 
 @dataclass(frozen=True, slots=True)
 class Classification:
-    """A level, the condition that decided it (none at Low), and whether a load rule raised it."""
+    """The level of one checkpoint reading, with what decided it."""
 
     level: Level
     condition: Condition | None
     """The deciding condition; None at Low, where nothing decided the level."""
     load_raised: bool
+    """True when a load rule lifted the level above what the weather alone gives."""
 
 
 # Lower edges of the Moderate, High and Severe bands. A value on an edge belongs to the higher
@@ -89,7 +90,8 @@ _SNOW_EDGES = (0.5, 1.0, 2.0)
 _RAIN_NO_TRAVEL_ABOVE = 1.00
 _SNOW_NO_TRAVEL_ABOVE = 3.0
 
-# Load rules, applied to wind only. Both weight limits are strict (">").
+# Load rules, applied to wind only. Both weight limits are strict (">") and compare against the
+# cargo weight, not the gross weight sent to the routing provider.
 _HEAVY_WIND_MIN_LOAD_LB = 30_000.0  # wind in the Severe band, above this load: No Travel
 _HIGH_WIND_MIN_LOAD_LB = 40_000.0  # wind in the High band, above this load: Severe
 
