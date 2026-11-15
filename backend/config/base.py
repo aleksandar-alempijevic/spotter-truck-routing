@@ -69,12 +69,18 @@ ASGI_APPLICATION = "config.asgi.application"
 TOMTOM_API_KEY = os.environ.get("TOMTOM_API_KEY", "")
 GEOAPIFY_API_KEY = os.environ.get("GEOAPIFY_API_KEY", "")
 
-# The providers take their API keys in the query string, and httpx logs every request URL at INFO.
-# Keep its loggers quiet so a key can never reach a log line, whatever the root level is.
+# The root logger prints warnings and nothing below them, so the app's own packages get a console
+# handler at INFO: the host's log shows what a request did, not only what went wrong. The providers
+# take their API keys in the query string, and httpx logs every request URL at INFO, so its loggers
+# stay at WARNING whatever the root level is. Django's own loggers keep their defaults.
+APP_LOGGERS = ("api", "config", "providers", "risk_rules", "routing", "weather")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "formatters": {"app": {"format": "%(levelname)s %(name)s: %(message)s"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "app"}},
     "loggers": {
+        **{name: {"handlers": ["console"], "level": "INFO"} for name in APP_LOGGERS},
         "httpx": {"level": "WARNING"},
         "httpcore": {"level": "WARNING"},
     },

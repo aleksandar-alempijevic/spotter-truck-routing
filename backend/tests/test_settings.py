@@ -30,3 +30,32 @@ def test_debug_on_without_secret_key_starts():
 
 def test_secret_key_alone_is_enough_with_debug_off():
     assert import_base_settings(DJANGO_SECRET_KEY="x").returncode == 0
+
+
+def test_app_info_lines_reach_the_console_and_http_client_lines_do_not():
+    """A clean process under the shared settings: INFO from the app's packages is printed, INFO
+    from httpx and httpcore (whose lines carry request URLs, so API keys) is not."""
+    code = (
+        "import logging, django; django.setup()\n"
+        "logging.getLogger('api.weather_report').info('app-line')\n"
+        "logging.getLogger('providers.outbound').info('provider-line')\n"
+        "logging.getLogger('httpx').info('httpx-line')\n"
+        "logging.getLogger('httpcore.connection').info('httpcore-line')\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=BACKEND_DIR,
+        env={
+            "PATH": os.environ.get("PATH", ""),
+            "DJANGO_SETTINGS_MODULE": "config.base",
+            "DJANGO_SECRET_KEY": "x",
+        },
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "INFO api.weather_report: app-line" in result.stderr
+    assert "INFO providers.outbound: provider-line" in result.stderr
+    assert "httpx-line" not in result.stderr
+    assert "httpcore-line" not in result.stderr
