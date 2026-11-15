@@ -1,6 +1,6 @@
-import type { Condition } from '../api/types';
+import type { Condition, ConditionsOut } from '../api/types';
 import { riskLabel } from '../risk/levels';
-import type { CheckpointView } from './view';
+import type { CheckpointView, RouteView } from './view';
 
 export interface CheckpointDescription {
   /** The level's label, or what stands in for one ("Checking weather", "No forecast"). */
@@ -13,9 +13,31 @@ export interface CheckpointDescription {
   decidedBy: Condition | null;
   /** Why the level is what it is: "Set by wind, raised a level by the load". */
   decision: string | null;
+  /** A blow-over warning for a strong gust, or null. It never changes the level. */
+  gustWarning: string | null;
 }
 
 const round = (n: number, places: number) => String(Math.round(n * 10 ** places) / 10 ** places);
+
+const BLOW_OVER = 'risk of blow-over for light or empty trailers';
+
+/** The warning for one reading's gust; the server says whether the gust is strong enough. */
+function gustWarning(c: ConditionsOut | null): string | null {
+  return c?.gust_warning ? `Gusts to ${round(c.gust_mph, 0)} mph — ${BLOW_OVER}` : null;
+}
+
+/**
+ * The route card's warning: the highest gust over the route's checkpoints and stops that carry a
+ * gust warning, or null when none does.
+ */
+export function routeGustWarning(route: Pick<RouteView, 'checkpoints' | 'stops'>): string | null {
+  const warned = [...route.checkpoints, ...route.stops]
+    .map((point) => point.conditions)
+    .filter((c): c is ConditionsOut => c?.gust_warning === true);
+  if (warned.length === 0) return null;
+  const top = Math.max(...warned.map((c) => c.gust_mph));
+  return `Gusts to ${round(top, 0)} mph on this route — ${BLOW_OVER}`;
+}
 
 /**
  * What a checkpoint says about itself, in words. The list row and the hover popup both read from
@@ -33,6 +55,7 @@ export function describeCheckpoint(
       note: 'Weather not checked yet',
       decidedBy: null,
       decision: null,
+      gustWarning: null,
     };
   }
   if (risk.kind === 'unavailable') {
@@ -42,6 +65,7 @@ export function describeCheckpoint(
       note: 'Weather could not be loaded',
       decidedBy: null,
       decision: null,
+      gustWarning: null,
     };
   }
   if (risk.kind === 'none' || !c) {
@@ -51,6 +75,7 @@ export function describeCheckpoint(
       note: 'No forecast for this time',
       decidedBy: null,
       decision: null,
+      gustWarning: null,
     };
   }
   const decidedBy = risk.kind === 'level' ? risk.condition : null;
@@ -69,6 +94,7 @@ export function describeCheckpoint(
     decidedBy,
     decision:
       by && (risk.kind === 'level' && risk.loadRaised ? `${by}, raised a level by the load` : by),
+    gustWarning: gustWarning(c),
   };
 }
 

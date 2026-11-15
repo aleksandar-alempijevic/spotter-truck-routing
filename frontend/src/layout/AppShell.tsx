@@ -176,9 +176,10 @@ export function AppShell({
       const route = plan.view?.routes.find((r) => r.id === ref.routeId);
       const cp = route?.checkpoints[ref.index];
       if (!route || !cp || !submission) return null;
-      const { level, readings, note, decision } = describeCheckpoint(cp);
+      const { level, readings, note, decision, gustWarning } = describeCheckpoint(cp);
       const lines = [level, ...(note ? [note] : readings.map((r) => r.text))];
       if (decision) lines.push(decision);
+      if (gustWarning) lines.push(gustWarning);
       return {
         title: `${route.name} · mile ${Math.round(cp.mile)} · ${originClock(submission.trip, cp.etaMs)}`,
         lines,

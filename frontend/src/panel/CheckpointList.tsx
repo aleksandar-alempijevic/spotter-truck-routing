@@ -91,6 +91,11 @@ function RowBody({
           {description.decision}
         </Typography>
       )}
+      {description.gustWarning && (
+        <Typography variant="caption" component="div" sx={{ fontWeight: 600 }}>
+          {description.gustWarning}
+        </Typography>
+      )}
       {foot && (
         <Typography variant="caption" color="text.secondary" component="div">
           {foot}

@@ -259,6 +259,11 @@ export interface components {
             rain_in_per_hr: number;
             /** Snow In Per Hr */
             snow_in_per_hr: number;
+            /**
+             * Gust Warning
+             * @description True when the gust is strong enough to risk blowing over a light or empty trailer.
+             */
+            readonly gust_warning: boolean;
         };
         /** GridCellOut */
         GridCellOut: {

@@ -83,6 +83,9 @@ class Classification:
 # Lower edges of the Moderate, High and Severe bands. A value on an edge belongs to the higher
 # band. Wind's fourth edge is No Travel itself (>= 55 mph).
 _WIND_EDGES = (25.0, 35.0, 45.0, 55.0)
+GUST_WARNING_MPH = _WIND_EDGES[2]
+"""A gust at or above this (the Severe wind edge) gets a blow-over warning. It is shown beside the
+level and never changes it: gusts are not part of the classification."""
 _RAIN_EDGES = (0.10, 0.25, 0.50)
 _SNOW_EDGES = (0.5, 1.0, 2.0)
 # Rain and snow are No Travel only strictly above these values: exactly 1.00 in/hr rain and

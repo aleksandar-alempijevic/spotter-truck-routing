@@ -4,7 +4,14 @@ Plain Python with no Django, Ninja or HTTP imports; the API layer calls this pac
 other way round. See docs/logic.md for the rules.
 """
 
-from .levels import Classification, Condition, Level, WeatherReading, classify_weather
+from .levels import (
+    GUST_WARNING_MPH,
+    Classification,
+    Condition,
+    Level,
+    WeatherReading,
+    classify_weather,
+)
 from .ranking import (
     FLOAT_MARGIN,
     RankedRoute,
@@ -19,6 +26,7 @@ from .summary import Checkpoint, RouteSummary, summarize_route
 
 __all__ = [
     "FLOAT_MARGIN",
+    "GUST_WARNING_MPH",
     "Checkpoint",
     "Classification",
     "Condition",

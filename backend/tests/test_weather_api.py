@@ -172,6 +172,7 @@ async def test_the_response_has_every_part_the_ui_needs(provider_mock):
         "gust_mph": 15.0,
         "rain_in_per_hr": 0.0,
         "snow_in_per_hr": 0.0,
+        "gust_warning": False,
     }
     assert first["checkpoints"][0]["risk"] == {
         "level": "low",
@@ -262,6 +263,20 @@ async def test_gusts_are_shown_and_never_classified(provider_mock):
 
     assert checkpoint["weather"]["gust_mph"] == 80.0
     assert checkpoint["risk"]["level"] == "low"
+
+
+@pytest.mark.parametrize(("gust", "warned"), [(44.9, False), (45.0, True)])
+async def test_a_gust_from_the_severe_wind_edge_warns_and_leaves_the_level_alone(
+    provider_mock, gust, warned
+):
+    forecast(provider_mock, gust=lambda lat, lon, hour: gust)
+
+    body = (await post(request(route()))).json()
+
+    checkpoint = body["routes"][0]["checkpoints"][0]
+    assert checkpoint["weather"]["gust_warning"] is warned
+    assert checkpoint["risk"]["level"] == "low"
+    assert body["routes"][0]["summary"]["low_miles"] > 0
 
 
 async def test_rain_is_precipitation_less_snow_water_and_snow_is_depth(provider_mock):

@@ -240,7 +240,13 @@ test("stops take no part in a route's risk, summary or ranking, however bad thei
   for (const route of stormy.routes) {
     route.stops = route.stops.map((stop) => ({
       ...stop,
-      weather: { wind_mph: 70, gust_mph: 90, rain_in_per_hr: 0, snow_in_per_hr: 0 },
+      weather: {
+        wind_mph: 70,
+        gust_mph: 90,
+        rain_in_per_hr: 0,
+        snow_in_per_hr: 0,
+        gust_warning: true,
+      },
       risk: { level: 'no_travel', condition: 'wind', load_raised: false },
     }));
   }

@@ -412,12 +412,21 @@ export function buildRoutes(
 
 // ---------- weather ----------
 
+/** A reading as the server sends it; 45 mph is the server's gust warning edge. */
+const conditions = (wind: number, gust: number, rain: number, snow: number): ConditionsOut => ({
+  wind_mph: wind,
+  gust_mph: gust,
+  rain_in_per_hr: rain,
+  snow_in_per_hr: snow,
+  gust_warning: gust >= 45,
+});
+
 const CONDITIONS: Record<Level, ConditionsOut> = {
-  low: { wind_mph: 9, gust_mph: 15, rain_in_per_hr: 0, snow_in_per_hr: 0 },
-  moderate: { wind_mph: 28, gust_mph: 39, rain_in_per_hr: 0, snow_in_per_hr: 0 },
-  high: { wind_mph: 14, gust_mph: 22, rain_in_per_hr: 0.35, snow_in_per_hr: 0 },
-  severe: { wind_mph: 20, gust_mph: 31, rain_in_per_hr: 0, snow_in_per_hr: 2.4 },
-  no_travel: { wind_mph: 58, gust_mph: 71, rain_in_per_hr: 0.2, snow_in_per_hr: 0 },
+  low: conditions(9, 15, 0, 0),
+  moderate: conditions(28, 39, 0, 0),
+  high: conditions(14, 22, 0.35, 0),
+  severe: conditions(20, 31, 0, 2.4),
+  no_travel: conditions(58, 71, 0.2, 0),
 };
 const DECIDING: Record<Level, 'wind' | 'rain' | 'snow' | null> = {
   low: null,
@@ -434,9 +443,7 @@ function weatherCheckpoint(
 ): WeatherCheckpointOut {
   if (level === null) return { mile, weather: null, risk: null };
   // A load rule raises a High wind to Severe: 38 mph is High for a light load.
-  const weather = loadRaised
-    ? { wind_mph: 38, gust_mph: 47, rain_in_per_hr: 0, snow_in_per_hr: 0 }
-    : CONDITIONS[level];
+  const weather = loadRaised ? conditions(38, 47, 0, 0) : CONDITIONS[level];
   return {
     mile,
     weather,

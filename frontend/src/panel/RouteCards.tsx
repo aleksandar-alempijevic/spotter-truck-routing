@@ -1,4 +1,5 @@
 import { Box, ButtonBase, Chip, Stack, Typography } from '@mui/material';
+import { routeGustWarning } from '../plan/describe';
 import type { Trip } from '../plan/trip';
 import type { RouteView } from '../plan/view';
 import { HATCH_CSS, RISK_STYLE, LEVELS_BY_SEVERITY } from '../risk/levels';
@@ -159,6 +160,11 @@ export function RouteCards({
                 {inDestination ? ` (${inDestination} there)` : ''}
               </Typography>
               <MilesByLevel route={route} />
+              {routeGustWarning(route) && (
+                <Typography variant="caption" component="div" sx={{ mt: 1, fontWeight: 600 }}>
+                  {routeGustWarning(route)}
+                </Typography>
+              )}
               {route.summary && route.summary.no_travel_miles > 0 && (
                 <Box
                   role="note"

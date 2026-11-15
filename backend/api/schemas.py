@@ -4,11 +4,11 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal, Self
 
 from ninja import Schema
-from pydantic import AwareDatetime, Field, model_validator
+from pydantic import AwareDatetime, Field, computed_field, model_validator
 from pydantic_core import PydanticCustomError
 
 from providers.tomtom import EMPTY_RIG_LB
-from risk_rules import Condition, Level, RankingStep
+from risk_rules import GUST_WARNING_MPH, Condition, Level, RankingStep
 from routing.checkpoints import MARK_EPSILON_MILES
 from routing.geo import METERS_PER_MILE, haversine_m
 from routing.rest_breaks import StopKind
@@ -318,6 +318,12 @@ class ConditionsOut(Schema):
     gust_mph: float
     rain_in_per_hr: float
     snow_in_per_hr: float
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def gust_warning(self) -> bool:
+        """True when the gust is strong enough to risk blowing over a light or empty trailer."""
+        return self.gust_mph >= GUST_WARNING_MPH
 
 
 class RiskOut(Schema):
