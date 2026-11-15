@@ -122,7 +122,7 @@ BODY_WITH_KEY = {"message": f"echoes {KEY}"}
         pytest.param(httpx.Response(200, text="null"), MalformedResponse, 1, id="JSON null"),
         pytest.param(httpx.ReadTimeout(f"slow {KEY}"), ProviderTimeout, 2, id="timeout"),
         pytest.param(
-            httpx.ConnectError(f"cannot reach {KEY}"), ProviderUnavailable, 4, id="connect error"
+            httpx.ConnectError(f"cannot reach {KEY}"), ProviderUnavailable, 2, id="connect error"
         ),
     ],
 )
@@ -268,12 +268,23 @@ async def test_only_a_429_carries_a_retry_delay(provider_mock, status):
     assert caught.value.retry_after_s is None
 
 
+@pytest.fixture(autouse=True)
+def pauses(monkeypatch):
+    """The pauses before connect retries, recorded and not slept."""
+    slept = []
+
+    async def record(seconds):
+        slept.append(seconds)
+
+    monkeypatch.setattr(outbound_module, "_pause", record)
+    return slept
+
+
 @pytest.mark.parametrize(
     ("error", "kind", "attempts", "retry"),
     [
         (httpx.ReadTimeout("x"), "ReadTimeout", 2, True),
-        (httpx.ConnectTimeout("x"), "ConnectTimeout", 4, False),
-        (httpx.ConnectTimeout("x"), "ConnectTimeout", 4, True),
+        (httpx.ConnectTimeout("x"), "ConnectTimeout", 1, False),
     ],
 )
 async def test_a_call_that_ends_in_a_timeout_logs_host_kind_and_attempts_only(
@@ -322,9 +333,7 @@ async def test_the_logged_elapsed_runs_from_the_first_attempt_to_the_end(
     ]
 
 
-async def test_the_connect_timeout_is_three_seconds_and_the_read_timeout_is_the_callers(
-    provider_mock,
-):
+async def test_the_connect_timeout_is_ten_seconds_unless_the_caller_asks_for_less(provider_mock):
     seen = []
 
     async def record(request):
@@ -335,9 +344,22 @@ async def test_the_connect_timeout_is_three_seconds_and_the_read_timeout_is_the_
 
     async with Outbound() as outbound:
         await outbound.get_json(URL, {}, timeout=12)
+        await outbound.get_json(URL, {}, timeout=12, connect_timeout=3, connect_attempts=4)
 
-    assert seen[0]["connect"] == 3.0
-    assert seen[0]["read"] == 12
+    assert [(t["connect"], t["read"]) for t in seen] == [(10.0, 12), (3, 12)]
+
+
+async def test_by_default_a_connect_failure_is_one_try_per_attempt(provider_mock):
+    route = provider_mock.get(URL).mock(side_effect=httpx.ConnectTimeout("x"))
+
+    async with Outbound() as outbound:
+        with pytest.raises(ProviderTimeout):
+            await outbound.get_json(URL, {}, timeout=5, retry=False)
+
+    assert route.call_count == 1
+
+
+CONNECTING = {"connect_timeout": 3, "connect_attempts": 4}
 
 
 @pytest.mark.parametrize("retry", [True, False])
@@ -347,31 +369,94 @@ async def test_a_connection_that_opens_on_the_last_try_gives_the_answer(provider
     )
 
     async with Outbound() as outbound:
-        assert await outbound.get_json(URL, {}, timeout=5, retry=retry) == {"ok": True}
+        assert await outbound.get_json(URL, {}, timeout=5, retry=retry, **CONNECTING) == {
+            "ok": True
+        }
 
     assert route.call_count == 4
 
 
-async def test_connect_tries_do_not_multiply_with_the_retry_of_a_failed_answer(provider_mock):
-    # A call that never connects makes 4 tries in all, not 4 x 2.
-    route = provider_mock.get(URL).mock(side_effect=httpx.ConnectTimeout("x"))
+@pytest.mark.parametrize("error", [httpx.ConnectTimeout("x"), httpx.ConnectError("x")])
+async def test_connect_tries_do_not_multiply_with_the_retry(provider_mock, error):
+    route = provider_mock.get(URL).mock(side_effect=error)
 
     async with Outbound() as outbound:
-        with pytest.raises(ProviderTimeout):
-            await outbound.get_json(URL, {}, timeout=5)
+        with pytest.raises(
+            ProviderTimeout if isinstance(error, httpx.ConnectTimeout) else ProviderUnavailable
+        ):
+            await outbound.get_json(URL, {}, timeout=5, **CONNECTING)
 
-    assert route.call_count == outbound_module.CONNECT_ATTEMPTS == 4
+    assert route.call_count == 4
 
 
-async def test_a_5xx_then_a_connection_that_never_opens_gets_a_fresh_set_of_connect_tries(
-    provider_mock,
-):
+async def test_a_retry_gets_a_fresh_connect_budget(provider_mock):
     route = provider_mock.get(URL).mock(
-        side_effect=[httpx.Response(503)] + [httpx.ConnectTimeout("x")] * 4
+        side_effect=[httpx.ConnectTimeout("x")] * 2
+        + [httpx.Response(503)]
+        + [httpx.ConnectTimeout("x")] * 4
     )
 
     async with Outbound() as outbound:
         with pytest.raises(ProviderTimeout):
-            await outbound.get_json(URL, {}, timeout=5)
+            await outbound.get_json(URL, {}, timeout=5, **CONNECTING)
 
-    assert route.call_count == 5
+    assert route.call_count == 7
+
+
+async def test_only_a_refused_connection_pauses_before_the_next_try(provider_mock, pauses):
+    provider_mock.get(URL).mock(side_effect=httpx.ConnectTimeout("x"))
+    async with Outbound() as outbound:
+        with pytest.raises(ProviderTimeout):
+            await outbound.get_json(URL, {}, timeout=5, **CONNECTING)
+    assert pauses == []
+
+    provider_mock.get(URL).mock(side_effect=httpx.ConnectError("x"))
+    async with Outbound() as outbound:
+        with pytest.raises(ProviderUnavailable):
+            await outbound.get_json(URL, {}, timeout=5, **CONNECTING)
+    assert pauses == [0.25, 0.5, 0.5]
+
+
+async def test_a_connection_that_never_opens_logs_every_try(provider_mock, caplog):
+    provider_mock.get(URL).mock(side_effect=httpx.ConnectError("x"))
+
+    with caplog.at_level("WARNING", logger="providers.outbound"):
+        async with Outbound() as outbound:
+            with pytest.raises(ProviderUnavailable):
+                await outbound.get_json(URL, {}, timeout=5, **CONNECTING)
+
+    assert [r.getMessage() for r in caplog.records] == [
+        "provider call failed: host=api.tomtom.com, kind=ConnectError, attempts=4, elapsed=0.0 s"
+    ]
+
+
+async def test_the_logged_elapsed_does_not_count_the_wait_for_a_slot(
+    provider_mock, caplog, monkeypatch
+):
+    now = 100.0
+    monkeypatch.setattr(outbound_module, "time", SimpleNamespace(monotonic=lambda: now))
+
+    async def hold(request):
+        nonlocal now
+        now += 12  # the first call holds the only slot for 12 s, then fails to connect
+        raise httpx.ConnectTimeout("x")
+
+    provider_mock.get(URL).mock(side_effect=hold)
+    started = asyncio.Event()
+
+    async def first(outbound):
+        async with outbound._slots:
+            started.set()
+            await asyncio.sleep(0.01)
+            nonlocal now
+            now += 50  # queue time for the second call
+
+    with caplog.at_level("WARNING", logger="providers.outbound"):
+        async with Outbound(max_concurrent=1) as outbound:
+            holder = asyncio.create_task(first(outbound))
+            await started.wait()
+            with pytest.raises(ProviderTimeout):
+                await outbound.get_json(URL, {}, timeout=5, retry=False)
+            await holder
+
+    assert caplog.records[0].getMessage().endswith("attempts=1, elapsed=12.0 s")

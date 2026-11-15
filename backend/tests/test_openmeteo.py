@@ -6,7 +6,12 @@ import httpx
 import pytest
 
 from providers import Outbound
-from providers.errors import MalformedResponse, ProviderRateLimited, ProviderUnavailable
+from providers.errors import (
+    MalformedResponse,
+    ProviderRateLimited,
+    ProviderTimeout,
+    ProviderUnavailable,
+)
 from providers.openmeteo import MAX_LOCATIONS_PER_CALL, fetch_forecasts
 from tests.open_meteo_fixtures import STAMPS, location
 from weather import ForecastSeries
@@ -203,3 +208,17 @@ async def test_a_chunk_outside_the_call_size_is_refused_before_any_request(provi
         await fetch([(39.75, -104.95)] * count)
 
     assert route.call_count == 0
+
+
+async def test_a_connection_is_tried_four_times_at_three_seconds_and_then_not_retried(
+    provider_mock,
+):
+    route = provider_mock.post(host="api.open-meteo.com").mock(
+        side_effect=httpx.ConnectTimeout("x")
+    )
+
+    with pytest.raises(ProviderTimeout):
+        await fetch([(40.0, -100.0)])
+
+    assert route.call_count == 4
+    assert route.calls[0].request.extensions["timeout"]["connect"] == 3.0
