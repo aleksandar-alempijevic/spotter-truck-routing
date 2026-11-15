@@ -228,6 +228,14 @@ async def test_only_routes_through_canada_is_no_route(provider_mock):
         await call()
 
 
+async def test_a_route_in_puerto_rico_is_kept(provider_mock):
+    provider_mock.get(host="api.tomtom.com").respond(
+        json=tomtom_body(tomtom_route([ORIGIN, DESTINATION], countries=("PRI",)))
+    )
+
+    assert len(await call()) == 1
+
+
 async def test_a_route_through_another_country_is_not_kept(provider_mock):
     provider_mock.get(host="api.tomtom.com").respond(
         json=tomtom_body(tomtom_route([ORIGIN, DESTINATION], countries=("USA", "MEX", "USA")))

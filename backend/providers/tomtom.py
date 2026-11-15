@@ -22,8 +22,10 @@ EMPTY_RIG_LB = 33_000
 """Assumed weight of the empty tractor and trailer. The driver enters the cargo only; TomTom
 checks the road's weight limits against the gross weight."""
 
-USA = "USA"
-"""TomTom's ISO 3166-1 alpha-3 country code for the US, as a country section reports it."""
+US_COUNTRY_CODES = frozenset({"USA", "PRI", "VIR"})
+"""TomTom's ISO 3166-1 alpha-3 codes, as a country section reports them, for the US and the
+territories with roads inside the service area: Puerto Rico and the US Virgin Islands. Hawaii and
+Alaska are `USA`. The area's other territory, the uninhabited Johnston Atoll, has no road."""
 
 NO_ROUTE_CODES = {"MAP_MATCHING_FAILURE", "NO_ROUTE_FOUND"}
 """TomTom's 400 error codes that mean the points cannot be joined by a road."""
@@ -156,14 +158,14 @@ def _parse_routes(body: Any, via: Via | None) -> list[Route]:
 
 
 def _is_kept(route: _Route) -> bool:
-    """Keep a route only when it has country sections and every one is the United States.
+    """Keep a route only when it has country sections and every one is the US or a US territory.
 
     A route without country sections, or with a section without a code, cannot be shown to stay
     in the US, so it is not kept.
     """
     sections = route.get("sections", [])
     codes = [s.get("countryCode") for s in sections]
-    return bool(codes) and all(code == USA for code in codes)
+    return bool(codes) and all(code in US_COUNTRY_CODES for code in codes)
 
 
 def _build_route(route: _Route, via: Via | None) -> Route:
