@@ -412,13 +412,16 @@ export function buildRoutes(
 
 // ---------- weather ----------
 
-/** A reading as the server sends it; 45 mph is the server's gust warning edge. */
+/** The server's gust warning edge (`GUST_WARNING_MPH` in `risk_rules/levels.py`). */
+const GUST_WARNING_MPH = 45;
+
+/** A reading as the server sends it. */
 const conditions = (wind: number, gust: number, rain: number, snow: number): ConditionsOut => ({
   wind_mph: wind,
   gust_mph: gust,
   rain_in_per_hr: rain,
   snow_in_per_hr: snow,
-  gust_warning: gust >= 45,
+  gust_warning: gust >= GUST_WARNING_MPH,
 });
 
 const CONDITIONS: Record<Level, ConditionsOut> = {

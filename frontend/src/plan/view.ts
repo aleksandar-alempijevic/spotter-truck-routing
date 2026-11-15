@@ -71,6 +71,8 @@ export interface RouteView {
   checkpoints: CheckpointView[];
   /** The worst level on the route, or pending / no forecast when it has none. */
   risk: RiskState;
+  /** The highest gust (mph, rounded) the server flagged for blow-over on the route, if any. */
+  gustMph: number | null;
   /** Null until the weather lands. */
   summary: RouteSummaryOut | null;
   rank: number | null;
@@ -112,6 +114,12 @@ export function checkAligned(routes: RoutesOut, weather: WeatherOut): void {
     bad('recommended route');
   }
   if (weather.ranking.routes.some((r) => !known.has(r.id))) bad('ranked route');
+}
+
+/** The highest rounded gust among the readings the server flagged, or null when none is. */
+function highestWarnedGust(points: readonly { conditions: ConditionsOut | null }[]): number | null {
+  const warned = points.flatMap((p) => (p.conditions?.gust_warning === true ? [p.conditions] : []));
+  return warned.length === 0 ? null : Math.round(Math.max(...warned.map((c) => c.gust_mph)));
 }
 
 /** A reading's risk: not in yet, unavailable after a failure, none without a forecast, or a level. */
@@ -161,31 +169,33 @@ export function buildPlanView(
           conditions: wc?.weather ?? null,
         };
       });
+      const stops: StopView[] = route.stops.map((stop, index) => {
+        const ws = w?.stops[index];
+        return {
+          index,
+          kind: stop.kind,
+          mile: stop.mile,
+          lat: stop.lat,
+          lon: stop.lon,
+          startMs: Date.parse(stop.starts_at),
+          durationSeconds: stop.duration_seconds,
+          risk: riskOf(ws?.risk, !ws, weatherFailed),
+          conditions: ws?.weather ?? null,
+          readAtMs: ws?.at ? Date.parse(ws.at) : null,
+        };
+      });
       return {
         id: route.id,
         name: `Route ${routeIndex + 1}`,
         via: route.via?.name ?? null,
         travelSeconds: route.travel_time_seconds,
         drivingSeconds: route.driving_seconds,
-        stops: route.stops.map((stop, index) => {
-          const ws = w?.stops[index];
-          return {
-            index,
-            kind: stop.kind,
-            mile: stop.mile,
-            lat: stop.lat,
-            lon: stop.lon,
-            startMs: Date.parse(stop.starts_at),
-            durationSeconds: stop.duration_seconds,
-            risk: riskOf(ws?.risk, !ws, weatherFailed),
-            conditions: ws?.weather ?? null,
-            readAtMs: ws?.at ? Date.parse(ws.at) : null,
-          };
-        }),
+        stops,
         miles: route.total_miles,
         line: route.line,
         checkpoints,
         risk: worstRisk(checkpoints.map((cp) => cp.risk)),
+        gustMph: highestWarnedGust([...checkpoints, ...stops]),
         summary: w?.summary ?? null,
         rank: rankById.get(route.id) ?? null,
         isFastest: route.id === fastest.id,

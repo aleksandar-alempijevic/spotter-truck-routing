@@ -1,10 +1,12 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, test } from 'vitest';
-import { describeCheckpoint, routeGustWarning } from '../plan/describe';
+import { describeCheckpoint, describeRouteGust } from '../plan/describe';
+import type { ConditionsOut } from '../api/types';
 import type { Trip } from '../plan/trip';
 import { buildPlanView } from '../plan/view';
 import { buildRoutes, buildWeather, DALLAS, scenarioDestination } from '../test/fixtures';
 import { CheckpointRow, StopRow } from './CheckpointList';
+import { PlanPanel } from './PlanPanel';
 import { RouteChips } from './RouteChips';
 import { RouteCards } from './RouteCards';
 
@@ -21,17 +23,30 @@ const trip = (): Trip => ({
   addressCredit: null,
 });
 
-/** A scenario with every gust calm, and one checkpoint's gust set the way the server reports it. */
-function viewWithGust(gust: number, gustWarning: boolean) {
-  const weather = buildWeather('oneRoute', { departure });
+type Scenario = Parameters<typeof buildWeather>[0];
+
+/** A scenario with every gust calm; each test then spikes the points it is about. */
+function calmWeather(scenario: Scenario, breaks = false) {
+  const weather = buildWeather(scenario, { departure, breaks });
+  const calm = <T extends { weather: ConditionsOut | null }>(point: T) => {
+    if (point.weather) point.weather = { ...point.weather, gust_mph: 20, gust_warning: false };
+  };
   for (const route of weather.routes) {
-    for (const c of route.checkpoints) {
-      if (c.weather) c.weather = { ...c.weather, gust_mph: 20, gust_warning: false };
-    }
+    route.checkpoints.forEach(calm);
+    route.stops.forEach(calm);
   }
+  return weather;
+}
+
+const viewOf = (scenario: Scenario, weather: ReturnType<typeof calmWeather>, breaks = false) =>
+  buildPlanView(buildRoutes(scenario, { departure, breaks }), weather);
+
+/** The one-route scenario, calm except one checkpoint's gust set the way the server reports it. */
+function viewWithGust(gust: number, gustWarning: boolean) {
+  const weather = calmWeather('oneRoute');
   const point = weather.routes[0].checkpoints.find((c) => c.weather)!;
   point.weather = { ...point.weather!, gust_mph: gust, gust_warning: gustWarning };
-  return buildPlanView(buildRoutes('oneRoute', { departure }), weather);
+  return viewOf('oneRoute', weather);
 }
 
 test('a gust the server flags shows a warning with the gust on the checkpoint, and not below it', () => {
@@ -66,10 +81,10 @@ test('the checkpoint row shows the warning, and the warning leaves the level alo
 
 test('the route card says the highest gust on the route, and only when one warns', () => {
   const gusty = viewWithGust(58, true);
-  expect(routeGustWarning(gusty.routes[0])).toBe(
+  expect(describeRouteGust(gusty.routes[0].gustMph)?.line).toBe(
     'Gusts to 58 mph on this route — risk of blow-over for light or empty trailers',
   );
-  expect(routeGustWarning(viewWithGust(44.9, false).routes[0])).toBeNull();
+  expect(viewWithGust(44.9, false).routes[0].gustMph).toBeNull();
 
   render(
     <RouteCards
@@ -84,7 +99,7 @@ test('the route card says the highest gust on the route, and only when one warns
   expect(screen.getAllByText(/Gusts to 58 mph on this route/)).toHaveLength(1);
 });
 
-test('the phone route chips carry the warning, and the selected route says it in full', () => {
+test('the phone route chips carry the warning on the chip', () => {
   const gusty = viewWithGust(58, true);
 
   render(
@@ -97,6 +112,36 @@ test('the phone route chips carry the warning, and the selected route says it in
   );
 
   expect(screen.getByText('Gust 58 mph')).toBeInTheDocument();
+});
+
+test("the phone panel says the selected route's warning in full under the chips", () => {
+  const gusty = viewWithGust(58, true);
+  const state = {
+    phase: 'ready',
+    view: gusty,
+    explanation: null,
+    weather: undefined,
+    routesError: null,
+    weatherError: null,
+    routesAt: 0,
+    retryRoutes: () => {},
+    retryWeather: () => {},
+  } as const;
+
+  render(
+    <PlanPanel
+      tier="peek"
+      state={state}
+      submission={{ id: 1, trip: trip(), startedAt: 0 }}
+      selectedRouteId={gusty.routes[0].id}
+      selectedCheckpoint={null}
+      selectedStop={null}
+      onSelectRoute={() => {}}
+      onSelectCheckpoint={() => {}}
+      onEditTrip={() => {}}
+    />,
+  );
+
   expect(
     screen.getByText(
       'Gusts to 58 mph on this route — risk of blow-over for light or empty trailers',
@@ -118,20 +163,12 @@ test('chips without a warning show none', () => {
   expect(screen.queryByText(/Gust/)).toBeNull();
 });
 
-/** The mixed scenario with rest stops, every gust calm except the first stop of the first route. */
+/** The mixed scenario with rest stops, calm except the first stop of the first route. */
 function viewWithOnlyAStopGusting() {
-  const weather = buildWeather('mixed', { departure, breaks: true });
-  for (const route of weather.routes) {
-    for (const c of route.checkpoints) {
-      if (c.weather) c.weather = { ...c.weather, gust_mph: 20, gust_warning: false };
-    }
-    for (const s of route.stops) {
-      if (s.weather) s.weather = { ...s.weather, gust_mph: 20, gust_warning: false };
-    }
-  }
+  const weather = calmWeather('mixed', true);
   const stop = weather.routes[0].stops.find((s) => s.weather)!;
   stop.weather = { ...stop.weather!, gust_mph: 63, gust_warning: true };
-  return buildPlanView(buildRoutes('mixed', { departure, breaks: true }), weather);
+  return viewOf('mixed', weather, true);
 }
 
 test('a gust at a rest stop alone warns on the stop row and on the route card', () => {
@@ -158,18 +195,13 @@ test('a gust at a rest stop alone warns on the stop row and on the route card', 
 });
 
 test('a reading without the flag, as an older answer has it, shows no warning and does not crash', () => {
-  const weather = buildWeather('oneRoute', { departure });
+  const weather = calmWeather('oneRoute');
   const point = weather.routes[0].checkpoints.find((c) => c.weather)!;
-  const { wind_mph, rain_in_per_hr, snow_in_per_hr } = point.weather!;
-  point.weather = {
-    wind_mph,
-    gust_mph: 90,
-    rain_in_per_hr,
-    snow_in_per_hr,
-  } as typeof point.weather;
-  const view = buildPlanView(buildRoutes('oneRoute', { departure }), weather);
+  point.weather = { ...point.weather!, gust_mph: 90 };
+  delete (point.weather as { gust_warning?: boolean }).gust_warning;
+  const view = viewOf('oneRoute', weather);
   const cp = view.routes[0].checkpoints.find((c) => c.conditions)!;
 
   expect(describeCheckpoint(cp).gustWarning).toBeNull();
-  expect(routeGustWarning(view.routes[0])).toBeNull();
+  expect(view.routes[0].gustMph).toBeNull();
 });

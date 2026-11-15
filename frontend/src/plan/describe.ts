@@ -1,6 +1,6 @@
 import type { Condition, ConditionsOut } from '../api/types';
 import { riskLabel } from '../risk/levels';
-import type { CheckpointView, RouteView } from './view';
+import type { CheckpointView } from './view';
 
 export interface CheckpointDescription {
   /** The level's label, or what stands in for one ("Checking weather", "No forecast"). */
@@ -26,22 +26,14 @@ function gustLine(c: ConditionsOut | null): string | null {
   return c?.gust_warning ? `Gusts to ${round(c.gust_mph, 0)} mph — ${BLOW_OVER}` : null;
 }
 
-/**
- * The highest gust (mph, rounded) over the route's checkpoints and stops that carry a gust
- * warning, or null when none does.
- */
-export function routeGustMph(route: Pick<RouteView, 'checkpoints' | 'stops'>): number | null {
-  const warned = [...route.checkpoints, ...route.stops]
-    .map((point) => point.conditions)
-    .filter((c): c is ConditionsOut => c?.gust_warning === true);
-  if (warned.length === 0) return null;
-  return Math.round(Math.max(...warned.map((c) => c.gust_mph)));
-}
-
-/** The route's warning line, for its card and under the phone's route chips. */
-export function routeGustWarning(route: Pick<RouteView, 'checkpoints' | 'stops'>): string | null {
-  const top = routeGustMph(route);
-  return top === null ? null : `Gusts to ${top} mph on this route — ${BLOW_OVER}`;
+/** A route's gust warning in its two forms: the chip's short text and the full line. */
+export function describeRouteGust(gustMph: number | null): { chip: string; line: string } | null {
+  return gustMph === null
+    ? null
+    : {
+        chip: `Gust ${gustMph} mph`,
+        line: `Gusts to ${gustMph} mph on this route — ${BLOW_OVER}`,
+      };
 }
 
 /**

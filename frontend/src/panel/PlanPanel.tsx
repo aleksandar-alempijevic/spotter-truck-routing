@@ -8,7 +8,9 @@ import { Credits } from './Credits';
 import { CheckpointList, CheckpointRow, StopRow } from './CheckpointList';
 import { PlanHeadline } from './PlanHeadline';
 import { RouteCards } from './RouteCards';
+import { GustWarning } from './GustWarning';
 import { RouteChips } from './RouteChips';
+import { describeRouteGust } from '../plan/describe';
 import { BREAKS_NOTE, BREAKS_NOTE_DETAIL } from '../plan/breaksCopy';
 import { WhyThisRoute } from './WhyThisRoute';
 
@@ -62,6 +64,7 @@ export function PlanPanel({
   const recommendedId = state.view?.ranking?.recommended_id ?? null;
   const breaksApplied = state.view?.breaksApplied ?? false;
   const selected = routes.find((r) => r.id === selectedRouteId) ?? null;
+  const chipsGust = describeRouteGust(selected?.gustMph ?? null);
   const detailCp =
     selected && selectedCheckpoint?.routeId === selected.id
       ? selected.checkpoints[selectedCheckpoint.index]
@@ -143,6 +146,7 @@ export function PlanPanel({
           onSelect={onSelectRoute}
         />
       )}
+      {parts.chips && chipsGust && <GustWarning text={chipsGust.line} />}
       {routes.length > 0 && parts.cards && (
         <RouteCards
           routes={routes}
