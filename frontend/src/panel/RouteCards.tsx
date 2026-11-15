@@ -10,6 +10,7 @@ import { formatMiles } from '../plan/format';
 import { selectableSx } from './selectable';
 import { Quantities } from './Quantities';
 import { splitText } from './stops';
+import { GustWarning } from './GustWarning';
 import { SelectedMark } from './SelectedMark';
 import { arrivalInDestinationZone, arrivalMs, originClock } from './times';
 
@@ -161,9 +162,9 @@ export function RouteCards({
               </Typography>
               <MilesByLevel route={route} />
               {routeGustWarning(route) && (
-                <Typography variant="caption" component="div" sx={{ mt: 1, fontWeight: 600 }}>
-                  {routeGustWarning(route)}
-                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  <GustWarning text={routeGustWarning(route)!} />
+                </Box>
               )}
               {route.summary && route.summary.no_travel_miles > 0 && (
                 <Box

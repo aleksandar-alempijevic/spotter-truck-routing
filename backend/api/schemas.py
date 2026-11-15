@@ -7,8 +7,8 @@ from ninja import Schema
 from pydantic import AwareDatetime, Field, computed_field, model_validator
 from pydantic_core import PydanticCustomError
 
-from providers.tomtom import EMPTY_RIG_LB
 from risk_rules import GUST_WARNING_MPH, Condition, Level, RankingStep
+from routing import EMPTY_RIG_LB
 from routing.checkpoints import MARK_EPSILON_MILES
 from routing.geo import METERS_PER_MILE, haversine_m
 from routing.rest_breaks import StopKind

@@ -13,9 +13,11 @@ from .overlap import measure_overlap, near_cells
 from .rest_breaks import RestStop, RouteStop, StopKind, locate_stops, plan_stops
 from .route import Route, Via
 from .simplify import simplify_line
+from .vehicle import EMPTY_RIG_LB
 from .via_cities import via_candidates
 
 __all__ = [
+    "EMPTY_RIG_LB",
     "Point",
     "RestStop",
     "Route",

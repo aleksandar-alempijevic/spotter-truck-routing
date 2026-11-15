@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from risk_rules import Condition, Level, WeatherReading, classify_weather
+from risk_rules import GUST_WARNING_MPH, Condition, Level, WeatherReading, classify_weather
 
 L, M, H, S, N = Level.LOW, Level.MODERATE, Level.HIGH, Level.SEVERE, Level.NO_TRAVEL
 LIGHT = 10_000.0
@@ -128,6 +128,12 @@ def test_load_raised_is_reported_only_when_a_load_rule_changed_the_deciding_wind
     assert (rainy.level, rainy.condition, rainy.load_raised) == (S, Condition.RAIN, False)
     # Rain is only High, so the load rule is what makes the checkpoint Severe.
     assert classify_weather(WeatherReading(40, 0.3, 0), 45_000).load_raised is True
+
+
+def test_the_gust_warning_edge_is_the_severe_wind_edge():
+    assert GUST_WARNING_MPH == 45.0
+    assert level_of(wind=GUST_WARNING_MPH) is S
+    assert level_of(wind=GUST_WARNING_MPH - 0.1) is H
 
 
 def test_gusts_are_not_an_input():

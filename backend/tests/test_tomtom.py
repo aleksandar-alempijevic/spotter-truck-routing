@@ -228,9 +228,12 @@ async def test_only_routes_through_canada_is_no_route(provider_mock):
         await call()
 
 
-async def test_a_route_in_puerto_rico_is_kept(provider_mock):
+@pytest.mark.parametrize(
+    "countries", [("PRI",), ("VIR",), ("USA", "PRI")], ids=["PRI", "VIR", "USA then PRI"]
+)
+async def test_a_route_in_a_us_territory_is_kept(provider_mock, countries):
     provider_mock.get(host="api.tomtom.com").respond(
-        json=tomtom_body(tomtom_route([ORIGIN, DESTINATION], countries=("PRI",)))
+        json=tomtom_body(tomtom_route([ORIGIN, DESTINATION], countries=countries))
     )
 
     assert len(await call()) == 1

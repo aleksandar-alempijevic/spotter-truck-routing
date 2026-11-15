@@ -6,7 +6,7 @@ from typing import Annotated, Any, NotRequired, TypedDict
 
 from pydantic import Field, TypeAdapter, ValidationError
 
-from routing import Point, Route, Via
+from routing import EMPTY_RIG_LB, Point, Route, Via
 from routing.route import RouteContractError
 
 from .errors import MalformedResponse, NoRouteFound, ProviderNotConfigured, ProviderUnavailable
@@ -17,10 +17,6 @@ CALL_TIMEOUT_S = 50.0
 """Long trips took up to 30 s to route in the feasibility test; this leaves room for a slow call."""
 
 KILOGRAMS_PER_POUND = 0.45359237
-
-EMPTY_RIG_LB = 33_000
-"""Assumed weight of the empty tractor and trailer. The driver enters the cargo only; TomTom
-checks the road's weight limits against the gross weight."""
 
 US_COUNTRY_CODES = frozenset({"USA", "PRI", "VIR"})
 """TomTom's ISO 3166-1 alpha-3 codes, as a country section reports them, for the US and the

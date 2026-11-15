@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from api.schemas import (
     MAX_CHECKPOINTS_PER_ROUTE,
+    MAX_LOAD_LB,
     CheckpointOut,
     PlanParams,
     RouteCore,
@@ -47,6 +48,11 @@ def test_a_valid_send_back_route_is_accepted():
 def test_the_load_bounds_hold_on_the_shared_plan_parameters(load):
     with pytest.raises(ValidationError):
         PlanParams(load_lb=load, checkpoint_interval_miles=25)
+
+
+def test_the_cargo_cap_is_the_federal_gross_limit_less_the_assumed_rig():
+    # The frontend's MAX_LOAD_LB (plan/trip.ts) is pinned to the same number.
+    assert MAX_LOAD_LB == 47_000
 
 
 def test_the_load_limit_itself_is_accepted():

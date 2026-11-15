@@ -121,3 +121,7 @@ test('"Leave now" is resolved against the time of the press', () => {
   const result = validateTrip(values({ departure: { mode: 'now' } }), NOW + 5 * HOUR_MS);
   expect(result.trip?.departureMs).toBe(NOW + 5 * HOUR_MS);
 });
+
+test("the cargo cap is the backend's: 80,000 lb gross less the assumed 33,000 lb rig", () => {
+  expect(MAX_LOAD_LB).toBe(47_000);
+});

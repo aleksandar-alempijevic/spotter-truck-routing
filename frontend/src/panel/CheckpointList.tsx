@@ -10,6 +10,7 @@ import type { RiskState } from '../risk/levels';
 import { zoneName } from '../time/zone';
 import { displayZone } from '../plan/trip';
 import { STOPS_ASSUMPTION } from '../plan/breaksCopy';
+import { GustWarning } from './GustWarning';
 import { interleave, stopName, stopWhat } from './stops';
 import { originClock } from './times';
 
@@ -92,8 +93,8 @@ function RowBody({
         </Typography>
       )}
       {description.gustWarning && (
-        <Typography variant="caption" component="div" sx={{ fontWeight: 600 }}>
-          {description.gustWarning}
+        <Typography variant="caption" component="div" sx={{ mt: 0.25 }}>
+          <GustWarning text={description.gustWarning} size="small" />
         </Typography>
       )}
       {foot && (

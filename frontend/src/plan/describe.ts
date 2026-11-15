@@ -21,22 +21,27 @@ const round = (n: number, places: number) => String(Math.round(n * 10 ** places)
 
 const BLOW_OVER = 'risk of blow-over for light or empty trailers';
 
-/** The warning for one reading's gust; the server says whether the gust is strong enough. */
-function gustWarning(c: ConditionsOut | null): string | null {
+/** The warning line for one reading's gust; the server says whether the gust is strong enough. */
+function gustLine(c: ConditionsOut | null): string | null {
   return c?.gust_warning ? `Gusts to ${round(c.gust_mph, 0)} mph — ${BLOW_OVER}` : null;
 }
 
 /**
- * The route card's warning: the highest gust over the route's checkpoints and stops that carry a
- * gust warning, or null when none does.
+ * The highest gust (mph, rounded) over the route's checkpoints and stops that carry a gust
+ * warning, or null when none does.
  */
-export function routeGustWarning(route: Pick<RouteView, 'checkpoints' | 'stops'>): string | null {
+export function routeGustMph(route: Pick<RouteView, 'checkpoints' | 'stops'>): number | null {
   const warned = [...route.checkpoints, ...route.stops]
     .map((point) => point.conditions)
     .filter((c): c is ConditionsOut => c?.gust_warning === true);
   if (warned.length === 0) return null;
-  const top = Math.max(...warned.map((c) => c.gust_mph));
-  return `Gusts to ${round(top, 0)} mph on this route — ${BLOW_OVER}`;
+  return Math.round(Math.max(...warned.map((c) => c.gust_mph)));
+}
+
+/** The route's warning line, for its card and under the phone's route chips. */
+export function routeGustWarning(route: Pick<RouteView, 'checkpoints' | 'stops'>): string | null {
+  const top = routeGustMph(route);
+  return top === null ? null : `Gusts to ${top} mph on this route — ${BLOW_OVER}`;
 }
 
 /**
@@ -94,7 +99,7 @@ export function describeCheckpoint(
     decidedBy,
     decision:
       by && (risk.kind === 'level' && risk.loadRaised ? `${by}, raised a level by the load` : by),
-    gustWarning: gustWarning(c),
+    gustWarning: gustLine(c),
   };
 }
 
