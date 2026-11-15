@@ -69,6 +69,14 @@ LEVEL_CODES = list(Level)
 
 
 @dataclass(slots=True)
+class _Waits:
+    """What one request's chunks waited out, for the line logged when it times out."""
+
+    refusals: int = 0
+    seconds: float = 0.0
+
+
+@dataclass(slots=True)
 class Runtime:
     """What the use case reads from outside: the clock, the way to sleep, the forecast cache and
     the limits. Production uses `default_runtime()`; tests hand in their own."""
@@ -153,6 +161,8 @@ async def _fetch(
     network) before the error goes out, so a retry fetches only what is missing.
     """
     fetched: dict[Cell, ForecastSeries] = {}
+    waits = _Waits()
+    started = deadline - runtime.budget_s
     chunks = [
         cells[i : i + openmeteo.MAX_LOCATIONS_PER_CALL]
         for i in range(0, len(cells), openmeteo.MAX_LOCATIONS_PER_CALL)
@@ -167,7 +177,7 @@ async def _fetch(
             fetched[cell] = one_series
 
     async def one(outbound: Outbound, chunk: list[Cell]) -> None:
-        raw = await _request_chunk(outbound, chunk, deadline, runtime)
+        raw = await _request_chunk(outbound, chunk, deadline, runtime, waits)
         # Its own task, so cancelling this chunk after its response arrived does not stop it.
         stored = asyncio.ensure_future(store(chunk, raw))
         storing.add(stored)
@@ -191,11 +201,38 @@ async def _fetch(
                     for task in tasks:
                         task.cancel()
                     await asyncio.gather(*tasks, return_exceptions=True)
+    except ProviderTimeout:
+        _log_timeout("call", started, cells, chunks, waits, runtime)
+        raise
     except TimeoutError:
+        _log_timeout("deadline", started, cells, chunks, waits, runtime)
         raise ProviderTimeout from None
     finally:
         await _settle(storing)
     return fetched
+
+
+def _log_timeout(
+    cause: str,
+    started: float,
+    cells: list[Cell],
+    chunks: list[list[Cell]],
+    waits: _Waits,
+    runtime: Runtime,
+) -> None:
+    """One line saying why the request timed out: "call" when a provider call timed out twice,
+    "deadline" when the request's own deadline passed. Counts and seconds only. A warning, because
+    the process's root logger shows warnings and nothing below them."""
+    logger.warning(
+        "weather: timed out, cause=%s, elapsed=%.1f s, locations=%d, chunks=%d, "
+        "refusals waited=%d, waited=%.0f s",
+        cause,
+        runtime.time() - started,
+        len(cells),
+        len(chunks),
+        waits.refusals,
+        waits.seconds,
+    )
 
 
 async def _settle(storing: set[asyncio.Future[None]]) -> None:
@@ -207,7 +244,7 @@ async def _settle(storing: set[asyncio.Future[None]]) -> None:
 
 
 async def _request_chunk(
-    outbound: Outbound, chunk: list[Cell], deadline: float, runtime: Runtime
+    outbound: Outbound, chunk: list[Cell], deadline: float, runtime: Runtime, waits: _Waits
 ) -> openmeteo.RawForecasts:
     """One chunk's raw answers, waiting out a refusal when the wait is short and fits the deadline.
 
@@ -225,6 +262,8 @@ async def _request_chunk(
             if wait is None or refusals > MAX_REFUSALS_PER_CHUNK:
                 raise
             logger.info("weather: refused, waiting %.0f s", wait)
+            waits.refusals += 1
+            waits.seconds += wait
             await runtime.sleep(wait)
 
 
