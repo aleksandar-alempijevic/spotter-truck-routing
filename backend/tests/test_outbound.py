@@ -1,8 +1,10 @@
 import asyncio
+from types import SimpleNamespace
 
 import httpx
 import pytest
 
+from providers import outbound as outbound_module
 from providers.errors import (
     MalformedResponse,
     ProviderRateLimited,
@@ -299,3 +301,21 @@ async def test_a_call_that_fails_another_way_logs_no_timeout(provider_mock, capl
                 await outbound.get_json(URL, {}, timeout=5)
 
     assert caplog.records == []
+
+
+async def test_the_logged_elapsed_runs_from_the_first_attempt_to_the_end(
+    provider_mock, caplog, monkeypatch
+):
+    # The first reading starts the call and the second ends it; a third would be a restart.
+    readings = iter([100.0, 112.5, 999.0])
+    monkeypatch.setattr(outbound_module, "time", SimpleNamespace(monotonic=lambda: next(readings)))
+    provider_mock.get(URL).mock(side_effect=httpx.ReadTimeout("x"))
+
+    with caplog.at_level("WARNING", logger="providers.outbound"):
+        async with Outbound() as outbound:
+            with pytest.raises(ProviderTimeout):
+                await outbound.get_json(URL, {}, timeout=5)
+
+    assert [r.getMessage() for r in caplog.records] == [
+        "provider call timed out: host=api.tomtom.com, kind=ReadTimeout, attempts=2, elapsed=12.5 s"
+    ]

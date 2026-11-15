@@ -59,3 +59,16 @@ def test_info_lines_reach_the_console_once_and_http_client_lines_do_not():
     assert "httpx-line" not in result.stderr
     assert "httpcore-line" not in result.stderr
     assert result.stdout.split() == [str(logging.WARNING)] * 2
+
+
+def test_a_django_error_reaches_the_console_once_with_debug_off():
+    code = (
+        "import logging, django; django.setup()\n"
+        "logging.getLogger('django.request').error('django-error')\n"
+    )
+
+    result = import_base_settings(code, DJANGO_SETTINGS_MODULE="config.base", DJANGO_SECRET_KEY="x")
+
+    assert result.returncode == 0, result.stderr
+    assert result.stderr.count("django-error") == 1
+    assert result.stderr.count("ERROR django.request: django-error") == 1  # through the handler
