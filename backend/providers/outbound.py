@@ -11,6 +11,7 @@ import asyncio
 import logging
 import math
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from types import TracebackType
 from typing import Any, Self
@@ -30,13 +31,29 @@ logger = logging.getLogger(__name__)
 MAX_CONCURRENT_CALLS = 4
 """Calls in flight at once within one planning request; further calls wait their turn."""
 
-CONNECT_TIMEOUT_S = 10.0
-"""The default connect timeout. A caller whose host has shown connect failures passes a shorter one
-and more tries."""
-
 CONNECT_ERROR_PAUSES_S = (0.25, 0.5, 0.5)
-"""The pause before each further connect try after a refused connection or a failed name lookup.
-A connect timeout needs none: the timeout already spaced its tries."""
+"""The pause before each further connect try (the last repeats) after a refused connection or a
+failed name lookup. A connect timeout needs none: the timeout already spaced its tries."""
+
+
+@dataclass(frozen=True)
+class ConnectPolicy:
+    """How a connection is opened: the timeout of each try and the number of tries.
+
+    The default is one try at 10 s. A caller whose host has shown connect failures asks for more
+    tries at a shorter timeout; a call that then never connects is not retried again, so the
+    connect tries and the retry of a failed answer do not multiply.
+    """
+
+    timeout_s: float = 10.0
+    attempts: int = 1
+
+    def __post_init__(self) -> None:
+        if self.attempts < 1:
+            raise ValueError("a connection needs at least one try")
+
+
+DEFAULT_CONNECT = ConnectPolicy()
 
 RETRY_STATUSES = range(500, 600)
 RATE_LIMIT_STATUSES = {401, 403, 429}
@@ -61,8 +78,21 @@ class _Tally:
     started: float | None = None
 
 
-async def _pause(seconds: float) -> None:
-    await asyncio.sleep(seconds)
+class _ConnectTriesExhausted(Exception):
+    """Every try of a multi-try `ConnectPolicy` failed to connect; `error` is the last failure."""
+
+    def __init__(self, error: httpx.HTTPError) -> None:
+        super().__init__()
+        self.error = error
+
+
+def _classify(error: httpx.HTTPError) -> tuple[type[Exception], str | None]:
+    """The neutral error for a failed try, and its kind when the failure is worth a log line."""
+    if isinstance(error, httpx.TimeoutException):
+        return ProviderTimeout, type(error).__name__
+    if isinstance(error, httpx.ConnectError):
+        return ProviderUnavailable, type(error).__name__
+    return ProviderUnavailable, None
 
 
 class Outbound:
@@ -73,7 +103,12 @@ class Outbound:
     semaphore, so a waiter can queue behind a slow call without a pool timeout cutting it off.
     """
 
-    def __init__(self, max_concurrent: int = MAX_CONCURRENT_CALLS) -> None:
+    def __init__(
+        self,
+        max_concurrent: int = MAX_CONCURRENT_CALLS,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    ) -> None:
+        self._sleep = sleep
         self._client: httpx.AsyncClient | None = None
         self._slots = asyncio.Semaphore(max_concurrent)
 
@@ -98,21 +133,16 @@ class Outbound:
         *,
         timeout: float,
         retry: bool = True,
-        connect_timeout: float = CONNECT_TIMEOUT_S,
-        connect_attempts: int = 1,
+        connect: ConnectPolicy = DEFAULT_CONNECT,
     ) -> Any:
         """GET a URL and return its parsed JSON.
 
         Retries once on a timeout, a transport error or a 5xx, never on a 4xx. A connection that
-        cannot be opened is tried `connect_attempts` times (one by default), each with
-        `connect_timeout`; with more than one, a call that never connects is not retried again,
-        so the tries do not multiply with the retry. Raises the
+        cannot be opened is tried as `connect` says. Raises the
         neutral errors from `providers.errors`. A 400 raises `UpstreamBadRequest` so the adapter
         can tell its provider's cases apart.
         """
-        return await self._call(
-            "GET", url, timeout, retry, (connect_timeout, connect_attempts), params=params
-        )
+        return await self._call("GET", url, timeout, retry, connect, params=params)
 
     async def post_form(
         self,
@@ -121,20 +151,11 @@ class Outbound:
         *,
         timeout: float,
         headers: dict[str, str] | None = None,
-        connect_timeout: float = CONNECT_TIMEOUT_S,
-        connect_attempts: int = 1,
+        connect: ConnectPolicy = DEFAULT_CONNECT,
     ) -> Any:
         """POST a form-encoded body and return the parsed JSON, under the same policy as
         `get_json`, with its retry. Used where a request would not fit in a URL."""
-        return await self._call(
-            "POST",
-            url,
-            timeout,
-            True,
-            (connect_timeout, connect_attempts),
-            data=data,
-            headers=headers,
-        )
+        return await self._call("POST", url, timeout, True, connect, data=data, headers=headers)
 
     async def _call(
         self,
@@ -142,7 +163,7 @@ class Outbound:
         url: str,
         timeout: float,
         retry: bool,
-        connect: tuple[float, int],
+        connect: ConnectPolicy,
         **content: Any,
     ) -> Any:
         tally = _Tally()
@@ -152,26 +173,15 @@ class Outbound:
                 response = await self._send_connecting(
                     method, url, timeout, connect, content, tally
                 )
-            except (httpx.ConnectTimeout, httpx.ConnectError) as error:
-                failure = (
-                    ProviderTimeout
-                    if isinstance(error, httpx.TimeoutException)
-                    else ProviderUnavailable
-                )
-                kind = type(error).__name__
-                if connect[1] > 1:
-                    break  # the connect tries were the retry
-            except httpx.TimeoutException as error:
-                failure = ProviderTimeout
-                kind = type(error).__name__
-            except httpx.HTTPError:
-                failure = ProviderUnavailable
-                kind = None
+            except _ConnectTriesExhausted as exhausted:
+                failure, kind = _classify(exhausted.error)
+                break  # the connect tries were the retry
+            except httpx.HTTPError as error:
+                failure, kind = _classify(error)
             else:
                 if response.status_code not in RETRY_STATUSES:
                     return _decode(response)
-                failure = ProviderUnavailable
-                kind = None
+                failure, kind = ProviderUnavailable, None
             if not retries_left:
                 break
             retries_left -= 1
@@ -192,29 +202,47 @@ class Outbound:
         method: str,
         url: str,
         timeout: float,
-        connect: tuple[float, int],
+        connect: ConnectPolicy,
         content: dict[str, Any],
         tally: _Tally,
     ) -> httpx.Response:
-        """One try's request, with up to `connect[1]` tries to open its connection; the last
-        connect error is raised. Each try takes its own slot, so the clock in `tally` starts
-        when the call first runs, not while it queues."""
-        connect_timeout, connect_attempts = connect
-        for attempt in range(connect_attempts):
+        """One try's request, with up to `connect.attempts` tries to open its connection.
+
+        Each try takes its own slot, so the clock in `tally` starts when the call first runs, not
+        while it queues. A refused connection or a failed name lookup pauses before the next try;
+        a connect timeout needs no pause. After the last try, a policy of several tries raises
+        `_ConnectTriesExhausted`, and a policy of one raises the connect error itself.
+        """
+        for attempt in range(connect.attempts - 1):
             try:
-                async with self._slots:
-                    if tally.started is None:
-                        tally.started = time.monotonic()
-                    tally.attempts += 1
-                    return await self._send(method, url, timeout, connect_timeout, content)
-            except httpx.ConnectTimeout:
-                if attempt == connect_attempts - 1:
-                    raise
+                return await self._try(method, url, timeout, connect, content, tally)
             except httpx.ConnectError:
-                if attempt == connect_attempts - 1:
-                    raise
-                await _pause(CONNECT_ERROR_PAUSES_S[attempt])
-        raise AssertionError("connect_attempts must be at least 1")
+                await self._sleep(
+                    CONNECT_ERROR_PAUSES_S[min(attempt, len(CONNECT_ERROR_PAUSES_S) - 1)]
+                )
+            except httpx.ConnectTimeout:
+                pass
+        try:
+            return await self._try(method, url, timeout, connect, content, tally)
+        except (httpx.ConnectTimeout, httpx.ConnectError) as error:
+            if connect.attempts == 1:
+                raise
+            raise _ConnectTriesExhausted(error) from None
+
+    async def _try(
+        self,
+        method: str,
+        url: str,
+        timeout: float,
+        connect: ConnectPolicy,
+        content: dict[str, Any],
+        tally: _Tally,
+    ) -> httpx.Response:
+        async with self._slots:
+            if tally.started is None:
+                tally.started = time.monotonic()
+            tally.attempts += 1
+            return await self._send(method, url, timeout, connect.timeout_s, content)
 
     async def _send(
         self, method: str, url: str, timeout: float, connect_timeout: float, content: dict[str, Any]

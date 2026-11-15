@@ -15,17 +15,15 @@ from routing import Point
 from weather import ForecastSeries
 
 from .errors import MalformedResponse, ProviderUnavailable
-from .outbound import Outbound, UpstreamBadRequest
+from .outbound import ConnectPolicy, Outbound, UpstreamBadRequest
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 CALL_TIMEOUT_S = 12.0
 """A call of 150 locations takes about half a second (measured in `live_weather_check.py`), so a
 call still running after this is stuck; the weather request's own deadline bounds the rest."""
-CONNECT_TIMEOUT_S = 3.0
-CONNECT_ATTEMPTS = 4
+CONNECT = ConnectPolicy(timeout_s=3.0, attempts=4)
 """Connections from the host's shared address are sometimes dropped (hosted log, 2026-11-15: a
-`ConnectTimeout` after 20 s), so a connect is tried 4 times at 3 s, at most 12 s in all, and a
-call that never connects is not retried again."""
+`ConnectTimeout` after 20 s), so a connect is tried 4 times at 3 s, at most 12 s in all."""
 RATE_LIMIT_WINDOW_S = 60.0
 LOCATIONS_PER_WINDOW = 600
 """The free tier's limit, per IP: this many locations in one window (a call of N locations costs
@@ -95,8 +93,7 @@ async def request_forecasts(outbound: Outbound, points: Sequence[Point]) -> RawF
             form,
             timeout=CALL_TIMEOUT_S,
             headers={"User-Agent": USER_AGENT},
-            connect_timeout=CONNECT_TIMEOUT_S,
-            connect_attempts=CONNECT_ATTEMPTS,
+            connect=CONNECT,
         )
     except UpstreamBadRequest:
         raise ProviderUnavailable from None
