@@ -2,15 +2,20 @@
 
 A web app that recommends the safest of up to three truck routes between two places. For each route it reads the weather along the road at the time the truck will be there, applies the assessment's risk and load-weight rules, and ranks the routes on weather risk first and travel time second. Full-stack take-home: React frontend, Django backend.
 
-**Live app: <https://spotter-truck-routing-kxsl.onrender.com>.** It runs on Render's free plan, which puts the service to sleep after 15 minutes without requests, so the first visit can take about a minute. Hosting details are in [docs/architecture.md](docs/architecture.md#hosting).
+**Live app: <https://spotter-truck-routing-kxsl.onrender.com>.** It runs on Render's free plan, which puts the service to sleep after 15 minutes without requests, so the first visit can take about a minute. Hosting is described in [docs/hosting.md](docs/hosting.md).
 
 ## Quickstart
 
-From a clone to a planned trip on your machine. You need [uv](https://docs.astral.sh/uv/), [Node.js](https://nodejs.org/) 22.12+, 24 or 26+, [pnpm](https://pnpm.io/) 9.15.4 and `make` (details in [Prerequisites](#prerequisites)).
+From a clone to a planned trip on your machine.
 
-1. **Get a TomTom key** (routes). Register at [my.tomtom.com](https://my.tomtom.com/); a key named "My first API key" is created with the account and listed under [API & SDK Keys](https://my.tomtom.com/keys). TomTom's [free tier](https://docs.tomtom.com/pricing) needs no credit card.
-2. **Get a Geoapify key** (address search). Sign up at [myprojects.geoapify.com](https://myprojects.geoapify.com/), create a project and copy its API key. The [free plan](https://www.geoapify.com/pricing/) gives 3,000 credits a day and needs no credit card.
-3. **Put both keys in `.env`** in the repository root:
+1. **Install the tools.**
+   - [uv](https://docs.astral.sh/uv/getting-started/installation/) (for example `brew install uv`); it installs Python 3.13 and the backend dependencies itself.
+   - [Node.js](https://nodejs.org/) 22.12+, 24 or 26+ (Vite and Vitest do not support 23 and 25).
+   - pnpm 9.15.4, pinned in `frontend/package.json`: run `corepack enable` and corepack uses the pinned version. Node 22 and 24 ship corepack; on later versions install it first with `npm install -g corepack`.
+   - `make`.
+2. **Get a TomTom key** (routes). Register at [my.tomtom.com](https://my.tomtom.com/); a key named "My first API key" is created with the account and listed under [API & SDK Keys](https://my.tomtom.com/keys). TomTom's [free tier](https://docs.tomtom.com/pricing) needs no credit card.
+3. **Get a Geoapify key** (address search). Sign up at [myprojects.geoapify.com](https://myprojects.geoapify.com/), create a project and copy its API key. The [free plan](https://www.geoapify.com/pricing/) gives 3,000 credits a day and needs no credit card.
+4. **Put both keys in `.env`** in the repository root:
 
    ```sh
    cp .env.example .env
@@ -20,7 +25,7 @@ From a clone to a planned trip on your machine. You need [uv](https://docs.astra
    ```
 
    The weather source, [Open-Meteo](https://open-meteo.com/), needs no key. Nothing else in `.env` is needed locally.
-4. **Install and run:**
+5. **Install and run:**
 
    ```sh
    make install     # backend and frontend dependencies, once
@@ -28,9 +33,11 @@ From a clone to a planned trip on your machine. You need [uv](https://docs.astra
    make frontend    # terminal 2: React app on http://localhost:5173
    ```
 
-5. **Open <http://localhost:5173>,** type an origin and a destination, a load, and plan.
+6. **Open <http://localhost:5173>,** type an origin and a destination, a load, and plan.
 
-Free tiers work: the app was built and is hosted on the free tiers of all three providers. TomTom's free tier is 20,000 routing requests a month, and one plan costs one to seven TomTom calls ([how routes are made](docs/architecture.md#how-routes-are-made)).
+Free tiers work: the app was built and is hosted on the free tiers of all three providers. TomTom's free tier is 20,000 routing requests a month. One plan makes one to seven TomTom calls (the base call and up to six via cities), and each call is retried once after a timeout or a server error, so a plan sends at most 14 requests ([how routes are made](docs/architecture.md#how-routes-are-made)).
+
+The browser only talks to the Vite dev server, which forwards `/api` requests to Django, so there is one origin and no CORS configuration. Without a provider key, that endpoint answers 503 with "A data provider is not configured on this server." and the page says that the address search or the service is not set up; the rest of the app works. While the backend runs, the interactive API docs are at <http://127.0.0.1:8000/api/docs> (Swagger UI loads from a CDN, so the browser needs internet access). To run the app the way it is deployed, as one server or one container, see [docs/hosting.md](docs/hosting.md#run-it-as-deployed).
 
 ## What the app does
 
@@ -52,7 +59,7 @@ The layout is built up from a phone, with a bottom sheet, and uses the room on w
 | Weather every 10 / 25 / 50 miles at the truck's ETA | Checkpoints and ETAs in [backend/routing/checkpoints.py](backend/routing/checkpoints.py); the forecast read at each ETA in [backend/weather/series.py](backend/weather/series.py); [docs/architecture.md](docs/architecture.md#weather) |
 | Risk from the provided risk and load rules | [backend/risk_rules/levels.py](backend/risk_rules/levels.py), explained in [docs/logic.md](docs/logic.md#1-risk-level-at-one-checkpoint) |
 | Recommend the best route, balancing risk and travel time | [backend/risk_rules/ranking.py](backend/risk_rules/ranking.py), explained in [docs/logic.md](docs/logic.md#3-ranking) |
-| Routes, checkpoints, risk levels, ETAs and route summaries on a map | The map in [frontend/src/map/](frontend/src/map/); route cards and checkpoint list in [frontend/src/panel/](frontend/src/panel/) |
+| Routes, checkpoints, risk levels, ETAs and route summaries on a map | The map in [frontend/src/map/](frontend/src/map/); route cards, chips and checkpoint list in [frontend/src/panel/](frontend/src/panel/) |
 | Weather heatmap along the corridor with a 0–48 hour slider | Corridor grid in [backend/weather/grid.py](backend/weather/grid.py); slider in [frontend/src/timeline/](frontend/src/timeline/); smoothness measured in [docs/performance.md](docs/performance.md#the-map-and-the-slider) |
 | Hosted application | <https://spotter-truck-routing-kxsl.onrender.com> |
 
@@ -69,13 +76,13 @@ The rules are in [docs/logic.md](docs/logic.md), and the core code is four files
 [docs/assumptions.md](docs/assumptions.md) lists every assumption with its reason. The ones that shape what a reviewer sees:
 
 - **Trip limits.** Departure from 15 minutes ago to 48 hours ahead, cargo above 0 and at most 47,000 lb, every time shown in the origin's time zone ([details](docs/assumptions.md#trip-request)).
-- **Routes stay inside the US.** A route is kept only when every country section TomTom reports is the US or a US territory (Puerto Rico, the US Virgin Islands) ([details](docs/assumptions.md#routes-and-checkpoints)).
+- **Routes stay inside the US,** its territories included ([details](docs/assumptions.md#routes-and-checkpoints)).
 - **TomTom is sent the gross weight,** the cargo plus an assumed 33,000 lb empty rig ([details](docs/assumptions.md#trip-request)).
 - **Rest breaks are an optional extra, off by default;** the switch adds the federal hours-of-service stops to the ETAs ([readings](docs/assumptions.md#when-rest-breaks-are-on), [rule](docs/logic.md#4-rest-breaks-when-they-are-on)).
 
 ## Known limitations
 
-- **The weather source is free and limited per IP address.** Open-Meteo's free tier allows 600 locations a minute, and the host's address is shared with other users, so a trip can wait for a minute window or fail with a 503. 10-mile spacing on a long trip can take about a minute ([quota](docs/assumptions.md#quota-and-cache)).
+- **The weather source is free and limited per IP address,** and the host's address is shared with other users, so a trip can wait for Open-Meteo's minute window or fail with a 503. 10-mile spacing on a long trip can take about a minute ([quota](docs/assumptions.md#quota-and-cache)).
 - **Connections from the host to Open-Meteo sometimes fail.** The hosted log has shown a weather call that timed out while connecting; the suspected cause is the host's shared outbound address. The app retries the connection quickly, and a weather request that still fails answers 504 or 502 ([deadline](docs/architecture.md#quota-waiting-and-deadline)).
 - **No route between Alaska and the lower 48,** or for any trip with no road route inside the US: the app shows "No truck route found" and says that routes stay inside the US, rather than show a route through Canada.
 - **Sometimes fewer than three routes.** When TomTom and up to six via cities give no distinct third route, the app shows the routes it has with a note saying why ([how routes are made](docs/architecture.md#how-routes-are-made)).
@@ -85,44 +92,11 @@ The rules are in [docs/logic.md](docs/logic.md), and the core code is four files
 
 ## Measured performance
 
-[docs/performance.md](docs/performance.md) has the method, the results and what was not measured, with local and hosted runs labelled.
+[docs/performance.md](docs/performance.md) has the method, the results with the build and date of each, and what was not measured.
 
-- **Slider:** dragging recolours only the cells whose level changed and makes no request; a WebGL compile that caused one slow frame per drag is moved out of the drag ([results](docs/performance.md#the-map-and-the-slider)).
-- **Planning a trip:** on the hosted app a cross-country trip at 25-mile spacing showed its results about 20 s after the click, and one at 10-mile spacing about 40 s, including a wait for Open-Meteo's minute window. These runs, and the local ones, predate the US-only routing and the gross weight sent to TomTom ([hosted](docs/performance.md#hosted-render-free-plan-2026-11-14), [local](docs/performance.md#planning-a-trip)).
-- **Build size:** the form renders from the entry chunk; the map and its worker load after it ([sizes](docs/performance.md#build-size)).
-
-## Run it locally
-
-### Prerequisites
-
-| Tool | Version | Note |
-|---|---|---|
-| [uv](https://docs.astral.sh/uv/) | any recent | uv manages the Python version (3.13) and the backend dependencies |
-| [Node.js](https://nodejs.org/) | 22.12+, 24 or 26+ | Vite and Vitest do not support 23 and 25 |
-| [pnpm](https://pnpm.io/) | 9.15.4 | pinned in `frontend/package.json` |
-| make | any | |
-| [Docker](https://www.docker.com/) | any recent | only for the image |
-
-### Development servers
-
-The [Quickstart](#quickstart) commands start the API and the Vite dev server. The browser only talks to Vite, which forwards `/api` requests to Django, so there is one origin and no CORS configuration. Without a provider key the page says that the address search or the service is not set up. While the backend runs, the interactive API docs are at <http://127.0.0.1:8000/api/docs> (Swagger UI loads from a CDN, so the browser needs internet access).
-
-### Configuration
-
-Settings come from environment variables, optionally from a git-ignored `.env` in the repository root; [.env.example](.env.example) lists them. `make backend` turns on debug mode itself, so local development needs no Django setting. The routes endpoint needs `TOMTOM_API_KEY` and address search needs `GEOAPIFY_API_KEY`; without its key an endpoint answers 503 with a clear message and the rest of the app works. With debug off (the default) `DJANGO_SECRET_KEY` must be set. Tests ignore `.env` and use dummy values.
-
-### One origin, as deployed
-
-```sh
-make serve       # build the frontend, then serve it and the API on http://127.0.0.1:8000
-make smoke       # in another terminal: the deploy smoke check against that server
-
-make image       # build the container image (needs Docker)
-docker run --rm -e DJANGO_SECRET_KEY=any-value -e DJANGO_ALLOWED_HOSTS=localhost -e PORT=8000 -p 8000:8000 spotter-truck-routing
-make smoke BASE_URL=http://localhost:8000   # the same check against the container
-```
-
-`make serve PORT=9000` and `make smoke PORT=9000` use another port; `make smoke BASE_URL=https://host.example` checks any other address. The container's check names `localhost` because the container allows only the hosts in `DJANGO_ALLOWED_HOSTS`, and `make smoke`'s default address, `127.0.0.1`, is refused with a 400. The check makes no provider call as long as no provider keys are configured: its last step expects the address search to answer 503 because its key is missing. With keys set, add `SMOKE_ARGS=--keys-set`, which skips that step. The container needs no `.env` and no provider keys to start; pass keys with `-e` to plan trips in it. The image runs one server process on purpose, because the forecast cache is shared by every request ([image and serving](docs/architecture.md#hosting)).
+- **Slider** (headless Chromium, software WebGL, phone size). A 12-drag run had a median frame gap of 16.7 ms (95th percentile 16.7 to 16.8 ms) and no request during a drag. After a fix that moves a WebGL compile out of the drag, 22 of 34 drags had no frame over 50 ms, with the largest gap 17 to 34 ms. The other 12 were at a departure of :45 under a 4x CPU slowdown on a loaded machine, and two of them showed one gap each, of 76 and 82 ms. A probe of the current fix showed one 68 ms gap at 4x with no compile behind it. None of these three gaps was traced, and in 3 of about 26 loaded runs another layer's program compiled mid-drag. On the hosted build of 2026-11-14, one drag per rate had no frame over 50 ms (largest gap 41.8 ms) ([results](docs/performance.md#the-map-and-the-slider)).
+- **Planning a trip** (local, on the current code). Routes for seven test trips took 1.8 to 11.9 s; weather for Seattle to Miami at 25-mile spacing (518 forecast locations) took 0.83 s cold and 0.09 s from the cache. On the hosted build of 2026-11-14 a cross-country trip showed its results about 20 s after the click at 25-mile spacing and about 40 s at 10-mile spacing, including a wait for Open-Meteo's minute window ([results](docs/performance.md#planning-a-trip)).
+- **Build size:** the form renders from a 207 kB (gzip) entry; the map chunk and its worker load after it ([sizes](docs/performance.md#build-size)).
 
 ## Tests and checks
 
@@ -132,13 +106,13 @@ make check   # the tests, a check that the generated API types are current, ruff
 make types   # regenerate frontend/src/api/schema.d.ts from the backend's OpenAPI schema
 ```
 
-Tests never make live calls: the providers are mocked, and the settings used by tests hold dummy keys. The build is part of `make check` because it is the only check that sees the map's worker file and its separately loaded chunk. The [Makefile](Makefile) is the one place that defines these commands.
+Tests never make live calls: the providers are mocked, and the settings used by tests hold dummy keys. The build is part of `make check` because it is the only check that sees the map's worker file and its separately loaded chunk. The [Makefile](Makefile) is the one place that defines these commands. What the tests cover is in [docs/architecture.md](docs/architecture.md#what-the-tests-cover).
 
 Four scripts in `backend/` run the real providers and are not part of `make check`, because they spend quota:
 
 | Script | What it does | Needs |
 |---|---|---|
-| `live_check.py` | the routes endpoint over seven test trips (about 12 TomTom calls) | `TOMTOM_API_KEY` |
+| `live_check.py` | the routes endpoint over seven test trips and one unroutable probe (13 TomTom calls in the last run) | `TOMTOM_API_KEY` |
 | `live_address_check.py` | address search over 8 queries (up to 10 Geoapify calls: a city search with no match is followed by an untyped search) | `GEOAPIFY_API_KEY` |
 | `live_weather_report_check.py` | one cross-country trip: routes (1 TomTom call), then weather, repeated to show the cache is used (about 500 Open-Meteo locations) | `TOMTOM_API_KEY` |
 | `live_weather_check.py` | Open-Meteo's quota behaviour (about 1,650 locations) | no key |
@@ -148,6 +122,10 @@ Four scripts in `backend/` run the real providers and are not part of `make chec
 ```sh
 uv --directory backend run python live_check.py /tmp/live-check.json
 ```
+
+## Configuration
+
+Settings come from environment variables, optionally from a git-ignored `.env` in the repository root; [.env.example](.env.example) lists them. `make backend` turns on debug mode itself, so local development needs no Django setting. The routes endpoint needs `TOMTOM_API_KEY` and address search needs `GEOAPIFY_API_KEY`. With debug off (the default) `DJANGO_SECRET_KEY` must be set. Tests ignore `.env` and use dummy values.
 
 ## Future work
 
@@ -163,7 +141,8 @@ backend/    Django + Django Ninja API on uvicorn (ASGI), Python 3.13, managed by
             weather/ holds forecast series, sampling and the corridor grid (plain Python)
             providers/ holds outbound HTTP to TomTom, Geoapify and Open-Meteo and the shared request policy
 frontend/   React + TypeScript + Vite + Material UI app, managed by pnpm
-docs/       architecture.md, logic.md (the risk and ranking rules), assumptions.md, performance.md
+docs/       architecture.md, api.md, logic.md (the risk and ranking rules), assumptions.md,
+            performance.md, hosting.md
 Makefile    install / run / test / check / serve / image / smoke commands
 scripts/    smoke_check.py, the deploy smoke check (standard library only)
 Dockerfile  the one-container image; render.yaml is the host config
