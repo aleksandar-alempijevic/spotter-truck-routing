@@ -264,3 +264,38 @@ async def test_only_a_429_carries_a_retry_delay(provider_mock, status):
             await outbound.get_json(URL, {}, timeout=5)
 
     assert caught.value.retry_after_s is None
+
+
+@pytest.mark.parametrize(
+    ("error", "kind", "attempts", "retry"),
+    [
+        (httpx.ReadTimeout("x"), "ReadTimeout", 2, True),
+        (httpx.ConnectTimeout("x"), "ConnectTimeout", 1, False),
+    ],
+)
+async def test_a_call_that_ends_in_a_timeout_logs_host_kind_and_attempts_only(
+    provider_mock, caplog, error, kind, attempts, retry
+):
+    url = "https://api.tomtom.com/route/12.34,-56.78/json"
+    provider_mock.get(host="api.tomtom.com").mock(side_effect=error)
+
+    with caplog.at_level("WARNING", logger="providers.outbound"):
+        async with Outbound() as outbound:
+            with pytest.raises(ProviderTimeout):
+                await outbound.get_json(url, {"key": "SECRET"}, timeout=5, retry=retry)
+
+    assert [r.getMessage() for r in caplog.records] == [
+        f"provider call timed out: host=api.tomtom.com, kind={kind}, attempts={attempts}, "
+        "elapsed=0.0 s"
+    ]
+
+
+async def test_a_call_that_fails_another_way_logs_no_timeout(provider_mock, caplog):
+    provider_mock.get(URL).respond(503)
+
+    with caplog.at_level("WARNING", logger="providers.outbound"):
+        async with Outbound() as outbound:
+            with pytest.raises(ProviderUnavailable):
+                await outbound.get_json(URL, {}, timeout=5)
+
+    assert caplog.records == []

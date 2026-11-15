@@ -8,9 +8,12 @@ provider-neutral error without a URL or upstream body, and the project's `LOGGIN
 """
 
 import asyncio
+import logging
 import math
+import time
 from types import TracebackType
 from typing import Any, Self
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -20,6 +23,8 @@ from .errors import (
     ProviderTimeout,
     ProviderUnavailable,
 )
+
+logger = logging.getLogger(__name__)
 
 MAX_CONCURRENT_CALLS = 4
 """Calls in flight at once within one planning request; further calls wait their turn."""
@@ -96,18 +101,31 @@ class Outbound:
     async def _call(
         self, method: str, url: str, timeout: float, retry: bool, **content: Any
     ) -> Any:
-        for _ in range(2 if retry else 1):
+        started = time.monotonic()
+        attempts = 0
+        while attempts < (2 if retry else 1):
+            attempts += 1
             try:
                 async with self._slots:
                     response = await self._send(method, url, timeout, content)
-            except httpx.TimeoutException:
+            except httpx.TimeoutException as error:
                 failure = ProviderTimeout
+                kind = type(error).__name__
             except httpx.HTTPError:
                 failure = ProviderUnavailable
             else:
                 if response.status_code not in RETRY_STATUSES:
                     return _decode(response)
                 failure = ProviderUnavailable
+        if failure is ProviderTimeout:
+            # The host only: the URL's query carries the key, and the path its coordinates.
+            logger.warning(
+                "provider call timed out: host=%s, kind=%s, attempts=%d, elapsed=%.1f s",
+                urlsplit(url).hostname,
+                kind,
+                attempts,
+                time.monotonic() - started,
+            )
         raise failure from None
 
     async def _send(

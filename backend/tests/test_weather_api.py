@@ -619,105 +619,19 @@ async def test_a_passed_deadline_is_a_504_and_nothing_is_cached(provider_mock, r
     assert len(runtime.cache) == 0
 
 
-async def test_a_call_that_times_out_twice_logs_its_cause_and_counts(provider_mock, caplog):
-    provider_mock.post(host="api.open-meteo.com").mock(side_effect=httpx.ReadTimeout("x"))
-
-    with caplog.at_level("WARNING", logger="api.weather_report"):
-        response = await post(request(route()))
-
-    assert response.status_code == 504
-    assert [r.getMessage() for r in caplog.records if r.name == "api.weather_report"] == [
-        "weather: timed out, cause=call, elapsed=0.0 s, locations=6, chunks=1, "
-        "refusals waited=0, longest wait=0 s"
-    ]
-
-
-async def test_a_passed_deadline_logs_its_cause_and_the_waits_before_it(
-    provider_mock, runtime, sleeps, caplog
-):
-    refusals = [httpx.Response(429, headers={"Retry-After": "0"})]
-
-    async def refuse_once_then_hang(request):
-        if refusals:
-            return refusals.pop()
+async def test_a_passed_deadline_logs_one_warning(provider_mock, runtime, caplog):
+    async def hang(request):
         await asyncio.sleep(30)
 
-    provider_mock.post(host="api.open-meteo.com").mock(side_effect=refuse_once_then_hang)
-    # The wait is 1 s (the pad); the deadline's real timer was set at the start, so the hang ends
-    # after the budget in real seconds.
-    runtime.budget_s = 1.05
+    provider_mock.post(host="api.open-meteo.com").mock(side_effect=hang)
+    runtime.budget_s = 0.01
 
     with caplog.at_level("WARNING", logger="api.weather_report"):
-        response = await post(request(route()))
-
-    assert response.status_code == 504
-    assert sleeps == [1.0]
-    assert [r.getMessage() for r in caplog.records if r.name == "api.weather_report"] == [
-        "weather: timed out, cause=deadline, elapsed=1.0 s, locations=6, chunks=1, "
-        "refusals waited=1, longest wait=1 s"
-    ]
-
-
-async def test_the_timeout_line_gives_the_longest_wait_of_two_chunks_not_their_sum(
-    provider_mock, runtime, sleeps, monkeypatch, caplog
-):
-    monkeypatch.setattr(openmeteo, "MAX_LOCATIONS_PER_CALL", 3)  # the route's 6 cells: 2 chunks
-    delays = {}
-    seen = {}
-
-    async def refuse_each_chunk_then_time_out(request):
-        first = parse_qs(request.content.decode())["latitude"][0].split(",")[0]
-        seen[first] = seen.get(first, 0) + 1
-        if seen[first] == 1:
-            delays.setdefault(first, str(5 + 15 * len(delays)))  # Retry-After 5, then 20
-            return httpx.Response(429, headers={"Retry-After": delays[first]})
-        await until(lambda: len(sleeps) == 2)  # both chunks have waited
-        raise httpx.ReadTimeout("x")
-
-    provider_mock.post(host="api.open-meteo.com").mock(side_effect=refuse_each_chunk_then_time_out)
-
-    with caplog.at_level("WARNING", logger="api.weather_report"):
-        response = await post(request(route()))
-
-    assert response.status_code == 504
-    assert sorted(sleeps) == [6.0, 21.0]
-    assert [r.getMessage() for r in caplog.records if r.name == "api.weather_report"] == [
-        "weather: timed out, cause=call, elapsed=27.0 s, locations=6, chunks=2, "
-        "refusals waited=2, longest wait=21 s"
-    ]
-
-
-async def test_a_wait_cut_short_by_the_deadline_is_not_counted(
-    provider_mock, runtime, monkeypatch, caplog
-):
-    async def never_ends(seconds):
-        await asyncio.sleep(30)
-
-    monkeypatch.setattr(weather_report, "RETRY_PAD_S", 0.01)
-    runtime.sleep = never_ends
-    runtime.budget_s = 0.05
-    provider_mock.post(host="api.open-meteo.com").respond(429, headers={"Retry-After": "0"})
-
-    with caplog.at_level("WARNING", logger="api.weather_report"):
-        response = await post(request(route()))
-
-    assert response.status_code == 504
-    assert [r.getMessage() for r in caplog.records if r.name == "api.weather_report"] == [
-        "weather: timed out, cause=deadline, elapsed=0.0 s, locations=6, chunks=1, "
-        "refusals waited=0, longest wait=0 s"
-    ]
-
-
-async def test_the_timeout_line_carries_no_key_url_or_coordinate(provider_mock, caplog):
-    provider_mock.post(host="api.open-meteo.com").mock(side_effect=httpx.ReadTimeout("x"))
-
-    with caplog.at_level("DEBUG"):
         await post(request(route()))
 
-    line = next(r.getMessage() for r in caplog.records if "timed out" in r.getMessage())
-    assert "http" not in line
-    assert "40." not in line
-    assert "-100" not in line
+    assert [r.getMessage() for r in caplog.records if r.name == "api.weather_report"] == [
+        "weather: deadline passed after 0.01 s"
+    ]
 
 
 async def test_a_malformed_answer_is_a_502(provider_mock):

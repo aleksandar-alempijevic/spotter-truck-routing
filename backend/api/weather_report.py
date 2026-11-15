@@ -69,16 +69,6 @@ LEVEL_CODES = list(Level)
 
 
 @dataclass(slots=True)
-class _Waits:
-    """The refusals one request's chunks waited out (each counted once its wait is over), for the
-    line logged when it times out. Chunks wait side by side, so the longest single wait is kept,
-    not a sum."""
-
-    refusals: int = 0
-    longest_s: float = 0.0
-
-
-@dataclass(slots=True)
 class Runtime:
     """What the use case reads from outside: the clock, the way to sleep, the forecast cache and
     the limits. Production uses `default_runtime()`; tests hand in their own."""
@@ -113,8 +103,7 @@ async def build_report(
     a passed deadline fails the request, and what was fetched stays cached for the retry.
     """
     hour = utc_hour(runtime.now())
-    started = runtime.time()
-    deadline = started + runtime.budget_s
+    deadline = runtime.time() + runtime.budget_s
 
     positions = [[(c.lat, c.lon) for c in route.checkpoints] for route in routes]
     stop_positions = [(s.lat, s.lon) for route in routes for s in route.stops]
@@ -144,7 +133,7 @@ async def build_report(
             series_by_cell[cell] = cached
     logger.info("weather: %d locations, %d cached", len(plan.cells), len(series_by_cell))
     if missing:
-        series_by_cell |= await _fetch(missing, started, deadline, runtime)
+        series_by_cell |= await _fetch(missing, deadline, runtime)
 
     body = await asyncio.to_thread(
         _assemble, routes, plan, series_by_cell, hour, load_lb, spacing_miles
@@ -154,38 +143,22 @@ async def build_report(
 
 
 async def _fetch(
-    cells: list[Cell], started: float, deadline: float, runtime: Runtime
+    cells: list[Cell], deadline: float, runtime: Runtime
 ) -> dict[Cell, ForecastSeries]:
     """Fetch the cells in chunks, all at once under the outbound cap, caching each chunk as it
-    arrives. `started` and `deadline` are instants on `runtime.time`.
+    arrives. `deadline` is an instant on `runtime.time`.
 
     When one chunk fails the others' unfinished calls are cancelled, but a chunk whose response
     has already arrived is still parsed and cached, and this waits for that (parse time only, no
     network) before the error goes out, so a retry fetches only what is missing.
     """
     fetched: dict[Cell, ForecastSeries] = {}
-    waits = _Waits()
     chunks = [
         cells[i : i + openmeteo.MAX_LOCATIONS_PER_CALL]
         for i in range(0, len(cells), openmeteo.MAX_LOCATIONS_PER_CALL)
     ]
     storing: set[asyncio.Future[None]] = set()
     """Parse-and-cache tasks whose chunk was cancelled before it saw the result."""
-
-    def log_timeout(cause: str) -> None:
-        """One line saying why the request timed out: "call" when a provider call ended in a
-        timeout after its retry, "deadline" when the request's own deadline passed. Counts and
-        seconds only. A warning, so it shows under the root logger's level too."""
-        logger.warning(
-            "weather: timed out, cause=%s, elapsed=%.1f s, locations=%d, chunks=%d, "
-            "refusals waited=%d, longest wait=%.0f s",
-            cause,
-            runtime.time() - started,
-            len(cells),
-            len(chunks),
-            waits.refusals,
-            waits.longest_s,
-        )
 
     async def store(chunk: list[Cell], raw: openmeteo.RawForecasts) -> None:
         series = await asyncio.to_thread(openmeteo.parse_forecasts, raw)
@@ -194,7 +167,7 @@ async def _fetch(
             fetched[cell] = one_series
 
     async def one(outbound: Outbound, chunk: list[Cell]) -> None:
-        raw = await _request_chunk(outbound, chunk, deadline, runtime, waits)
+        raw = await _request_chunk(outbound, chunk, deadline, runtime)
         # Its own task, so cancelling this chunk after its response arrived does not stop it.
         stored = asyncio.ensure_future(store(chunk, raw))
         storing.add(stored)
@@ -218,11 +191,8 @@ async def _fetch(
                     for task in tasks:
                         task.cancel()
                     await asyncio.gather(*tasks, return_exceptions=True)
-    except ProviderTimeout:
-        log_timeout("call")
-        raise
     except TimeoutError:
-        log_timeout("deadline")
+        logger.warning("weather: deadline passed after %g s", runtime.budget_s)
         raise ProviderTimeout from None
     finally:
         await _settle(storing)
@@ -238,7 +208,7 @@ async def _settle(storing: set[asyncio.Future[None]]) -> None:
 
 
 async def _request_chunk(
-    outbound: Outbound, chunk: list[Cell], deadline: float, runtime: Runtime, waits: _Waits
+    outbound: Outbound, chunk: list[Cell], deadline: float, runtime: Runtime
 ) -> openmeteo.RawForecasts:
     """One chunk's raw answers, waiting out a refusal when the wait is short and fits the deadline.
 
@@ -257,8 +227,6 @@ async def _request_chunk(
                 raise
             logger.info("weather: refused, waiting %.0f s", wait)
             await runtime.sleep(wait)
-            waits.refusals += 1
-            waits.longest_s = max(waits.longest_s, wait)
 
 
 def _wait_for(delay_s: float | None, deadline: float, runtime: Runtime) -> float | None:
