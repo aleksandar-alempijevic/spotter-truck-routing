@@ -72,7 +72,9 @@ GEOAPIFY_API_KEY = os.environ.get("GEOAPIFY_API_KEY", "")
 # The root logger prints warnings and nothing below them, so the app's own packages get a console
 # handler at INFO: the host's log shows what a request did, not only what went wrong. The providers
 # take their API keys in the query string, and httpx logs every request URL at INFO, so its loggers
-# stay at WARNING whatever the root level is. Django's own loggers keep their defaults.
+# stay at WARNING whatever the root level is. Django's own loggers keep their defaults. A new
+# top-level package that logs must be added to `APP_LOGGERS`, or its INFO lines stay hidden (a test
+# lists the backend's packages). An app log line carries no URL, key or coordinate.
 APP_LOGGERS = ("api", "config", "providers", "risk_rules", "routing", "weather")
 LOGGING = {
     "version": 1,

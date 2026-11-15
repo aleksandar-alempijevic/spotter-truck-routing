@@ -41,6 +41,8 @@ def test_app_info_lines_reach_the_console_and_http_client_lines_do_not():
         "logging.getLogger('providers.outbound').info('provider-line')\n"
         "logging.getLogger('httpx').info('httpx-line')\n"
         "logging.getLogger('httpcore.connection').info('httpcore-line')\n"
+        "for name in ('httpx', 'httpcore'):\n"
+        "    print(name, logging.getLevelName(logging.getLogger(name).getEffectiveLevel()))\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", code],
@@ -57,5 +59,22 @@ def test_app_info_lines_reach_the_console_and_http_client_lines_do_not():
     assert result.returncode == 0, result.stderr
     assert "INFO api.weather_report: app-line" in result.stderr
     assert "INFO providers.outbound: provider-line" in result.stderr
+    assert result.stdout.splitlines() == ["httpx WARNING", "httpcore WARNING"]
     assert "httpx-line" not in result.stderr
     assert "httpcore-line" not in result.stderr
+
+
+def test_every_backend_package_that_has_code_logs_at_info():
+    """A new top-level package is hidden from the host's log until it is in `APP_LOGGERS`."""
+    from config.base import APP_LOGGERS
+
+    packages = {
+        path.name
+        for path in BACKEND_DIR.iterdir()
+        if path.is_dir()
+        and not path.name.startswith((".", "__"))
+        and path.name != "tests"
+        and any(path.rglob("*.py"))
+    }
+
+    assert packages <= set(APP_LOGGERS)
