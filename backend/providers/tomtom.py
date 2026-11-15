@@ -22,8 +22,8 @@ EMPTY_RIG_LB = 33_000
 """Assumed weight of the empty tractor and trailer. The driver enters the cargo only; TomTom
 checks the road's weight limits against the gross weight."""
 
-CANADA = "CAN"
-"""TomTom's ISO 3166-1 alpha-3 country code for Canada, as a country section reports it."""
+USA = "USA"
+"""TomTom's ISO 3166-1 alpha-3 country code for the US, as a country section reports it."""
 
 NO_ROUTE_CODES = {"MAP_MATCHING_FAILURE", "NO_ROUTE_FOUND"}
 """TomTom's 400 error codes that mean the points cannot be joined by a road."""
@@ -95,7 +95,7 @@ async def calculate_routes(
     """Truck routes from origin to destination, optionally through one via point.
 
     Routes stay inside the US: the request asks TomTom to avoid border crossings, which it may
-    ignore, so a route whose country sections include Canada, or are missing, is dropped here too.
+    ignore, so a route with any country section outside the US, or with none, is dropped here too.
     TomTom may return fewer routes than `alternatives` + 1. Raises `NoRouteFound` when it
     returns none, or none that is kept, and `MalformedResponse` when a route breaks the contract
     `routing.Route` needs.
@@ -156,14 +156,14 @@ def _parse_routes(body: Any, via: Via | None) -> list[Route]:
 
 
 def _is_kept(route: _Route) -> bool:
-    """Keep a route only when its country sections are all named and none is Canada.
+    """Keep a route only when it has country sections and every one is the United States.
 
-    A route without country sections, or with a section without a code, cannot be shown to
-    avoid Canada, so it is not kept.
+    A route without country sections, or with a section without a code, cannot be shown to stay
+    in the US, so it is not kept.
     """
     sections = route.get("sections", [])
     codes = [s.get("countryCode") for s in sections]
-    return bool(codes) and all(codes) and CANADA not in codes
+    return bool(codes) and all(code == USA for code in codes)
 
 
 def _build_route(route: _Route, via: Via | None) -> Route:

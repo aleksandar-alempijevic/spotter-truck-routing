@@ -134,9 +134,11 @@ class LocationMeter:
         self._real_send = Outbound._send
         meter = self
 
-        async def metered(outbound, method, url, timeout, content):
+        async def metered(outbound, method, url, timeout, connect_timeout, content):
             if method != "POST":
-                return await meter._real_send(outbound, method, url, timeout, content)
+                return await meter._real_send(
+                    outbound, method, url, timeout, connect_timeout, content
+                )
             locations = len(content["data"]["latitude"].split(","))
             record: dict[str, Any] = {
                 "phase": meter.phase,
@@ -151,7 +153,7 @@ class LocationMeter:
             response = await meter.budget.run(
                 locations,
                 record,
-                lambda: meter._real_send(outbound, method, url, timeout, content),
+                lambda: meter._real_send(outbound, method, url, timeout, connect_timeout, content),
                 note_error,
             )
             record["status"] = response.status_code
