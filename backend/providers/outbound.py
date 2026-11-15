@@ -1,5 +1,5 @@
-"""Shared outbound HTTP policy: one client per planning request, a concurrency cap, a timeout
-and one retry, for GET and for form-encoded POST.
+"""Shared outbound HTTP policy: one client per planning request, a concurrency cap, a timeout,
+one retry and quick connect retries, for GET and for form-encoded POST.
 
 The providers carry their keys in the query string, and httpx logs the full URL of every request
 at INFO level and puts it in its exception text. Every httpx failure is therefore turned into a
@@ -28,6 +28,13 @@ logger = logging.getLogger(__name__)
 
 MAX_CONCURRENT_CALLS = 4
 """Calls in flight at once within one planning request; further calls wait their turn."""
+
+CONNECT_TIMEOUT_S = 3.0
+CONNECT_ATTEMPTS = 4
+"""A connection that cannot be opened is tried again at once, up to this many tries of
+`CONNECT_TIMEOUT_S` each: a call that never connects gives up after 12 s. These tries are separate
+from the one retry of a timeout, transport error or 5xx, which a call that never connected does
+not get, so the two do not multiply."""
 
 RETRY_STATUSES = range(500, 600)
 RATE_LIMIT_STATUSES = {401, 403, 429}
@@ -80,7 +87,8 @@ class Outbound:
     ) -> Any:
         """GET a URL and return its parsed JSON.
 
-        Retries once on a timeout, a transport error or a 5xx, never on a 4xx. Raises the
+        Retries once on a timeout, a transport error or a 5xx, never on a 4xx; a connection that
+        cannot be opened is tried up to `CONNECT_ATTEMPTS` times in place of that retry. Raises the
         neutral errors from `providers.errors`. A 400 raises `UpstreamBadRequest` so the adapter
         can tell its provider's cases apart.
         """
@@ -103,11 +111,21 @@ class Outbound:
     ) -> Any:
         started = time.monotonic()
         attempts = 0
-        while attempts < (2 if retry else 1):
+        retries_left = 1 if retry else 0
+        connects_left = CONNECT_ATTEMPTS
+        while True:
             attempts += 1
             try:
                 async with self._slots:
                     response = await self._send(method, url, timeout, content)
+            except (httpx.ConnectTimeout, httpx.ConnectError) as error:
+                timed_out = isinstance(error, httpx.ConnectTimeout)
+                failure = ProviderTimeout if timed_out else ProviderUnavailable
+                kind = type(error).__name__
+                connects_left -= 1
+                if connects_left:
+                    continue
+                break  # never connected: the connect tries were the retry
             except httpx.TimeoutException as error:
                 failure = ProviderTimeout
                 kind = type(error).__name__
@@ -117,6 +135,10 @@ class Outbound:
                 if response.status_code not in RETRY_STATUSES:
                     return _decode(response)
                 failure = ProviderUnavailable
+            if not retries_left:
+                break
+            retries_left -= 1
+            connects_left = CONNECT_ATTEMPTS
         if failure is ProviderTimeout:
             # The host only: the URL's query carries the key, and the path its coordinates.
             logger.warning(
@@ -133,7 +155,7 @@ class Outbound:
     ) -> httpx.Response:
         assert self._client is not None, "Outbound must be used as a context manager"
         return await self._client.request(
-            method, url, timeout=httpx.Timeout(timeout, connect=10), **content
+            method, url, timeout=httpx.Timeout(timeout, connect=CONNECT_TIMEOUT_S), **content
         )
 
 
