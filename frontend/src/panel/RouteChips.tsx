@@ -65,7 +65,7 @@ export function RouteChips({ routes, selectedId, recommendedId, onSelect }: Prop
               <Typography variant="caption" component="span" sx={{ lineHeight: 1.2 }}>
                 <RiskBadge state={route.risk} />
               </Typography>
-              {gust !== null && <GustWarning text={`Gusts ${gust} mph`} size="small" />}
+              {gust !== null && <GustWarning text={`Gust ${gust} mph`} size="small" />}
             </ButtonBase>
           );
         })}

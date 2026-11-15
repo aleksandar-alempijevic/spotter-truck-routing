@@ -96,7 +96,7 @@ test('the phone route chips carry the warning, and the selected route says it in
     />,
   );
 
-  expect(screen.getByText('Gusts 58 mph')).toBeInTheDocument();
+  expect(screen.getByText('Gust 58 mph')).toBeInTheDocument();
   expect(
     screen.getByText(
       'Gusts to 58 mph on this route — risk of blow-over for light or empty trailers',
@@ -115,7 +115,7 @@ test('chips without a warning show none', () => {
       onSelect={() => {}}
     />,
   );
-  expect(screen.queryByText(/Gusts/)).toBeNull();
+  expect(screen.queryByText(/Gust/)).toBeNull();
 });
 
 /** The mixed scenario with rest stops, every gust calm except the first stop of the first route. */
