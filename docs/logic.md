@@ -30,7 +30,7 @@ A load of exactly 30,000 or 40,000 lb does not trigger its rule. Rain and snow i
 
 **Combining conditions.** First the three conditions are levelled on the weather alone, with no load rule. The worst of those is the weather-alone level, and when more than one condition has it, wind is named before rain and rain before snow. At Low no condition is named. Then the load rules are applied to wind. If the load-adjusted wind level is above every weather-alone level, the checkpoint takes that level, the condition is wind and `load_raised` is true, which is what lets the UI explain a Severe at 38 mph. Otherwise the weather-alone level and condition stand and `load_raised` is false. So a heavy load at 40 mph with rain already Severe is Severe because of rain, not because of the load.
 
-**Gusts** are not part of the reading. They are shown beside the level and never change it: the assessment says "wind", read here as sustained wind.
+**Gusts** are not part of the reading. They are shown beside the level and never change it: the assessment says "wind", read here as sustained wind. A gust of 45 mph or more (the Severe wind edge, `GUST_WARNING_MPH`) adds a blow-over warning for light or empty trailers to the checkpoint or stop, and the route card names the highest such gust on the route. The warning never changes the level, the route summary or the ranking.
 
 **Inputs must be real measurements.** Every field must be a finite number of at least 0; anything else (NaN, infinity, a negative) is rejected. Missing weather is never passed in as a number: the caller leaves the checkpoint's level absent.
 

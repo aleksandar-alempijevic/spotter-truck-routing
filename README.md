@@ -60,7 +60,7 @@ The layout is built up from a phone, with a bottom sheet, and uses the room on w
 
 The rules are in [docs/logic.md](docs/logic.md), and the core code is four files: [backend/risk_rules/levels.py](backend/risk_rules/levels.py) (risk at a checkpoint), [backend/risk_rules/ranking.py](backend/risk_rules/ranking.py) (the ranking), [backend/routing/checkpoints.py](backend/routing/checkpoints.py) (checkpoints and ETAs) and [backend/weather/series.py](backend/weather/series.py) (the forecast at an ETA).
 
-- **Risk at a checkpoint** is the worst of the wind, rain and snow bands; a value on a band edge goes to the higher band. The load rules raise the wind level only, and they compare against the cargo the driver entered, not the gross weight sent to TomTom.
+- **Risk at a checkpoint** is the worst of the wind, rain and snow bands; a value on a band edge goes to the higher band. The load rules raise the wind level only, and they compare against the cargo the driver entered, not the gross weight sent to TomTom. Sustained wind decides; a gust of 45 mph or more adds a blow-over warning but never changes the level or the ranking.
 - **Ranking** follows the assessment's order: fewest Severe miles, fewest High miles, lowest average risk, shortest travel time. A route with No Travel miles ranks below every route without them. For High miles and average risk, a difference of one checkpoint changing by one level counts as a tie, so travel time can decide; Severe has no tolerance.
 - **Where the forecast does not reach,** a checkpoint has no level and its miles count as "no forecast", never as Low.
 
@@ -69,7 +69,7 @@ The rules are in [docs/logic.md](docs/logic.md), and the core code is four files
 [docs/assumptions.md](docs/assumptions.md) lists every assumption with its reason. The ones that shape what a reviewer sees:
 
 - **Trip limits.** Departure from 15 minutes ago to 48 hours ahead, cargo above 0 and at most 47,000 lb, every time shown in the origin's time zone ([details](docs/assumptions.md#trip-request)).
-- **Routes stay inside the US.** A route is kept only when every country section TomTom reports is the US ([details](docs/assumptions.md#routes-and-checkpoints)).
+- **Routes stay inside the US.** A route is kept only when every country section TomTom reports is the US or a US territory (Puerto Rico, the US Virgin Islands) ([details](docs/assumptions.md#routes-and-checkpoints)).
 - **TomTom is sent the gross weight,** the cargo plus an assumed 33,000 lb empty rig ([details](docs/assumptions.md#trip-request)).
 - **Rest breaks are an optional extra, off by default;** the switch adds the federal hours-of-service stops to the ETAs ([readings](docs/assumptions.md#when-rest-breaks-are-on), [rule](docs/logic.md#4-rest-breaks-when-they-are-on)).
 
@@ -77,7 +77,7 @@ The rules are in [docs/logic.md](docs/logic.md), and the core code is four files
 
 - **The weather source is free and limited per IP address.** Open-Meteo's free tier allows 600 locations a minute, and the host's address is shared with other users, so a trip can wait for a minute window or fail with a 503. 10-mile spacing on a long trip can take about a minute ([quota](docs/assumptions.md#quota-and-cache)).
 - **Connections from the host to Open-Meteo sometimes fail.** The hosted log has shown a weather call that timed out while connecting; the suspected cause is the host's shared outbound address. The app retries the connection quickly, and a weather request that still fails answers 504 or 502 ([deadline](docs/architecture.md#quota-waiting-and-deadline)).
-- **No route between Alaska and the lower 48,** or for any trip with no road route inside the US: the app answers "no route" rather than show a route through Canada.
+- **No route between Alaska and the lower 48,** or for any trip with no road route inside the US: the app shows "No truck route found" and says that routes stay inside the US, rather than show a route through Canada.
 - **Sometimes fewer than three routes.** When TomTom and up to six via cities give no distinct third route, the app shows the routes it has with a note saying why ([how routes are made](docs/architecture.md#how-routes-are-made)).
 - **No forecast beyond 96 hours.** Checkpoints past the forecast are shown as "no forecast"; this matters mostly for long trips with rest breaks on.
 - **The slider was measured with software graphics only,** in headless Chromium; a real phone and a real GPU are not measured ([limits](docs/performance.md#limits)).
